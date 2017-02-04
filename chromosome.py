@@ -6,7 +6,7 @@ from Bio.Seq import Seq
 
 class Chromosome(object):
 	"""
-	Attributes
+	Attributes	
 		seq = Biopython Seq object
 		id = unique id
 	"""
@@ -22,11 +22,7 @@ class Chromosome(object):
 		return
 		
 	def __repr__(self):
-		return """Chromosome(
-		seq=%s
-		id=%s
-		circular=%s\n\t)
-		""" % (self.seq.__repr__(),self.id,self.circular)
+		return "Chromosome object\n seq=%s\n id=%s\n circular=%s" % (self.seq.__repr__(),self.id,self.circular)
 		
 		
 
