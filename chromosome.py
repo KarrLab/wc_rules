@@ -14,15 +14,18 @@ class Chromosome(object):
 	id = None
 	circular = False
 		
-	def __init__(self,file,id=None,circular=False):
-		record = SeqIO.read(file,"fasta")
-		self.seq = record.seq
+	def __init__(self,seq,id=None,circular=False,):
+		self.seq = seq
 		self.id = id
-		self.circular = circular
-		return
+		self.circular = True
+		
+	@staticmethod
+	def loadFasta(file,id=None,circular=False):
+		record = SeqIO.read(file,"fasta")
+		return Chromosome(seq = record.seq,id=id,circular=circular)
 		
 	def __repr__(self):
-		return "Chromosome object\n seq=%s\n id=%s\n circular=%s" % (self.seq.__repr__(),self.id,self.circular)
+		return "Chromosome(seq=%s,id=%s,circular=%s)" % (self.seq.__repr__(),self.id,self.circular)
 		
 		
 
