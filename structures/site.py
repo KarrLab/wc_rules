@@ -1,1 +1,0 @@
-class Site(object): pass
