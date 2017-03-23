@@ -40,6 +40,12 @@ class AddBond(Operation):
 class DeleteBond(Operation):
 	linkedsites = core.OneToManyAttribute(Site,related_name='deletebond')
 	
+class AddMol(Operation):
+	mol = core.OneToOneAttribute(Molecule,related_name='addmol')
+
+class DeleteMol(Operation):
+	mol = core.OneToOneAttribute(Molecule,related_name='deletemol')
+	
 class Rule(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
 	label = core.StringAttribute(unique=False)
