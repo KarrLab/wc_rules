@@ -1,2 +1,2 @@
-# nucleopatterns
-Specifying nucleic acid macromolecules as BioNetGen graphs
+# wc_rules
+Rule-based modeling for whole-cell models.
