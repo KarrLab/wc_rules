@@ -5,7 +5,7 @@ class Complex(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
 	def getMolecule(self,label,**kwargs):
 		if label is not None:
-			return self.molecules.get(**kwargs)	
+			return self.molecules.get(label=label,**kwargs)	
 		else:
 			return self.molecules.get(**kwargs)
 
