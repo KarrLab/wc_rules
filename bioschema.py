@@ -34,48 +34,62 @@ class Bond(core.Model):
 	linkedsites = core.OneToManyAttribute(Site,related_name='bond')
 
 ###### Variables ######
+class BooleanStateVariable(core.Model):
+	id = core.StringAttribute(primary=True,unique=True)
+	at = core.OneToOneAttribute(Site)
+	value = core.BooleanAttribute(default=None)
 
 ###### Operations ######
 class Operation(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
+	linkedsites = core.OneToManyAttribute(Site,related_name='operation')
+	mol = core.OneToOneAttribute(Molecule,related_name='operation')
+	boolvar = core.OneToOneAttribute(BooleanStateVariable,related_name='operation')
+	complex = core.OneToOneAttribute(Complex,related_name='operation')
+	@property
+	def label(self): return self.__class__.__name__
+	@property
+	def target(self): return None
 
-class AddBond(Operation):
-	linkedsites = core.OneToManyAttribute(Site,related_name='addbond')
-	@property
-	def label(self): return self.__class__.__name__
-	
-class DeleteBond(Operation):
-	linkedsites = core.OneToManyAttribute(Site,related_name='deletebond')
-	@property
-	def label(self): return self.__class__.__name__
-	
-class AddMol(Operation):
-	mol = core.OneToOneAttribute(Molecule,related_name='addmol')
-	@property
-	def label(self): return self.__class__.__name__
 
-class DeleteMol(Operation):
-	mol = core.OneToOneAttribute(Molecule,related_name='deletemol')
+class BondOp(Operation): 
 	@property
-	def label(self): return self.__class__.__name__
+	def target(self): return self.linkedsites
+
+class MolOp(Operation):
+	@property
+	def target(self): return self.mol
 	
+class BoolStateOp(Operation):
+	@property
+	def target(self): return self.boolvar
+	
+class AddBond(BondOp): pass
+class DeleteBond(BondOp):pass
+class ChangeBooleanStateToTrue(BoolStateOp): pass
+
+##### Rule #####
 class Rule(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
 	label = core.StringAttribute(unique=True)
 	reactants = core.OneToManyAttribute(Complex,related_name='rule')
-	operations = core.OneToManyAttribute(Operation,related_name='rule')
 	reversible = core.BooleanAttribute(default=False)
+	operations = core.OneToManyAttribute(Operation,related_name='rule')
 	
 ###### Structure Improvements ######
 class Protein(Molecule): pass
 class ProteinSite(Site): pass
 
 ###### Variable Improvements ######
+class PhosphorylationState(BooleanStateVariable):
+	at = core.OneToOneAttribute(Site,related_name='ph')
 
 ###### Operation Improvements ######
+class Phosphorylate(ChangeBooleanStateToTrue): pass
 
-
-
+def main():
+	return
 	
-if __name__ == '__main__': pass	
+if __name__ == '__main__': 
+	main()
 
