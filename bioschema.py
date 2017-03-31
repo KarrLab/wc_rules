@@ -1,4 +1,4 @@
-from wc_utils.schema import core
+from obj_model import core
 
 ###### Structures ######
 class Complex(core.Model):

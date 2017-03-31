@@ -1,2 +1,2 @@
 from bioschema import *
-from wc_utils.schema import core
+from obj_model import core
