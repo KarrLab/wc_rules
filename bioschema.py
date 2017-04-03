@@ -23,8 +23,6 @@ class Molecule(core.Model):
 class Site(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
 	molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
-	class Meta(core.Model.Meta):
-		attribute_order = ('id','molecule',)
 	@property
 	def label(self): return self.__class__.__name__
 
@@ -42,32 +40,31 @@ class BooleanStateVariable(core.Model):
 ###### Operations ######
 class Operation(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
-	linkedsites = core.OneToManyAttribute(Site,related_name='operation')
-	mol = core.OneToOneAttribute(Molecule,related_name='operation')
-	boolvar = core.OneToOneAttribute(BooleanStateVariable,related_name='operation')
-	complex = core.OneToOneAttribute(Complex,related_name='operation')
 	@property
 	def label(self): return self.__class__.__name__
 	@property
 	def target(self): return None
 
-
-class BondOp(Operation): 
+class AddBond(Operation):
+	linkedsites = core.OneToManyAttribute(Site,related_name='operation')
 	@property
 	def target(self): return self.linkedsites
-
-class MolOp(Operation):
-	@property
-	def target(self): return self.mol
 	
-class BoolStateOp(Operation):
+class DeleteBond(Operation):
+	bond = core.OneToOneAttribute(Bond,related_name='operation')
+	@property
+	def target(self): return self.bond
+	
+class ChangeBooleanStateToTrue(Operation):
+	boolvar = core.OneToOneAttribute(BooleanStateVariable,related_name='operation')
+	@property
+	def target(self): return self.boolvar
+
+class ChangeBooleanStateToFalse(Operation):
+	boolvar = core.OneToOneAttribute(BooleanStateVariable,related_name='operation')
 	@property
 	def target(self): return self.boolvar
 	
-class AddBond(BondOp): pass
-class DeleteBond(BondOp):pass
-class ChangeBooleanStateToTrue(BoolStateOp): pass
-
 ##### Rule #####
 class Rule(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
@@ -86,6 +83,7 @@ class PhosphorylationState(BooleanStateVariable):
 
 ###### Operation Improvements ######
 class Phosphorylate(ChangeBooleanStateToTrue): pass
+class Dephosphorylate(ChangeBooleanStateToFalse): pass
 
 def main():
 	return
