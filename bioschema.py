@@ -25,6 +25,22 @@ class Site(core.Model):
 	molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
 	@property
 	def label(self): return self.__class__.__name__
+	@property
+	def bound(self):
+		if self.bond is not None:
+			return True
+		return False
+	@property
+	def unbound(self): return not self.bound
+	@property
+	def available_to_bind(self):
+		if self.unbound is False:
+			return False
+		if self.excludes() is not None:
+			for site in self.excludes():
+				if site.unbound is False:
+					return False
+		return True 
 	def excludes(self):
 		L = []
 		for ex_obj in self.exclusions:
@@ -99,7 +115,6 @@ class Dephosphorylate(ChangeBooleanStateToFalse): pass
 
 def main():
 	return
-	
 if __name__ == '__main__': 
 	main()
 
