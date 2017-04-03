@@ -25,16 +25,25 @@ class Site(core.Model):
 	molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
 	@property
 	def label(self): return self.__class__.__name__
+	def excludes(self):
+		L = []
+		for ex_obj in self.exclusions:
+			for site in ex_obj.sites:
+				if site is not self:	
+					L.append(site)
+		if len(L)>0:
+			return L
+		return None
 
 class Bond(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
 	complex = core.ManyToOneAttribute(Complex,related_name='bonds')
 	linkedsites = core.OneToManyAttribute(Site,related_name='bond')
 	
-class Excludes(core.Model):
+class Exclusion(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
-	sites = core.ManyToManyAttribute(Site,related_name='excludes')
-	mol = core.OneToOneAttribute(Molecule,related_name='list_of_excludes')
+	sites = core.ManyToManyAttribute(Site,related_name='exclusions')
+	mol = core.ManyToOneAttribute(Molecule,related_name='exclusions')
 
 ###### Variables ######
 class BooleanStateVariable(core.Model):
@@ -90,7 +99,6 @@ class Dephosphorylate(ChangeBooleanStateToFalse): pass
 
 def main():
 	return
-	
 	
 if __name__ == '__main__': 
 	main()
