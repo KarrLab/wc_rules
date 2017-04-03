@@ -30,6 +30,11 @@ class Bond(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
 	complex = core.ManyToOneAttribute(Complex,related_name='bonds')
 	linkedsites = core.OneToManyAttribute(Site,related_name='bond')
+	
+class Excludes(core.Model):
+	id = core.StringAttribute(primary=True,unique=True)
+	sites = core.ManyToManyAttribute(Site,related_name='excludes')
+	mol = core.OneToOneAttribute(Molecule,related_name='list_of_excludes')
 
 ###### Variables ######
 class BooleanStateVariable(core.Model):
@@ -55,15 +60,13 @@ class DeleteBond(Operation):
 	@property
 	def target(self): return self.bond
 	
-class ChangeBooleanStateToTrue(Operation):
+class ChangeBooleanState(Operation):
 	boolvar = core.OneToOneAttribute(BooleanStateVariable,related_name='operation')
 	@property
 	def target(self): return self.boolvar
-
-class ChangeBooleanStateToFalse(Operation):
-	boolvar = core.OneToOneAttribute(BooleanStateVariable,related_name='operation')
-	@property
-	def target(self): return self.boolvar
+	
+class ChangeBooleanStateToTrue(ChangeBooleanState):pass
+class ChangeBooleanStateToFalse(ChangeBooleanState):pass
 	
 ##### Rule #####
 class Rule(core.Model):
@@ -87,6 +90,7 @@ class Dephosphorylate(ChangeBooleanStateToFalse): pass
 
 def main():
 	return
+	
 	
 if __name__ == '__main__': 
 	main()
