@@ -120,7 +120,7 @@ class Operation(core.Model):
 		return self
 	
 class AddBond(Operation):
-	linkedsites = core.OneToManyAttribute(Site,related_name='operation')
+	linkedsites = core.OneToManyAttribute(Site,related_name='add_bond_op')
 	@property
 	def target(self): return self.linkedsites
 	@target.setter
@@ -131,24 +131,24 @@ class AddBond(Operation):
 		return self
 	
 class DeleteBond(Operation):
-	bond = core.OneToOneAttribute(Bond,related_name='operation')
+	linkedsites = core.OneToManyAttribute(Site,related_name='delete_bond_op')
 	@property
-	def target(self): return self.bond
+	def target(self): return self.linkedsites
 	@target.setter
-	def target(self,bond):
-		self.bond = bond
-	def set_target_bond(self,bond):
-		self.bond = bond
+	def target(self,arr):
+		self.linkedsites = arr
+	def add_target_site(self,site):
+		self.linkedsites.append(site)
 		return self
 	
 class ChangeBooleanState(Operation):
-	boolvar = core.OneToOneAttribute(BooleanStateVariable,related_name='operation')
+	boolvar = core.OneToOneAttribute(BooleanStateVariable,related_name='change_boolean_state_op')
 	@property
 	def target(self): return self.boolvar
 	@target.setter
 	def target(self,boolvar):
 		self.boolvar = boolvar
-	def set_target_boolvar:
+	def set_target_var(self,boolvar):
 		self.boolvar = boolvar
 		return self
 
