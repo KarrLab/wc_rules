@@ -19,7 +19,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
-import karr_lab_build_utils
+import wc_rules
 
 # -- General configuration ------------------------------------------------
 
@@ -55,7 +55,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Karr Lab build utilities'
+project = u'wc_rules'
 copyright = u'2016, Karr Lab'
 author = u'Jonathan Karr'
 
@@ -64,7 +64,7 @@ author = u'Jonathan Karr'
 # built documents.
 #
 # The short X.Y version.
-version = karr_lab_build_utils.__version__
+version = wc_rules.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
 
