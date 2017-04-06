@@ -1,3 +1,11 @@
+""" Language for describing whole-cell models
+
+:Author: John Sekar <johnarul.sekar@gmail.com>
+:Date: 2017-04-06
+:Copyright: 2017, Karr Lab
+:License: MIT
+"""
+
 from obj_model import core
 
 ###### Structures ######
