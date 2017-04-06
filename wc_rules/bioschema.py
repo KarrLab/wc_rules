@@ -23,7 +23,7 @@ class Complex(core.Model):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Molecule): self.molecules.append(v)
 		elif isinstance(v,Bond): self.bonds.append(v)
-		else: assert False, AddObjectErrorMessage(self,v)
+		else: raise AddObjectError(self,v,['Molecule','Bond'])
 		return self
 	
 class Molecule(core.Model):
@@ -43,7 +43,7 @@ class Molecule(core.Model):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Site): self.sites.append(v)
 		elif isinstance(v,Exclusion): self.exclusions.append(v)
-		else: assert False, AddObjectErrorMessage(self,v)
+		else: raise AddObjectError(self,v,['Site','Exclusion'])
 		return self
 		
 class Site(core.Model):
@@ -82,7 +82,7 @@ class Site(core.Model):
 	def add(self,v):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,BooleanStateVariable): self.boolvars.append(v)
-		else: assert False, AddObjectErrorMessage(self,v)
+		else: raise AddObjectError(self,v,['BooleanStateVariable'])
 		return self
 	def get_boolvar(self,label,**kwargs):
 		if label is not None:
@@ -101,7 +101,7 @@ class Bond(core.Model):
 	def add(self,v):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Site): self.sites.append(v)
-		else: assert False, AddObjectErrorMessage(self,v)
+		else: raise AddObjectError(self,v,['Site'])
 		return self
 		
 class Exclusion(core.Model):
@@ -114,7 +114,7 @@ class Exclusion(core.Model):
 	def add(self,v):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Site): self.sites.append(v)
-		else: assert False, AddObjectErrorMessage(self,v)
+		else: raise AddObjectError(self,v,['Site'])
 		return self
 	
 ###### Variables ######
@@ -142,7 +142,7 @@ class Operation(core.Model):
 	def target(self): return None
 	@target.setter
 	def target(self,value): return None
-	def set_target(self,value):
+	def set_target(self,value): 
 		self.target = value
 		return self
 	def set_id(self,id):
@@ -157,9 +157,9 @@ class BondOperation(Operation):
 	def target(self,arr):
 		self.sites = arr
 	def set_target(self,v):
-		if type(v) is list: [self.add(w) for w in v]
+		if type(v) is list: [self.set_target(w) for w in v]
 		elif isinstance(v,Site): self.sites.append(v)
-		else: assert False, AddObjectErrorMessage(self,v,'set_target()')
+		else: raise AddObjectError(self,v,['Site'],'set_target()')
 		return self
 	
 class AddBond(BondOperation):pass
@@ -174,7 +174,7 @@ class BooleanStateOperation(Operation):
 		self.boolvar = boolvar
 	def set_target(self,v):
 		if isinstance(v,BooleanStateVariable): self.boolvar = v
-		else: assert False, AddObjectErrorMessage(self,v)
+		else: raise AddObjectError(self,v,['BooleanStateVariable'],'set_target()')
 		return self
 
 class SetTrue(BooleanStateOperation):pass
@@ -194,14 +194,23 @@ class Rule(core.Model):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Complex): self.reactants.append(v)
 		elif isinstance(v,Operation): self.operations.append(v)
-		else: assert False, AddObjectErrorMessage(self,v)
+		else: raise AddObjectError(self,v,['Complex','Operation'])
 		return self
 
 ###### Error ######
-def AddObjectErrorMessage(parent,obj,methodname = 'add()'):
-	msg = 'Object of ' + str(type(obj))+' cannot be added to object of '+str(type(parent)) + ' using '+methodname +'.'
-	msg = filter(lambda ch: ch not in "<>", msg)
-	return msg
+class AddObjectError(Exception):
+	def __init__(self,parentobject,currentobject,allowedobjects,methodname='add()'):
+		msg = '\nObject of ' + self.to_str(currentobject)+ ' cannot be added to ' + self.to_str(parentobject) + ' using ' + methodname + '. '
+		if (len(allowedobjects)==1 or isinstance(allowedobjects,str)):
+			msg = msg + 'Only objects of type' + str(allowedobjects) + 'are allowed.'
+		else:
+			msg = msg + 'Only objects of type ' + ', '.join(allowedobjects) + ' are allowed.'
+		super(AddObjectError, self).__init__(msg)
+	@staticmethod
+	def to_str(obj):
+		msg = str(type(obj))
+		msg = ''.join([ch for ch in msg if ch not in "<>"])
+		return msg
 	
 ###### Structure Improvements ######
 class Protein(Molecule): pass
