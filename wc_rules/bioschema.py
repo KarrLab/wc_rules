@@ -19,11 +19,11 @@ class Complex(core.Model):
 	def set_id(self,id):
 		self.id = id
 		return self
-	def add_molecule(self,molecule):
-		self.molecules.append(molecule)
-		return self
-	def add_bond(self,bond):
-		self.bonds.append(bond)
+	def add(self,v):
+		if type(v) is list: [self.add(w) for w in v]
+		elif isinstance(v,Molecule): self.molecules.append(v)
+		elif isinstance(v,Bond): self.bonds.append(v)
+		else: assert False, AddObjectErrorMessage(self,v)
 		return self
 	
 class Molecule(core.Model):
@@ -39,11 +39,11 @@ class Molecule(core.Model):
 	def set_id(self,id):
 		self.id = id
 		return self
-	def add_site(self,site):
-		self.sites.append(site)
-		return self
-	def add_exclusion(self,exclusion):
-		self.exclusions.add(exclusion)
+	def add(self,v):
+		if type(v) is list: [self.add(w) for w in v]
+		elif isinstance(v,Site): self.sites.append(v)
+		elif isinstance(v,Exclusion): self.exclusions.append(v)
+		else: assert False, AddObjectErrorMessage(self,v)
 		return self
 		
 class Site(core.Model):
@@ -79,18 +79,31 @@ class Site(core.Model):
 	def set_id(self,id):
 		self.id = id
 		return self
-
+	def add(self,v):
+		if type(v) is list: [self.add(w) for w in v]
+		elif isinstance(v,BooleanStateVariable): self.boolvars.append(v)
+		else: assert False, AddObjectErrorMessage(self,v)
+		return self
+	def get_boolvar(self,label,**kwargs):
+		if label is not None:
+			return self.boolvars.get(label=label,**kwargs)
+		else:
+			return self.boolvars.get(**kwargs)
+		
+		
 class Bond(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
 	complex = core.ManyToOneAttribute(Complex,related_name='bonds')
-	linkedsites = core.OneToManyAttribute(Site,related_name='bond')
+	sites = core.OneToManyAttribute(Site,related_name='bond')
 	def set_id(self,id):
 		self.id = id
 		return self
-	def add_site(self,site):
-		self.linkedsites.append(site)
+	def add(self,v):
+		if type(v) is list: [self.add(w) for w in v]
+		elif isinstance(v,Site): self.sites.append(v)
+		else: assert False, AddObjectErrorMessage(self,v)
 		return self
-	
+		
 class Exclusion(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
 	sites = core.ManyToManyAttribute(Site,related_name='exclusions')
@@ -98,19 +111,28 @@ class Exclusion(core.Model):
 	def set_id(self,id):
 		self.id = id
 		return self
-	def add_site(self,site):
-		self.sites.append(site)
+	def add(self,v):
+		if type(v) is list: [self.add(w) for w in v]
+		elif isinstance(v,Site): self.sites.append(v)
+		else: assert False, AddObjectErrorMessage(self,v)
 		return self
-
+	
 ###### Variables ######
 class BooleanStateVariable(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
+	site = core.ManyToOneAttribute(Site,related_name='boolvars')
 	value = core.BooleanAttribute(default=None)
+	@property
+	def label(self): return self.__class__.__name__
 	def set_id(self,id):
 		self.id = id
 		return self
-
-
+	def set_value(self,value):
+		self.value = value
+		return self
+	def set_true(self): return self.set_value(True)
+	def set_false(self): return self.set_value(False)
+	
 ###### Operations ######
 class Operation(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
@@ -127,42 +149,36 @@ class Operation(core.Model):
 		self.id = id
 		return self
 	
-class AddBond(Operation):
-	linkedsites = core.OneToManyAttribute(Site,related_name='add_bond_op')
+class BondOperation(Operation):
+	sites = core.OneToManyAttribute(Site,related_name='bond_op')
 	@property
-	def target(self): return self.linkedsites
+	def target(self): return self.sites
 	@target.setter
 	def target(self,arr):
-		self.linkedsites = arr
-	def add_target_site(self,site):
-		self.linkedsites.append(site)
+		self.sites = arr
+	def set_target(self,v):
+		if type(v) is list: [self.add(w) for w in v]
+		elif isinstance(v,Site): self.sites.append(v)
+		else: assert False, AddObjectErrorMessage(self,v,'set_target()')
 		return self
 	
-class DeleteBond(Operation):
-	linkedsites = core.OneToManyAttribute(Site,related_name='delete_bond_op')
-	@property
-	def target(self): return self.linkedsites
-	@target.setter
-	def target(self,arr):
-		self.linkedsites = arr
-	def add_target_site(self,site):
-		self.linkedsites.append(site)
-		return self
-	
-class ChangeBooleanState(Operation):
-	boolvar = core.OneToOneAttribute(BooleanStateVariable,related_name='change_boolean_state_op')
+class AddBond(BondOperation):pass
+class DeleteBond(BondOperation):pass
+
+class BooleanStateOperation(Operation):
+	boolvar = core.OneToOneAttribute(BooleanStateVariable,related_name='boolean_state_op')
 	@property
 	def target(self): return self.boolvar
 	@target.setter
 	def target(self,boolvar):
 		self.boolvar = boolvar
-	def set_target_var(self,boolvar):
-		self.boolvar = boolvar
+	def set_target(self,v):
+		if isinstance(v,BooleanStateVariable): self.boolvar = v
+		else: assert False, AddObjectErrorMessage(self,v)
 		return self
 
-	
-class ChangeBooleanStateToTrue(ChangeBooleanState):pass
-class ChangeBooleanStateToFalse(ChangeBooleanState):pass
+class SetTrue(BooleanStateOperation):pass
+class SetFalse(BooleanStateOperation):pass
 	
 ##### Rule #####
 class Rule(core.Model):
@@ -174,25 +190,29 @@ class Rule(core.Model):
 	def set_id(self,id):
 		self.id = id
 		return self
-	def add_reactant(self,reac):
-		self.reactants.append(reac)
+	def add(self,v):
+		if type(v) is list: [self.add(w) for w in v]
+		elif isinstance(v,Complex): self.reactants.append(v)
+		elif isinstance(v,Operation): self.operations.append(v)
+		else: assert False, AddObjectErrorMessage(self,v)
 		return self
-	def add_operation(self,op):
-		self.operations.append(op)
-		return self
-	
+
+###### Error ######
+def AddObjectErrorMessage(parent,obj,methodname = 'add()'):
+	msg = 'Object of ' + str(type(obj))+' cannot be added to object of '+str(type(parent)) + ' using '+methodname +'.'
+	msg = filter(lambda ch: ch not in "<>", msg)
+	return msg
 	
 ###### Structure Improvements ######
 class Protein(Molecule): pass
 class ProteinSite(Site): pass
 
 ###### Variable Improvements ######
-class PhosphorylationState(BooleanStateVariable):
-	site = core.OneToOneAttribute(Site,related_name='ph')
+class PhosphorylationState(BooleanStateVariable): pass
 
 ###### Operation Improvements ######
-class Phosphorylate(ChangeBooleanStateToTrue): pass
-class Dephosphorylate(ChangeBooleanStateToFalse): pass
+class Phosphorylate(SetTrue): pass
+class Dephosphorylate(SetFalse): pass
 
 def main():
 	return
