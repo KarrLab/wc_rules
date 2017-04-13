@@ -60,13 +60,7 @@ class Site(core.Model):
 	def unbound(self): return not self.bound
 	@property
 	def available_to_bind(self):
-		if self.unbound is False:
-			return False
-		if self.excludes() is not None:
-			for site in self.excludes():
-				if site.unbound is False:
-					return False
-		return True 
+		return all(site.unbound for site in self.get_excludes())
 	def get_excludes(self):
 		L = []
 		for ex_obj in self.exclusions:
@@ -224,8 +218,8 @@ class Phosphorylate(SetTrue): pass
 class Dephosphorylate(SetFalse): pass
 
 def main():
-	return
-	
+	return 
+
 if __name__ == '__main__': 
 	main()
 
