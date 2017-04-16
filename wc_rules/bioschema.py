@@ -8,6 +8,20 @@
 
 from obj_model import core
 
+###### Factory ######
+class Factory(object):
+	def build(self,obj_type,names,instances=True):
+		types = dict()
+		vec = []
+		for name in names:
+			if name not in moltypes:
+				types[name] = type(name,(obj_type,),{})
+				if instances==False:
+					vec.append( types[name] )
+			if instances==True:
+				vec.append( types[name]() )
+		return vec
+		
 ###### Structures ######
 class Complex(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
@@ -43,7 +57,7 @@ class Molecule(core.Model):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Site): self.sites.append(v)
 		elif isinstance(v,Exclusion): self.exclusions.append(v)
-		else: raise AddObjectError(self,v,['Site','Exclusion'])
+		else: raise AddObjectError(self,v,['Molecule','Bond'])
 		return self
 		
 class Site(core.Model):
@@ -218,8 +232,8 @@ class Phosphorylate(SetTrue): pass
 class Dephosphorylate(SetFalse): pass
 
 def main():
-	return 
-
+	return
+	
 if __name__ == '__main__': 
 	main()
 
