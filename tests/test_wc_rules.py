@@ -1,4 +1,6 @@
 from wc_rules import bioschema as bio
+from wc_rules import ratelaw as rl
+from wc_rules import utils
 import unittest
 
 class TestBioschema(unittest.TestCase):
@@ -11,7 +13,7 @@ class TestBioschema(unittest.TestCase):
 		a.set_id('1')
 		self.assertEqual(a.id,'1')
 		
-		with self.assertRaises(bio.AddObjectError): a.add(object())
+		with self.assertRaises(utils.AddObjectError): a.add(object())
 		
 	def test_bond(self):
 		class A(bio.Site):pass
@@ -34,7 +36,7 @@ class TestBioschema(unittest.TestCase):
 		bnd.set_id('1')
 		self.assertEqual(bnd.id,'1')
 		
-		with self.assertRaises(bio.AddObjectError): bnd.add(object())
+		with self.assertRaises(utils.AddObjectError): bnd.add(object())
 		
 		a = bnd.sites.get(label='A')
 		self.assertEqual(a.label,'A')
@@ -56,7 +58,7 @@ class TestBioschema(unittest.TestCase):
 		exc.set_id('1')
 		self.assertEqual(exc.id,'1')
 		
-		with self.assertRaises(bio.AddObjectError): exc.add(object())
+		with self.assertRaises(utils.AddObjectError): exc.add(object())
 		
 		a = exc.sites.get(label='A')
 		self.assertEqual(a.label,'A')
@@ -97,7 +99,7 @@ class TestBioschema(unittest.TestCase):
 		self.assertEqual([x.label for x in a.sites],['B','C'])
 		self.assertEqual([x.label for x in a.exclusions[0].sites],['B','C'])
 		
-		with self.assertRaises(bio.AddObjectError): a.add(object())
+		with self.assertRaises(utils.AddObjectError): a.add(object())
 		
 		b = a.sites.get(label='B')
 		self.assertEqual(b.label,'B')
@@ -123,7 +125,7 @@ class TestBioschema(unittest.TestCase):
 		cplx.set_id('1')
 		self.assertEqual(cplx.id,'1')
 		
-		with self.assertRaises(bio.AddObjectError): cplx.add(object())
+		with self.assertRaises(utils.AddObjectError): cplx.add(object())
 		
 		a = cplx.molecules.get(label='A',id='1')
 		self.assertEqual([a.label,a.id],['A','1'])
@@ -137,7 +139,7 @@ class TestBioschema(unittest.TestCase):
 		bnd_op = bio.BondOperation().set_target([a1,a2])
 		self.assertEqual([x.label for x in bnd_op.target],['A','A'])
 		
-		with self.assertRaises(bio.AddObjectError): bnd_op.set_target(object())
+		with self.assertRaises(utils.AddObjectError): bnd_op.set_target(object())
 		
 	def test_state_op(self):
 		class P(bio.BooleanStateVariable):pass
@@ -145,8 +147,14 @@ class TestBioschema(unittest.TestCase):
 		state_op = bio.BooleanStateOperation().set_target(p)
 		self.assertEqual(state_op.target.label,'P')
 		
-		with self.assertRaises(bio.AddObjectError): state_op.set_target(object())
-		with self.assertRaises(bio.AddObjectError): state_op.set_target([object(),])	
+		with self.assertRaises(utils.AddObjectError): state_op.set_target(object())
+		with self.assertRaises(utils.AddObjectError): state_op.set_target([object(),])	
+	
+	def test_rate_expression(self):
+		
+		k1 = rl.Parameter(symbol='k1',value=1000.0)
+		expr1 = rl.RateExpression(expr='k1*k2',parameters=[k1])
+		self.assertEqual([expr1.expr,expr1.parameters.get().symbol,expr1.parameters.get().value],['k1*k2','k1',1000.0])
 	
 	def test_rule(self):
 		class A(bio.Molecule): pass
@@ -164,10 +172,16 @@ class TestBioschema(unittest.TestCase):
 		reac2 = bio.Complex().add(B1)
 		op1 = bio.AddBond().set_target([a1,b1])
 		op2 = bio.Phosphorylate().set_target(b1.boolvars.get())
+		kf = rl.RateExpression(expr='kf')
+		kr = rl.RateExpression(expr='kr')
 		
-		rule1 = bio.Rule(reversible=True).add([reac1,reac2,op1,op2])
+		rule1 = bio.Rule(reversible=True,forward=kf,reverse=kr).add([reac1,reac2,op1,op2])
  		
 		self.assertEqual([x.label for y in rule1.reactants for x in y.molecules],['A','B'])
 		self.assertEqual([y.label for y in rule1.operations[0].target],['a','b'])
 		self.assertEqual(rule1.operations[1].target.label,'P')
+		self.assertEqual([rule1.forward.expr,rule1.reverse.expr],['kf','kr'])
+		
+	
+	
 		

@@ -7,21 +7,9 @@
 """
 
 from obj_model import core
+import wc_rules.utils as utils
+import wc_rules.ratelaw as rl
 
-###### Factory ######
-class Factory(object):
-	def build(self,obj_type,names,instances=True):
-		types = dict()
-		vec = []
-		for name in names:
-			if name not in moltypes:
-				types[name] = type(name,(obj_type,),{})
-				if instances==False:
-					vec.append( types[name] )
-			if instances==True:
-				vec.append( types[name]() )
-		return vec
-		
 ###### Structures ######
 class Complex(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
@@ -37,7 +25,7 @@ class Complex(core.Model):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Molecule): self.molecules.append(v)
 		elif isinstance(v,Bond): self.bonds.append(v)
-		else: raise AddObjectError(self,v,['Molecule','Bond'])
+		else: raise utils.AddObjectError(self,v,['Molecule','Bond'])
 		return self
 	
 class Molecule(core.Model):
@@ -57,7 +45,7 @@ class Molecule(core.Model):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Site): self.sites.append(v)
 		elif isinstance(v,Exclusion): self.exclusions.append(v)
-		else: raise AddObjectError(self,v,['Molecule','Bond'])
+		else: raise utils.AddObjectError(self,v,['Molecule','Bond'])
 		return self
 		
 class Site(core.Model):
@@ -90,14 +78,13 @@ class Site(core.Model):
 	def add(self,v):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,BooleanStateVariable): self.boolvars.append(v)
-		else: raise AddObjectError(self,v,['BooleanStateVariable'])
+		else: raise utils.AddObjectError(self,v,['BooleanStateVariable'])
 		return self
 	def get_boolvar(self,label,**kwargs):
 		if label is not None:
 			return self.boolvars.get(label=label,**kwargs)
 		else:
 			return self.boolvars.get(**kwargs)
-		
 		
 class Bond(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
@@ -109,7 +96,7 @@ class Bond(core.Model):
 	def add(self,v):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Site): self.sites.append(v)
-		else: raise AddObjectError(self,v,['Site'])
+		else: raise utils.AddObjectError(self,v,['Site'])
 		return self
 		
 class Exclusion(core.Model):
@@ -122,7 +109,7 @@ class Exclusion(core.Model):
 	def add(self,v):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Site): self.sites.append(v)
-		else: raise AddObjectError(self,v,['Site'])
+		else: raise utils.AddObjectError(self,v,['Site'])
 		return self
 	
 ###### Variables ######
@@ -167,7 +154,7 @@ class BondOperation(Operation):
 	def set_target(self,v):
 		if type(v) is list: [self.set_target(w) for w in v]
 		elif isinstance(v,Site): self.sites.append(v)
-		else: raise AddObjectError(self,v,['Site'],'set_target()')
+		else: raise utils.AddObjectError(self,v,['Site'],'set_target()')
 		return self
 	
 class AddBond(BondOperation):pass
@@ -182,7 +169,7 @@ class BooleanStateOperation(Operation):
 		self.boolvar = boolvar
 	def set_target(self,v):
 		if isinstance(v,BooleanStateVariable): self.boolvar = v
-		else: raise AddObjectError(self,v,['BooleanStateVariable'],'set_target()')
+		else: raise utils.AddObjectError(self,v,['BooleanStateVariable'],'set_target()')
 		return self
 
 class SetTrue(BooleanStateOperation):pass
@@ -195,6 +182,8 @@ class Rule(core.Model):
 	reactants = core.OneToManyAttribute(Complex,related_name='rule')
 	reversible = core.BooleanAttribute(default=False)
 	operations = core.OneToManyAttribute(Operation,related_name='rule')
+	forward = core.OneToOneAttribute(rl.RateExpression,related_name='rule_forward')
+	reverse = core.OneToOneAttribute(rl.RateExpression,related_name='rule_reverse')
 	def set_id(self,id):
 		self.id = id
 		return self
@@ -202,24 +191,9 @@ class Rule(core.Model):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Complex): self.reactants.append(v)
 		elif isinstance(v,Operation): self.operations.append(v)
-		else: raise AddObjectError(self,v,['Complex','Operation'])
+		else: raise utils.AddObjectError(self,v,['Complex','Operation'])
 		return self
 
-###### Error ######
-class AddObjectError(Exception):
-	def __init__(self,parentobject,currentobject,allowedobjects,methodname='add()'):
-		msg = '\nObject of ' + self.to_str(currentobject)+ ' cannot be added to ' + self.to_str(parentobject) + ' using ' + methodname + '. '
-		if (len(allowedobjects)==1 or isinstance(allowedobjects,str)):
-			msg = msg + 'Only objects of type' + str(allowedobjects) + 'are allowed.'
-		else:
-			msg = msg + 'Only objects of type ' + ', '.join(allowedobjects) + ' are allowed.'
-		super(AddObjectError, self).__init__(msg)
-	@staticmethod
-	def to_str(obj):
-		msg = str(type(obj))
-		msg = ''.join([ch for ch in msg if ch not in "<>"])
-		return msg
-	
 ###### Structure Improvements ######
 class Protein(Molecule): pass
 class ProteinSite(Site): pass
