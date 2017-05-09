@@ -85,7 +85,26 @@ class Site(core.Model):
 			return self.boolvars.get(label=label,**kwargs)
 		else:
 			return self.boolvars.get(**kwargs)
-		
+	def add_pairwise_overlaps(self,sites,mutual=True):
+		if type(sites) is not list:
+			sites = [sites]
+		for site in sites:
+			if isinstance(site,(Site,)) is not True:
+				raise utils.AddObjectError(self,site,['Site'])
+		if self.pairwise_overlaps_obj is None:
+			self.pairwise_overlaps_obj = PairwiseOverlaps(sites=[])
+		self.pairwise_overlaps_obj.sites.extend(sites)
+		if mutual==True:
+			for site in sites:
+				if site.pairwise_overlaps_obj is None:
+					site.pairwise_overlaps_obj = PairwiseOverlaps(sites=[])
+				site.pairwise_overlaps_obj.sites.append(self)
+		return self
+
+class PairwiseOverlaps(core.Model):
+	site = core.OneToOneAttribute(Site,related_name='pairwise_overlaps_obj')
+	sites = core.ManyToManyAttribute(Site,related_name='pairwise_overlaps_in')
+	
 class Bond(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
 	complex = core.ManyToOneAttribute(Complex,related_name='bonds')
@@ -206,7 +225,22 @@ class Phosphorylate(SetTrue): pass
 class Dephosphorylate(SetFalse): pass
 
 def main():
-	return
+	class a(Site): pass
+	class b(Site): pass
+	class M(Molecule): pass
+	
+	a1 = a()
+	b1 = b()
+	b2 = b()
+	vec = [b1,b1,b2]
+	a1.add_pairwise_overlaps(vec)
+	print(a1.pairwise_overlaps_obj.site.__repr__())
+	print(a1.pairwise_overlaps_obj.sites)
+	for site in vec:
+		print([x.site for x in site.pairwise_overlaps_in])
+		
+	m1 = M()
+	a1.add_pairwise_overlaps(m1)
 	
 if __name__ == '__main__': 
 	main()

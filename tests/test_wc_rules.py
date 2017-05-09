@@ -182,6 +182,30 @@ class TestBioschema(unittest.TestCase):
 		self.assertEqual(rule1.operations[1].target.label,'P')
 		self.assertEqual([rule1.forward.expr,rule1.reverse.expr],['kf','kr'])
 		
+	def test_pairwise_overlaps(self):
+		class a(bio.Site): pass
+		class b(bio.Site): pass
+		class M(bio.Molecule): pass
+		
+		a1,b1,b2 = a(),b(),b()
+	
+		a1.add_pairwise_overlaps([b1,b2])
+		self.assertEqual(a1.pairwise_overlaps_obj.sites,[b1,b2])
+		self.assertEqual(a1,b1.pairwise_overlaps_obj.sites[0])
+		self.assertEqual(a1,b2.pairwise_overlaps_obj.sites[0])
+		
+		a1,b1,b2 = a(),b(),b()
+		a1.add_pairwise_overlaps([b1,b2],mutual=False)
+		self.assertEqual(a1.pairwise_overlaps_obj.sites,[b1,b2])
+		self.assertEqual(None,b1.pairwise_overlaps_obj)
+		self.assertEqual(None,b2.pairwise_overlaps_obj)
+		
+		m1 = M()
+		with self.assertRaises(utils.AddObjectError): a1.add_pairwise_overlaps(m1)
+	
+	def test_current(self):
+		print("\n\nOutput goes here\n===============\n")
+		print("\n===============\nOutput ends here\n")
 	
 	
 		
