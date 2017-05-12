@@ -24,8 +24,7 @@ class Complex(core.Model):
 	def add(self,v):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Molecule): self.molecules.append(v)
-		elif isinstance(v,Bond): self.bonds.append(v)
-		else: raise utils.AddObjectError(self,v,['Molecule','Bond'])
+		else: raise utils.AddObjectError(self,v,['Molecule'])
 		return self
 	
 class Molecule(core.Model):
@@ -44,7 +43,6 @@ class Molecule(core.Model):
 	def add(self,v):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Site): self.sites.append(v)
-		elif isinstance(v,Exclusion): self.exclusions.append(v)
 		else: raise utils.AddObjectError(self,v,['Molecule','Bond'])
 		return self
 		
@@ -53,84 +51,136 @@ class Site(core.Model):
 	molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
 	@property
 	def label(self): return self.__class__.__name__
-	@property
-	def bound(self):
-		if self.bond is not None:
-			return True
-		return False
-	@property
-	def unbound(self): return not self.bound
-	@property
-	def available_to_bind(self):
-		return all(site.unbound for site in self.get_excludes())
-	def get_excludes(self):
-		L = []
-		for ex_obj in self.exclusions:
-			for site in ex_obj.sites:
-				if site is not self:	
-					L.append(site)
-		if len(L)>0:
-			return L
-		return None
+	
 	def set_id(self,id):
 		self.id = id
 		return self
-	def add(self,v):
-		if type(v) is list: [self.add(w) for w in v]
-		elif isinstance(v,BooleanStateVariable): self.boolvars.append(v)
-		else: raise utils.AddObjectError(self,v,['BooleanStateVariable'])
-		return self
+	
+	def add(self,v,where=None): 
+		if where is None or where=='boolvars':
+			return self.add_boolvars(v)
+		if where=='overlaps':
+			return self.add_pairwise_overlap_targets(v)
+		if where=='bond':
+			return self.add_bond_to(v) 
+	
+	#### Boolean Variables ####
 	def get_boolvar(self,label,**kwargs):
 		if label is not None:
 			return self.boolvars.get(label=label,**kwargs)
 		else:
 			return self.boolvars.get(**kwargs)
-	def add_pairwise_overlaps(self,sites,mutual=True):
-		if type(sites) is not list:
-			sites = [sites]
-		for site in sites:
-			if isinstance(site,(Site,)) is not True:
-				raise utils.AddObjectError(self,site,['Site'])
-		if self.pairwise_overlaps_obj is None:
-			self.pairwise_overlaps_obj = PairwiseOverlaps(sites=[])
-		self.pairwise_overlaps_obj.sites.extend(sites)
+	def add_boolvars(self,vars):
+		for var in utils.listify(vars):
+			if isinstance(var,(BooleanStateVariable,)) is not True:
+				raise utils.AddObjectError(self,var,['BooleanStateVariable'])
+			self.boolvars.append(var)
+		return self
+	
+	#### Pairwise Overlaps ####
+	def init_pairwise_overlap(self):
+		self.pairwise_overlap = PairwiseOverlap(source=self)
+		return self
+	def add_pairwise_overlap_targets(self,targets,mutual=True):
+		if self.pairwise_overlap is None:
+			self.init_pairwise_overlap()
 		if mutual==True:
-			for site in sites:
-				if site.pairwise_overlaps_obj is None:
-					site.pairwise_overlaps_obj = PairwiseOverlaps(sites=[])
-				site.pairwise_overlaps_obj.sites.append(self)
+			for target in targets:
+				if target.pairwise_overlap is None:
+					target.init_pairwise_overlap()
+		self.pairwise_overlap.add_targets(targets,mutual=mutual)
 		return self
-
-class PairwiseOverlaps(core.Model):
-	site = core.OneToOneAttribute(Site,related_name='pairwise_overlaps_obj')
-	sites = core.ManyToManyAttribute(Site,related_name='pairwise_overlaps_in')
-	
-class Bond(core.Model):
-	id = core.StringAttribute(primary=True,unique=True)
-	complex = core.ManyToOneAttribute(Complex,related_name='bonds')
-	sites = core.OneToManyAttribute(Site,related_name='bond')
-	def set_id(self,id):
-		self.id = id
+	def remove_pairwise_overlap_targets(self,targets):
+		return self.pairwise_overlap.remove_targets(targets)
+	def undef_pairwise_overlap(self):
+		targets = [t for t in self.pairwise_overlap.targets]
+		self.remove_pairwise_overlap_targets(targets)
+		self.pairwise_overlap = None
 		return self
-	def add(self,v):
-		if type(v) is list: [self.add(w) for w in v]
-		elif isinstance(v,Site): self.sites.append(v)
-		else: raise utils.AddObjectError(self,v,['Site'])
-		return self
+	def get_overlaps(self):
+		if self.pairwise_overlap is None:
+			return None
+		if self.pairwise_overlap.n_targets == 0:
+			return None
+		return self.pairwise_overlap.targets
+	@property
+	def has_overlaps(self):
+		if self.pairwise_overlap is not None:
+			if self.pairwise_overlap.n_targets > 0:
+				return True
+		return False
 		
-class Exclusion(core.Model):
-	id = core.StringAttribute(primary=True,unique=True)
-	sites = core.ManyToManyAttribute(Site,related_name='exclusions')
-	molecule = core.ManyToOneAttribute(Molecule,related_name='exclusions')
-	def set_id(self,id):
-		self.id = id
+	#### Binding State ####
+	def init_binding_state(self):
+		self.binding_state = BindingState(source=self)
 		return self
-	def add(self,v):
-		if type(v) is list: [self.add(w) for w in v]
-		elif isinstance(v,Site): self.sites.append(v)
-		else: raise utils.AddObjectError(self,v,['Site'])
+	def add_bond_to(self,target):
+		if self.binding_state is None:
+			self.init_binding_state()
+		if target.binding_state is None:
+			target.init_binding_state()
+		if self.binding_state_value is 'bound':
+			raise utils.GenericError('Another bond already exists!')
+		if target.binding_state_value is 'bound':
+			raise utils.GenericError('Another bond already exists!')
+		self.binding_state.add_targets(target)
+	def remove_bond(self):
+		targets = [t for t in self.binding_state.targets]
+		return self.binding_state.remove_targets(targets)
+	def undef_binding_state(self):
+		self.remove_bond()
+		self.binding_state = None
 		return self
+	def get_binding_partner(self):
+		if self.binding_state is None:
+			return None
+		return self.binding_state.targets[0]
+	@property
+	def binding_state_value(self):
+		if self.binding_state is None:
+			return None
+		if self.binding_state.n_targets==0:
+			return 'unbound'
+		if self.binding_state.n_targets==1:
+			return 'bound'
+		
+###### Site to Site Relationships ######
+class SiteRelationsManager(core.Model):
+	source = core.OneToOneAttribute(Site)
+	targets = core.ManyToManyAttribute(Site)
+	mutual = core.BooleanAttribute(default=True)
+	target_min = core.IntegerAttribute(default=0)
+	target_max = core.IntegerAttribute()
+	attrname = core.StringAttribute()
+	def add_targets(self,targets,mutual=True):
+		for target in utils.listify(targets):
+			self.targets.append(target)
+			if mutual==True:
+				getattr(target,self.attrname).add_targets([self.source],mutual=False)	
+		return self
+	def remove_targets(self,targets,mutual=True):
+		for target in utils.listify(targets):
+			self.targets.remove(target)
+			if mutual==True:
+				getattr(target,self.attrname).remove_targets([self.source],mutual=False)
+		return self
+	def get_targets(self): return self.targets
+	@property
+	def n_targets(self):
+		if self.targets is None: return 0
+		return len(self.targets)
+
+class PairwiseOverlap(SiteRelationsManager):
+	source = core.OneToOneAttribute(Site,related_name='pairwise_overlap')
+	targets = core.ManyToManyAttribute(Site,related_name='pairwise_overlap_targets')
+	attrname = core.StringAttribute(default='pairwise_overlap')
 	
+class BindingState(SiteRelationsManager):
+	source = core.OneToOneAttribute(Site,related_name='binding_state')
+	targets = core.ManyToManyAttribute(Site,related_name='binding_state_targets',max_related=1,max_related_rev=1)
+	attrname = core.StringAttribute(default='binding_state')
+
+
 ###### Variables ######
 class BooleanStateVariable(core.Model):
 	id = core.StringAttribute(primary=True,unique=True)
@@ -224,24 +274,9 @@ class PhosphorylationState(BooleanStateVariable): pass
 class Phosphorylate(SetTrue): pass
 class Dephosphorylate(SetFalse): pass
 
+
 def main():
-	class a(Site): pass
-	class b(Site): pass
-	class M(Molecule): pass
-	
-	a1 = a()
-	b1 = b()
-	b2 = b()
-	vec = [b1,b1,b2]
-	a1.add_pairwise_overlaps(vec)
-	print(a1.pairwise_overlaps_obj.site.__repr__())
-	print(a1.pairwise_overlaps_obj.sites)
-	for site in vec:
-		print([x.site for x in site.pairwise_overlaps_in])
-		
-	m1 = M()
-	a1.add_pairwise_overlaps(m1)
-	
+	pass
 if __name__ == '__main__': 
 	main()
 

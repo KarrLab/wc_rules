@@ -14,55 +14,64 @@ class TestBioschema(unittest.TestCase):
 		self.assertEqual(a.id,'1')
 		
 		with self.assertRaises(utils.AddObjectError): a.add(object())
+	
+	def test_pairwise_overlap(self):
+		class a(bio.Site):pass
+		class b(bio.Site):pass
+		class c(bio.Site):pass
 		
-	def test_bond(self):
-		class A(bio.Site):pass
-		class B(bio.Site):pass
-		a,b = A(), B()
+		a1,b1,c1 = a(),b(),c()
+		self.assertEqual(a1.pairwise_overlap,None)
 		
-		self.assertEqual([x.bond for x in [a,b]],[None,None])
-		self.assertEqual([x.bound for x in [a,b]],[False,False])
+		a1.init_pairwise_overlap()
+		self.assertEqual(a1.pairwise_overlap.source.label,'a')
 		
-		bnd = bio.Bond(sites=[a,b])
-		self.assertEqual([x.label for x in bnd.sites],['A','B'])
-		self.assertEqual([x.bound for x in bnd.sites],[True,True])
+		a1.add_pairwise_overlap_targets([b1,c1])
+		self.assertEqual(a1.has_overlaps,True)
+		self.assertEqual(a1.pairwise_overlap.n_targets,2)
+		self.assertEqual([x.label for x in a1.get_overlaps()],['b','c'])
+		self.assertEqual([x.label for y in a1.get_overlaps() for x in y.get_overlaps()],['a','a'])
 		
-		bnd = bio.Bond().add([a,b])
-		self.assertEqual([x.label for x in bnd.sites],['A','B'])
+		a1.remove_pairwise_overlap_targets(c1)
+		self.assertEqual([x.label for x in a1.get_overlaps()],['b'])
 		
-		bnd = bio.Bond().add(a).add(b)
-		self.assertEqual([x.label for x in bnd.sites],['A','B'])
+		a1.remove_pairwise_overlap_targets(b1)
+		self.assertEqual(a1.has_overlaps,False)
 		
-		bnd.set_id('1')
-		self.assertEqual(bnd.id,'1')
+		a1.add([b1,c1],where='overlaps')
+		self.assertEqual([x.label for x in a1.get_overlaps()],['b','c'])
 		
-		with self.assertRaises(utils.AddObjectError): bnd.add(object())
+		a1.undef_pairwise_overlap()
+		self.assertEqual(a1.pairwise_overlap,None)
 		
-		a = bnd.sites.get(label='A')
-		self.assertEqual(a.label,'A')
+	def test_binding_state(self):
+		class a(bio.Site):pass
+		class b(bio.Site):pass
+		class c(bio.Site):pass
 		
-	def test_exclusion(self):
-		class A(bio.Site):pass
-		class B(bio.Site):pass
-		class C(bio.Site):pass
-		a,b,c = A(), B(), C()
+		a1,b1,c1 = a(),b(),c()
+		self.assertEqual(a1.binding_state,None)
 		
-		exc = bio.Exclusion().add([a,c])
-		self.assertEqual(c.available_to_bind,True)
-		self.assertEqual([x.label for x in exc.sites],['A','C'])
-		self.assertEqual([y.label for x in exc.sites for y in x.get_excludes() ], ['C','A'] )
+		a1.init_binding_state()
+		self.assertEqual(a1.binding_state.source.label,'a')
+		self.assertEqual(a1.binding_state_value,'unbound')
 		
-		bnd  = bio.Bond().add([a,b])
-		self.assertEqual(c.available_to_bind,False)
+		a1.add_bond_to(b1)
+		self.assertEqual(a1.binding_state_value,'bound')
+		self.assertEqual(a1.get_binding_partner().label,'b')
+		self.assertEqual(a1.get_binding_partner().get_binding_partner().label,'a')
 		
-		exc.set_id('1')
-		self.assertEqual(exc.id,'1')
+		with self.assertRaises(utils.GenericError): a1.add_bond_to(c1)
 		
-		with self.assertRaises(utils.AddObjectError): exc.add(object())
+		a1.remove_bond()
+		self.assertEqual([a1.binding_state_value,b1.binding_state_value],['unbound','unbound'])
 		
-		a = exc.sites.get(label='A')
-		self.assertEqual(a.label,'A')
+		a1.add(b1,where='bond')
+		self.assertEqual([a1.binding_state_value,b1.binding_state_value],['bound','bound'])
 		
+		a1.undef_binding_state()
+		self.assertEqual(a1.binding_state,None)
+			
 	def test_state(self):
 		class A(bio.Site):pass
 		class P(bio.BooleanStateVariable):pass
@@ -94,33 +103,17 @@ class TestBioschema(unittest.TestCase):
 		a.set_id('1')
 		self.assertEqual(a.id,'1')
 		
-		exc = bio.Exclusion().add([b,c])
-		a = A().add(b).add(c).add(exc)
-		self.assertEqual([x.label for x in a.sites],['B','C'])
-		self.assertEqual([x.label for x in a.exclusions[0].sites],['B','C'])
-		
 		with self.assertRaises(utils.AddObjectError): a.add(object())
 		
 		b = a.sites.get(label='B')
 		self.assertEqual(b.label,'B')
-		b = exc.sites.get(label='B')
-		self.assertEqual(b.label,'B')
 		
 	def test_complex(self):
 		class A(bio.Molecule):pass
-		class B(bio.Site):pass
-		a1,a2,b1,b2 = A().set_id('1'), A().set_id('2'), B().set_id('1'), B().set_id('2')
-		a1.add(b1)
-		a2.add(b2)
-		bnd = bio.Bond().add([b1,b2])
+		a1,a2 = A().set_id('1'), A().set_id('2')
 		
-		cplx = bio.Complex().add([a1,a2,bnd])
+		cplx = bio.Complex().add([a1,a2])
 		self.assertEqual([x.label for x in cplx.molecules],['A','A'])
-		self.assertEqual([x.label for bnd in cplx.bonds for x in bnd.sites],['B','B'])
-		
-		cplx = bio.Complex().add(a1).add(a2).add(bnd)
-		self.assertEqual([x.label for x in cplx.molecules],['A','A'])
-		self.assertEqual([x.label for bnd in cplx.bonds for x in bnd.sites],['B','B'])
 		
 		cplx.set_id('1')
 		self.assertEqual(cplx.id,'1')
@@ -130,8 +123,6 @@ class TestBioschema(unittest.TestCase):
 		a = cplx.molecules.get(label='A',id='1')
 		self.assertEqual([a.label,a.id],['A','1'])
 		
-		b = cplx.bonds.get().sites.get(label='B',id='1')
-		self.assertEqual([b.label,b.id],['B','1'])
 		
 	def test_bond_op(self):
 		class A(bio.Site):pass
@@ -151,7 +142,6 @@ class TestBioschema(unittest.TestCase):
 		with self.assertRaises(utils.AddObjectError): state_op.set_target([object(),])	
 	
 	def test_rate_expression(self):
-		
 		k1 = rl.Parameter(symbol='k1',value=1000.0)
 		expr1 = rl.RateExpression(expr='k1*k2',parameters=[k1])
 		self.assertEqual([expr1.expr,expr1.parameters.get().symbol,expr1.parameters.get().value],['k1*k2','k1',1000.0])
@@ -182,30 +172,8 @@ class TestBioschema(unittest.TestCase):
 		self.assertEqual(rule1.operations[1].target.label,'P')
 		self.assertEqual([rule1.forward.expr,rule1.reverse.expr],['kf','kr'])
 		
-	def test_pairwise_overlaps(self):
-		class a(bio.Site): pass
-		class b(bio.Site): pass
-		class M(bio.Molecule): pass
-		
-		a1,b1,b2 = a(),b(),b()
 	
-		a1.add_pairwise_overlaps([b1,b2])
-		self.assertEqual(a1.pairwise_overlaps_obj.sites,[b1,b2])
-		self.assertEqual(a1,b1.pairwise_overlaps_obj.sites[0])
-		self.assertEqual(a1,b2.pairwise_overlaps_obj.sites[0])
-		
-		a1,b1,b2 = a(),b(),b()
-		a1.add_pairwise_overlaps([b1,b2],mutual=False)
-		self.assertEqual(a1.pairwise_overlaps_obj.sites,[b1,b2])
-		self.assertEqual(None,b1.pairwise_overlaps_obj)
-		self.assertEqual(None,b2.pairwise_overlaps_obj)
-		
-		m1 = M()
-		with self.assertRaises(utils.AddObjectError): a1.add_pairwise_overlaps(m1)
-	
-	def test_current(self):
-		print("\n\nOutput goes here\n===============\n")
-		print("\n===============\nOutput ends here\n")
+	def test_current(self):pass
 	
 	
 		
