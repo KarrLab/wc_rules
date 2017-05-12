@@ -148,9 +148,6 @@ class Site(core.Model):
 class SiteRelationsManager(core.Model):
 	source = core.OneToOneAttribute(Site)
 	targets = core.ManyToManyAttribute(Site)
-	mutual = core.BooleanAttribute(default=True)
-	target_min = core.IntegerAttribute(default=0)
-	target_max = core.IntegerAttribute()
 	attrname = core.StringAttribute()
 	def add_targets(self,targets,mutual=True):
 		for target in utils.listify(targets):
