@@ -11,7 +11,9 @@ import wc_rules.utils as utils
 import wc_rules.ratelaw as rl
 
 ###### Structures ######
-class Complex(core.Model):
+class BaseClass(core.Model): pass
+
+class Complex(BaseClass):
 	id = core.StringAttribute(primary=True,unique=True)
 	def get_molecule(self,label,**kwargs):
 		if label is not None:
@@ -27,7 +29,7 @@ class Complex(core.Model):
 		else: raise utils.AddObjectError(self,v,['Molecule'])
 		return self
 	
-class Molecule(core.Model):
+class Molecule(BaseClass):
 	id = core.StringAttribute(primary=True,unique=True)
 	complex = core.ManyToOneAttribute(Complex,related_name='molecules')
 	@property
@@ -46,7 +48,7 @@ class Molecule(core.Model):
 		else: raise utils.AddObjectError(self,v,['Molecule','Bond'])
 		return self
 		
-class Site(core.Model):
+class Site(BaseClass):
 	id = core.StringAttribute(primary=True,unique=True)
 	molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
 	@property
@@ -145,7 +147,7 @@ class Site(core.Model):
 			return 'bound'
 		
 ###### Site to Site Relationships ######
-class SiteRelationsManager(core.Model):
+class SiteRelationsManager(BaseClass):
 	source = core.OneToOneAttribute(Site)
 	targets = core.ManyToManyAttribute(Site)
 	attrname = core.StringAttribute()
@@ -179,7 +181,7 @@ class BindingState(SiteRelationsManager):
 
 
 ###### Variables ######
-class BooleanStateVariable(core.Model):
+class BooleanStateVariable(BaseClass):
 	id = core.StringAttribute(primary=True,unique=True)
 	site = core.ManyToOneAttribute(Site,related_name='boolvars')
 	value = core.BooleanAttribute(default=None)
@@ -195,7 +197,7 @@ class BooleanStateVariable(core.Model):
 	def set_false(self): return self.set_value(False)
 	
 ###### Operations ######
-class Operation(core.Model):
+class Operation(BaseClass):
 	id = core.StringAttribute(primary=True,unique=True)
 	@property
 	def label(self): return self.__class__.__name__
@@ -242,7 +244,7 @@ class SetTrue(BooleanStateOperation):pass
 class SetFalse(BooleanStateOperation):pass
 	
 ##### Rule #####
-class Rule(core.Model):
+class Rule(BaseClass):
 	id = core.StringAttribute(primary=True,unique=True)
 	label = core.StringAttribute(unique=True)
 	reactants = core.OneToManyAttribute(Complex,related_name='rule')
