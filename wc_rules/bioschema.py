@@ -12,12 +12,27 @@ import wc_rules.ratelaw as rl
 
 ###### Structures ######
 class BaseClass(core.Model):
+	"""	Base class for bioschema objects.
+	Attributes:
+	* id (:obj:`str`): unique id that can be used to pick object from a list
+	Properties:
+	* label (:obj:`str`): name of the leaf class from which object is created
+	"""
 	id = core.StringAttribute(primary=True,unique=True)
 	def set_id(self,id):
+		""" Sets id attribute.
+		Args:
+			id (:obj:`str`) 
+		Returns:
+			self
+		"""
 		self.id = id
 		return self
 	@property
-	def label(self): return self.__class__.__name__
+	def label(self): 
+		""" Name of the leaf class from which object is created.
+		"""
+		return self.__class__.__name__
 
 class Complex(BaseClass):
 	def get_molecule(self,label,**kwargs):
