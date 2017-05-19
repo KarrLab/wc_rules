@@ -11,18 +11,20 @@ import wc_rules.utils as utils
 import wc_rules.ratelaw as rl
 
 ###### Structures ######
-class BaseClass(core.Model): pass
+class BaseClass(core.Model):
+	id = core.StringAttribute(primary=True,unique=True)
+	def set_id(self,id):
+		self.id = id
+		return self
+	@property
+	def label(self): return self.__class__.__name__
 
 class Complex(BaseClass):
-	id = core.StringAttribute(primary=True,unique=True)
 	def get_molecule(self,label,**kwargs):
 		if label is not None:
 			return self.molecules.get(label=label,**kwargs)	
 		else:
 			return self.molecules.get(**kwargs)
-	def set_id(self,id):
-		self.id = id
-		return self
 	def add(self,v):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Molecule): self.molecules.append(v)
@@ -30,18 +32,12 @@ class Complex(BaseClass):
 		return self
 	
 class Molecule(BaseClass):
-	id = core.StringAttribute(primary=True,unique=True)
 	complex = core.ManyToOneAttribute(Complex,related_name='molecules')
-	@property
-	def label(self): return self.__class__.__name__
 	def get_site(self,label,**kwargs):
 		if label is not None:
 			return self.sites.get(label=label,**kwargs)
 		else:
 			return self.sites.get(**kwargs)
-	def set_id(self,id):
-		self.id = id
-		return self
 	def add(self,v):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Site): self.sites.append(v)
@@ -49,15 +45,7 @@ class Molecule(BaseClass):
 		return self
 		
 class Site(BaseClass):
-	id = core.StringAttribute(primary=True,unique=True)
 	molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
-	@property
-	def label(self): return self.__class__.__name__
-	
-	def set_id(self,id):
-		self.id = id
-		return self
-	
 	def add(self,v,where=None): 
 		if where is None or where=='boolvars':
 			return self.add_boolvars(v)
@@ -182,14 +170,8 @@ class BindingState(SiteRelationsManager):
 
 ###### Variables ######
 class BooleanStateVariable(BaseClass):
-	id = core.StringAttribute(primary=True,unique=True)
 	site = core.ManyToOneAttribute(Site,related_name='boolvars')
 	value = core.BooleanAttribute(default=None)
-	@property
-	def label(self): return self.__class__.__name__
-	def set_id(self,id):
-		self.id = id
-		return self
 	def set_value(self,value):
 		self.value = value
 		return self
@@ -198,18 +180,12 @@ class BooleanStateVariable(BaseClass):
 	
 ###### Operations ######
 class Operation(BaseClass):
-	id = core.StringAttribute(primary=True,unique=True)
-	@property
-	def label(self): return self.__class__.__name__
 	@property
 	def target(self): return None
 	@target.setter
 	def target(self,value): return None
 	def set_target(self,value): 
 		self.target = value
-		return self
-	def set_id(self,id):
-		self.id = id
 		return self
 	
 class BondOperation(Operation):
@@ -245,16 +221,11 @@ class SetFalse(BooleanStateOperation):pass
 	
 ##### Rule #####
 class Rule(BaseClass):
-	id = core.StringAttribute(primary=True,unique=True)
-	label = core.StringAttribute(unique=True)
 	reactants = core.OneToManyAttribute(Complex,related_name='rule')
 	reversible = core.BooleanAttribute(default=False)
 	operations = core.OneToManyAttribute(Operation,related_name='rule')
 	forward = core.OneToOneAttribute(rl.RateExpression,related_name='rule_forward')
 	reverse = core.OneToOneAttribute(rl.RateExpression,related_name='rule_reverse')
-	def set_id(self,id):
-		self.id = id
-		return self
 	def add(self,v):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Complex): self.reactants.append(v)
