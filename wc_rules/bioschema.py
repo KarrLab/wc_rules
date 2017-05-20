@@ -9,6 +9,11 @@
 from obj_model import core
 import wc_rules.utils as utils
 import wc_rules.ratelaw as rl
+import networkx as nx
+
+###### Graph Methods ######
+def node_match(node1,node2):
+	return node2.node_match(node1)
 
 ###### Structures ######
 class BaseClass(core.Model):
@@ -19,6 +24,17 @@ class BaseClass(core.Model):
 	* label (:obj:`str`): name of the leaf class from which object is created
 	"""
 	id = core.StringAttribute(primary=True,unique=True)
+	class GraphMeta(core.Model.Meta):
+		# outward_edges - list of RelatedManager attributes of the class
+		# used in get_edges() to look for the next set of edges.
+		outward_edges = tuple()
+		
+		# semantic - list of attributes/properties whose values
+		# are checked in node_match() to compute 'semantic' equality.
+		# '==' is used to compare, so they must match immutables.
+		# attribute = defined using obj_model.core
+		# property = defined using @property method decorator
+		semantic = tuple()
 	def set_id(self,id):
 		""" Sets id attribute.
 		Args:
@@ -33,8 +49,37 @@ class BaseClass(core.Model):
 		""" Name of the leaf class from which object is created.
 		"""
 		return self.__class__.__name__
+	
+	def node_match(self,other):
+		if other is None: return False
+		if isinstance(other,(self.__class__,)) is not True:
+			return False
+		for attrname in self.__class__.GraphMeta.semantic:
+			self_attr = getattr(self,attrname)
+			other_attr = getattr(other,attrname)
+			if self_attr is not None:
+				if other_attr is None: return False
+			print(attrname,self_attr,other_attr,)
+			if self_attr != other_attr: return False
+		return True
+	def get_edges(self):
+		edges = []
+		for attrname in self.__class__.GraphMeta.outward_edges:
+			if getattr(self,attrname) is not None:
+				attr_obj = getattr(self,attrname)
+				if isinstance(attr_obj,core.RelatedManager):
+					for x in attr_obj:
+						edges.append(tuple([self,x]))
+						edges.extend(x.get_edges())
+				else:
+					edges.append(tuple([self,attr_obj]))
+		return edges
+	
 
 class Complex(BaseClass):
+	class GraphMeta(BaseClass.GraphMeta):
+		outward_edges = tuple(['molecules'])
+		semantic = tuple()
 	def get_molecule(self,label,**kwargs):
 		if label is not None:
 			return self.molecules.get(label=label,**kwargs)	
@@ -46,8 +91,12 @@ class Complex(BaseClass):
 		else: raise utils.AddObjectError(self,v,['Molecule'])
 		return self
 	
+	
 class Molecule(BaseClass):
 	complex = core.ManyToOneAttribute(Complex,related_name='molecules')
+	class GraphMeta(BaseClass.GraphMeta):
+		outward_edges = tuple(['sites'])
+		semantic = tuple()
 	def get_site(self,label,**kwargs):
 		if label is not None:
 			return self.sites.get(label=label,**kwargs)
@@ -58,9 +107,13 @@ class Molecule(BaseClass):
 		elif isinstance(v,Site): self.sites.append(v)
 		else: raise utils.AddObjectError(self,v,['Molecule','Bond'])
 		return self
+	
 		
 class Site(BaseClass):
 	molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
+	class GraphMeta(BaseClass.GraphMeta):
+		outward_edges = tuple(['boolvars','pairwise_overlap','binding_state'])
+		semantic = tuple()
 	def add(self,v,where=None): 
 		if where is None or where=='boolvars':
 			return self.add_boolvars(v)
@@ -154,6 +207,9 @@ class SiteRelationsManager(BaseClass):
 	source = core.OneToOneAttribute(Site)
 	targets = core.ManyToManyAttribute(Site)
 	attrname = core.StringAttribute()
+	class GraphMeta(BaseClass.GraphMeta):
+		outward_edges = tuple(['targets'])
+		semantic = tuple()
 	def add_targets(self,targets,mutual=True):
 		for target in utils.listify(targets):
 			self.targets.append(target)
@@ -181,12 +237,17 @@ class BindingState(SiteRelationsManager):
 	source = core.OneToOneAttribute(Site,related_name='binding_state')
 	targets = core.ManyToManyAttribute(Site,related_name='binding_state_targets',max_related=1,max_related_rev=1)
 	attrname = core.StringAttribute(default='binding_state')
-
-
+	class GraphMeta(BaseClass.GraphMeta):
+		outward_edges = tuple(['targets'])
+		semantic = tuple(['n_targets'])
+		
 ###### Variables ######
 class BooleanStateVariable(BaseClass):
 	site = core.ManyToOneAttribute(Site,related_name='boolvars')
 	value = core.BooleanAttribute(default=None)
+	class GraphMeta(BaseClass.GraphMeta):
+		outward_edges = tuple()
+		semantic = tuple(['value'])
 	def set_value(self,value):
 		self.value = value
 		return self
@@ -262,6 +323,7 @@ class Dephosphorylate(SetFalse): pass
 
 def main():
 	pass
+	
 if __name__ == '__main__': 
 	main()
 
