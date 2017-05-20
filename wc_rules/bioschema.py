@@ -59,7 +59,6 @@ class BaseClass(core.Model):
 			other_attr = getattr(other,attrname)
 			if self_attr is not None:
 				if other_attr is None: return False
-			print(attrname,self_attr,other_attr,)
 			if self_attr != other_attr: return False
 		return True
 	def get_edges(self):
