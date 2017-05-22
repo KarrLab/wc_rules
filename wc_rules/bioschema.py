@@ -9,11 +9,7 @@
 from obj_model import core
 import wc_rules.utils as utils
 import wc_rules.ratelaw as rl
-import networkx as nx
-
-###### Graph Methods ######
-def node_match(node1,node2):
-	return node2.node_match(node1)
+import wc_rules.graph_utils as g
 
 ###### Structures ######
 class BaseClass(core.Model):
@@ -24,16 +20,8 @@ class BaseClass(core.Model):
 	* label (:obj:`str`): name of the leaf class from which object is created
 	"""
 	id = core.StringAttribute(primary=True,unique=True)
-	class GraphMeta(core.Model.Meta):
-		# outward_edges - list of RelatedManager attributes of the class
-		# used in get_edges() to look for the next set of edges.
+	class GraphMeta(g.GraphMeta): 
 		outward_edges = tuple()
-		
-		# semantic - list of attributes/properties whose values
-		# are checked in node_match() to compute 'semantic' equality.
-		# '==' is used to compare, so they must match immutables.
-		# attribute = defined using obj_model.core
-		# property = defined using @property method decorator
 		semantic = tuple()
 	def set_id(self,id):
 		""" Sets id attribute.
@@ -52,31 +40,14 @@ class BaseClass(core.Model):
 	
 	##### Graph Methods #####
 	def node_match(self,other):
-		if other is None: return False
-		if isinstance(other,(self.__class__,)) is not True:
-			return False
-		for attrname in self.__class__.GraphMeta.semantic:
-			self_attr = getattr(self,attrname)
-			other_attr = getattr(other,attrname)
-			if self_attr is not None:
-				if other_attr is None: return False
-			if self_attr != other_attr: return False
-		return True
+		return g.node_compare(self,other)
+		
 	def get_edges(self):
-		edges = []
-		for attrname in self.__class__.GraphMeta.outward_edges:
-			if getattr(self,attrname) is not None:
-				attr_obj = getattr(self,attrname)
-				if isinstance(attr_obj,core.RelatedManager):
-					for x in attr_obj:
-						edges.append(tuple([self,x]))
-						edges.extend(x.get_edges())
-				else:
-					edges.append(tuple([self,attr_obj]))
-		return edges
+		return g.get_edges(self)
+	
 	@property
 	def graph(self):
-		return nx.DiGraph(self.get_edges())
+		return g.get_graph(self)
 
 class Complex(BaseClass):
 	class GraphMeta(BaseClass.GraphMeta):
