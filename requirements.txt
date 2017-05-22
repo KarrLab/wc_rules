@@ -1,1 +1,2 @@
 git+https://github.com/KarrLab/obj_model.git#egg=obj_model
+networkx
