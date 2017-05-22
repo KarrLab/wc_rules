@@ -172,7 +172,33 @@ class TestBioschema(unittest.TestCase):
 		self.assertEqual(rule1.operations[1].target.label,'P')
 		self.assertEqual([rule1.forward.expr,rule1.reverse.expr],['kf','kr'])
 		
-	
+	def test_graph_complex(self):
+		class A(bio.Molecule):pass
+		class B(bio.Molecule):pass
+		class x(bio.Site):pass
+		class y(bio.Site):pass
+		class z(bio.Site):pass
+		
+		A1, B1 = A(), B()
+		x1, y1, z1 = x(), y(), z()
+		p1, p2 = bio.PhosphorylationState(), bio.PhosphorylationState()
+		c1 = bio.Complex()
+		
+		A1.add(x1).add(y1.add(p1))
+		B1.add(z1.add(p1))
+		x1.add_bond_to(z1)
+		y1.init_binding_state()
+		c1.add([A1,B1])
+		
+		g = c1.graph
+		nodes = sorted(list(x.label for x in g.nodes()))
+		edges = sorted(list(tuple(x.label for x in edge) for edge in g.edges() ) )
+		nodes2 = ['A', 'B', 'BindingState', 'BindingState', 'BindingState', 'Complex', 'PhosphorylationState', 'x', 'y', 'z']
+		edges2 = [('A', 'x'), ('A', 'y'), ('B', 'z'), ('Complex', 'A'), ('Complex', 'B'), ('x', 'BindingState'), ('y', 'BindingState'), ('z', 'BindingState'), ('z', 'PhosphorylationState')]
+		self.assertEqual(nodes,nodes2)
+		self.assertEqual(edges,edges2)
+		
+		
 	def test_current(self):pass
 	
 	

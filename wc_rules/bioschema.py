@@ -74,7 +74,9 @@ class BaseClass(core.Model):
 				else:
 					edges.append(tuple([self,attr_obj]))
 		return edges
-	
+	@property
+	def graph(self):
+		return nx.DiGraph(self.get_edges())
 
 class Complex(BaseClass):
 	class GraphMeta(BaseClass.GraphMeta):
