@@ -50,6 +50,7 @@ class BaseClass(core.Model):
 		"""
 		return self.__class__.__name__
 	
+	##### Graph Methods #####
 	def node_match(self,other):
 		if other is None: return False
 		if isinstance(other,(self.__class__,)) is not True:
@@ -255,6 +256,9 @@ class BooleanStateVariable(BaseClass):
 	
 ###### Operations ######
 class Operation(BaseClass):
+	class GraphMeta(BaseClass.GraphMeta):
+		outward_edges = tuple(['target'])
+		semantic = tuple()
 	@property
 	def target(self): return None
 	@target.setter
@@ -301,6 +305,9 @@ class Rule(BaseClass):
 	operations = core.OneToManyAttribute(Operation,related_name='rule')
 	forward = core.OneToOneAttribute(rl.RateExpression,related_name='rule_forward')
 	reverse = core.OneToOneAttribute(rl.RateExpression,related_name='rule_reverse')
+	class GraphMeta(BaseClass.GraphMeta):
+		outward_edges = tuple(['reactants','operations'])
+		semantic = tuple()
 	def add(self,v):
 		if type(v) is list: [self.add(w) for w in v]
 		elif isinstance(v,Complex): self.reactants.append(v)
