@@ -1,18 +1,14 @@
-Welcome to wc_rules's documentation!
-====================================
+`wc_rules` documentation
+========================
 
-Contents:
+Rule-based modeling for whole-cell models.
+
+Contents
+--------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
-   source/modules.rst
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   installation.rst
+   API documentation <source/modules.rst>
+   about.rst
