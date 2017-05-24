@@ -10,6 +10,7 @@ from obj_model import core
 import wc_rules.utils as utils
 import wc_rules.ratelaw as rl
 import wc_rules.graph_utils as g
+import networkx as nx
 
 ###### Structures ######
 class BaseClass(core.Model):
@@ -39,15 +40,12 @@ class BaseClass(core.Model):
 		return self.__class__.__name__
 	
 	##### Graph Methods #####
-	def node_match(self,other):
-		return g.node_compare(self,other)
+	def get_graph(self,recurse=True,memo=None):
+		return g.get_graph(self,recurse=recurse,memo=memo)
 		
-	def get_edges(self):
-		return g.get_edges(self)
-	
 	@property
 	def graph(self):
-		return g.get_graph(self)
+		return self.get_graph(recurse=True)
 
 class Complex(BaseClass):
 	class GraphMeta(BaseClass.GraphMeta):
@@ -240,6 +238,7 @@ class Operation(BaseClass):
 		self.target = value
 		return self
 	
+	
 class BondOperation(Operation):
 	sites = core.OneToManyAttribute(Site,related_name='bond_op')
 	@property
@@ -302,7 +301,7 @@ class Dephosphorylate(SetFalse): pass
 
 def main():
 	pass
-	
+		
 if __name__ == '__main__': 
 	main()
 

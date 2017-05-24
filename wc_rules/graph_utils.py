@@ -39,18 +39,37 @@ def node_compare(current,other):
 		if current_attr != other_attr: return False
 	return True
 	
-def get_edges(node):
-	edges = []
-	for attrname in node.__class__.GraphMeta.outward_edges:
-		if getattr(node,attrname) is not None:
-			attr_obj = getattr(node,attrname)
-			if isinstance(attr_obj,core.RelatedManager):
-				for x in attr_obj:
-					edges.append(tuple([node,x]))
-					edges.extend(x.get_edges())
-			else:
-				edges.append(tuple([node,attr_obj]))
-	return edges
+def get_graph(current_obj,recurse=True,memo=None):
+	def update_graph(graph,obj1):
+		if id(obj1) not in graph:
+			graph.add_node(id(obj1),obj=obj1)
+		else:
+			graph.node[id(obj1)]['obj'] = obj1
 
-def get_graph(node):
-	return nx.DiGraph(node.get_edges())
+	# Initializing if a memo is not provided
+	if memo is None:
+		memo = nx.DiGraph()
+	# Adding node if not already in memo, else updating it
+	update_graph(memo,current_obj)
+	
+	# getting list of next nodes to check
+	next_nodes = []
+	for attrname in current_obj.__class__.GraphMeta.outward_edges:
+		if getattr(current_obj,attrname) is not None:
+			attr = getattr(current_obj,attrname)
+			if isinstance(attr,list):
+				next_nodes.extend(attr)
+			else:
+				next_nodes.append(attr)
+	# for each node in next_nodes,
+	# if an edge already exists, ignore
+	# if adding a new edge, recurse onto that node using current memo
+	for x in next_nodes:
+		update_graph(memo,x)
+		e = tuple([id(current_obj),id(x)])
+		if e not in memo.edges():
+			memo.add_edge(*e)
+			if recurse is True:
+				memo2 = x.get_graph(recurse=True,memo=memo)
+				memo = memo2
+	return memo

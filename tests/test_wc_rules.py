@@ -189,15 +189,20 @@ class TestBioschema(unittest.TestCase):
 		x1.add_bond_to(z1)
 		y1.init_binding_state()
 		c1.add([A1,B1])
-		
+			
 		g = c1.graph
-		nodes = sorted(list(x.label for x in g.nodes()))
-		edges = sorted(list(tuple(x.label for x in edge) for edge in g.edges() ) )
-		nodes2 = ['A', 'B', 'BindingState', 'BindingState', 'BindingState', 'Complex', 'PhosphorylationState', 'x', 'y', 'z']
-		edges2 = [('A', 'x'), ('A', 'y'), ('B', 'z'), ('Complex', 'A'), ('Complex', 'B'), ('x', 'BindingState'), ('y', 'BindingState'), ('z', 'BindingState'), ('z', 'PhosphorylationState')]
-		self.assertEqual(nodes,nodes2)
-		self.assertEqual(edges,edges2)
 		
+		def get_node_label(graph,node): return graph.node[node]['obj'].label
+		
+		nodes1 = sorted([get_node_label(g,x) for x in g.nodes()])
+		nodes2 = ['A', 'B', 'BindingState', 'BindingState', 'BindingState', 'Complex', 'PhosphorylationState', 'x', 'y', 'z']
+		
+		edges1 = sorted([tuple([get_node_label(g,x) for x in edge]) for edge in g.edges()])
+		edges2 = [('A', 'x'), ('A', 'y'), ('B', 'z'), ('BindingState', 'x'), ('BindingState', 'z'), ('Complex', 'A'), ('Complex', 'B'), ('x', 'BindingState'), ('y', 'BindingState'), ('z', 'BindingState'), ('z', 'PhosphorylationState')]
+			
+		self.assertEqual(nodes1,nodes2)
+		self.assertEqual(edges2,edges2)
+			
 		
 	def test_current(self):pass
 	
