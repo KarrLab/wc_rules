@@ -49,7 +49,8 @@ class Complex(BaseClass):
 
     def add(self, other):
         if isinstance(other, list):
-            map(self.add, other)
+            for o in other:
+                self.add(o)
         elif isinstance(other, Molecule):
             self.molecules.append(other)
         else:
@@ -66,7 +67,8 @@ class Molecule(BaseClass):
 
     def add(self, other):
         if isinstance(other, list):
-            map(self.add, other)
+            for o in other:
+                self.add(o)
         elif isinstance(other, Site):
             self.sites.append(other)
         else:
@@ -271,7 +273,8 @@ class BondOperation(Operation):
 
     def set_target(self, other):
         if isinstance(other, list):
-            map(self.set_target, other)
+            for o in other:
+                self.set_target(o)
         elif isinstance(other, Site):
             self.sites.append(other)
         else:
@@ -327,7 +330,8 @@ class Rule(BaseClass):
 
     def add(self, other):
         if isinstance(other, list):
-            map(self.add, other)
+            for o in other:
+                self.add(o)
         elif isinstance(other, Complex):
             self.reactants.append(other)
         elif isinstance(other, Operation):
