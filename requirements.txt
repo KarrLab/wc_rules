@@ -1,2 +1,3 @@
-git+https://github.com/KarrLab/obj_model.git#egg=obj_model
+attrdict
 networkx
+git+https://github.com/KarrLab/obj_model.git#egg=obj_model
