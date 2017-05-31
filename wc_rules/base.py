@@ -108,7 +108,15 @@ class BaseClass(core.Model):
 				raise utils.AddError('Attribute \'{}\' already set. Either unset first or use force=True.'.format(attrname))
 			setattr(self,attrname,obj)
 		return self
-
+		
+	def remove_by_attrname(self,obj,attrname):
+		if attrname not in self.related_types.keys():
+			raise utils.RemoveError('Attribute \'{}\' not found.'.format(attrname))
+		if self.can_append[attrname]:
+			getattr(self,attrname).remove(obj)
+		else:
+			setattr(self,attrname,None)
+		return self
 	
 	##### Graph Methods #####
 	def get_graph(self,recurse=True,memo=None):

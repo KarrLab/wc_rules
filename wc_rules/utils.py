@@ -24,6 +24,7 @@ class GenericError(Exception):
 		super(GenericError, self).__init__(msg)
 		
 class AddError(GenericError):pass
+class RemoveError(GenericError):pass
 		
 class AddObjectError(Exception):
 	def __init__(self,parentobject,currentobject,allowedobjects,methodname='add()'):
