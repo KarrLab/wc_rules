@@ -16,7 +16,7 @@ def node_match(node1,node2):
 	#### this is to be compatible with networkx's subgraph isomorphism algorithm
 	# node2 is from the smaller graph
 	# node1 is from the bigger graph
-	return node2.node_match(node1)
+	return node_compare(node2['obj'],node1['obj'])
 
 def node_compare(current,other):
 	#### Logic: can current node's semantic properties be entirely contained within other node?
@@ -28,16 +28,19 @@ def node_compare(current,other):
 	#		None --- anything is a match
 	#		current.attrib --- None is not a match
 	#		current.attrib == current.attrib is a match
-	if other is None: return False
+	
+	match = True
+	if other is None: match = False
 	if isinstance(other,(current.__class__,)) is not True:
-		return False
+		match = False
 	for attrname in current.__class__.GraphMeta.semantic:
 		current_attr = getattr(current,attrname)
 		other_attr = getattr(other,attrname)
 		if current_attr is not None:
-			if other_attr is None: return False
-		if current_attr != other_attr: return False
-	return True
+			if other_attr is None: match = False
+		if current_attr != other_attr: match = False
+	#print('current=',current,',other=',other,',match=',match)
+	return match
 	
 def get_graph(current_obj,recurse=True,memo=None):
 	def update_graph(graph,obj1):
