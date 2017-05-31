@@ -1,7 +1,7 @@
 from obj_model import core
 import networkx as nx
 
-class GraphMeta(core.Model.Meta):
+class GraphMeta(object):
 	""" Inner class holding values used in graph methods
 	Attributes:
 	* outward_edges (:obj:`str`): attributes to be examined recursively for get_graph(). 
