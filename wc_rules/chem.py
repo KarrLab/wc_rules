@@ -7,60 +7,10 @@
 """
 
 from obj_model import core
-import wc_rules.utils as utils
 import wc_rules.ratelaw as rl
 import wc_rules.graph_utils as g
-import networkx as nx
-
-###### Structures ######
-class BaseClass(core.Model):
-	"""	Base class for bioschema objects.
-	Attributes:
-	* id (:obj:`str`): unique id that can be used to pick object from a list
-	Properties:
-	* label (:obj:`str`): name of the leaf class from which object is created
-	"""
-	id = core.StringAttribute(primary=True,unique=True)
-	class GraphMeta(g.GraphMeta): 
-		outward_edges = tuple()
-		semantic = tuple()
-	def set_id(self,id):
-		""" Sets id attribute.
-		Args:
-			id (:obj:`str`) 
-		Returns:
-			self
-		"""
-		self.id = id
-		return self
-	@property
-	def label(self): 
-		""" Name of the leaf class from which object is created.
-		"""
-		return self.__class__.__name__
-	
-	_related_types = None
-	@property
-	def related_types(self):
-		''' A dictionary {attrname:class} of related classes '''
-		if self._related_types is None:
-			type_dict = dict()
-			for attrname,attr in list(self.__class__.Meta.attributes.items()):
-				if hasattr(attr,'related_class'):
-					type_dict[attrname] = attr.related_class
-			for attrname,attr in list(self.__class__.Meta.related_attributes.items()):
-				if hasattr(attr,'primary_class'):
-					type_dict[attrname] = attr.primary_class
-			self._related_types = type_dict
-		return self._related_types
-	
-	##### Graph Methods #####
-	def get_graph(self,recurse=True,memo=None):
-		return g.get_graph(self,recurse=recurse,memo=memo)
-		
-	@property
-	def graph(self):
-		return self.get_graph(recurse=True)
+from wc_rules.base import BaseClass
+import wc_rules.utils as utils
 
 class Complex(BaseClass):
 	class GraphMeta(BaseClass.GraphMeta):
@@ -97,8 +47,11 @@ class Molecule(BaseClass):
 		
 class Site(BaseClass):
 	molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
+	bond = core.OneToOneAttribute('Site',related_name='bond')
+	overlaps = core.ManyToManyAttribute('Site',related_name='overlaps')
 	class GraphMeta(BaseClass.GraphMeta):
-		outward_edges = tuple(['boolvars','pairwise_overlap','binding_state'])
+		#outward_edges = tuple(['boolvars','pairwise_overlap','binding_state'])
+		outward_edges = tuple(['bond','overlaps','boolvars','pairwise_overlap','binding_state'])
 		semantic = tuple()
 	def add(self,v,where=None): 
 		if where is None or where=='boolvars':
@@ -301,18 +254,6 @@ class Rule(BaseClass):
 		elif isinstance(v,Operation): self.operations.append(v)
 		else: raise utils.AddObjectError(self,v,['Complex','Operation'])
 		return self
-
-###### Structure Improvements ######
-class Protein(Molecule): pass
-class ProteinSite(Site): pass
-
-###### Variable Improvements ######
-class PhosphorylationState(BooleanStateVariable): pass
-
-###### Operation Improvements ######
-class Phosphorylate(SetTrue): pass
-class Dephosphorylate(SetFalse): pass
-
 
 def main():
 	pass
