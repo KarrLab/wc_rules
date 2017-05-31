@@ -104,7 +104,6 @@ class BaseClass(core.Model):
 		if self.can_append[attrname]:
 			getattr(self,attrname).append(obj)
 		else:
-			print(getattr(self,attrname))
 			if (getattr(self,attrname) is not None) and (not force):
 				raise utils.AddError('Attribute \'{}\' already set. Either unset first or use force=True.'.format(attrname))
 			setattr(self,attrname,obj)
