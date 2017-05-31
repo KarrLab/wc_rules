@@ -39,17 +39,20 @@ class BaseClass(core.Model):
 		"""
 		return self.__class__.__name__
 	
+	_related_types = None
 	@property
 	def related_types(self):
 		''' A dictionary {attrname:class} of related classes '''
-		type_dict = dict()
-		for attrname,attr in list(self.__class__.Meta.attributes.items()):
-			if hasattr(attr,'related_class'):
-				type_dict[attrname] = attr.related_class
-		for attrname,attr in list(self.__class__.Meta.related_attributes.items()):
-			if hasattr(attr,'primary_class'):
-				type_dict[attrname] = attr.primary_class
-		return type_dict
+		if self._related_types is None:
+			type_dict = dict()
+			for attrname,attr in list(self.__class__.Meta.attributes.items()):
+				if hasattr(attr,'related_class'):
+					type_dict[attrname] = attr.related_class
+			for attrname,attr in list(self.__class__.Meta.related_attributes.items()):
+				if hasattr(attr,'primary_class'):
+					type_dict[attrname] = attr.primary_class
+			self._related_types = type_dict
+		return self._related_types
 	
 	##### Graph Methods #####
 	def get_graph(self,recurse=True,memo=None):
