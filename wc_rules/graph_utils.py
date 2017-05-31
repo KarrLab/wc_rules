@@ -54,13 +54,17 @@ def get_graph(current_obj,recurse=True,memo=None):
 	
 	# getting list of next nodes to check
 	next_nodes = []
+	node_relation = {}
 	for attrname in current_obj.__class__.GraphMeta.outward_edges:
 		if getattr(current_obj,attrname) is not None:
 			attr = getattr(current_obj,attrname)
 			if isinstance(attr,list):
 				next_nodes.extend(attr)
+				for a in attr:
+					node_relation[a] = attrname
 			else:
 				next_nodes.append(attr)
+				node_relation[attr] = attrname 
 	# for each node in next_nodes,
 	# if an edge already exists, ignore
 	# if adding a new edge, recurse onto that node using current memo
@@ -68,7 +72,7 @@ def get_graph(current_obj,recurse=True,memo=None):
 		update_graph(memo,x)
 		e = tuple([id(current_obj),id(x)])
 		if e not in memo.edges():
-			memo.add_edge(*e)
+			memo.add_edge(*e,relation=node_relation[x])
 			if recurse is True:
 				memo2 = x.get_graph(recurse=True,memo=memo)
 				memo = memo2
