@@ -112,6 +112,10 @@ class BaseClass(core.Model):
 	def remove_by_attrname(self,obj,attrname):
 		if attrname not in self.related_types.keys():
 			raise utils.RemoveError('Attribute \'{}\' not found.'.format(attrname))
+		if isinstance(obj,list):
+			for x in obj:
+				self.remove_by_attrname(x,attrname=attrname)
+			return self
 		if self.can_append[attrname]:
 			getattr(self,attrname).remove(obj)
 		else:
@@ -129,6 +133,33 @@ class BaseClass(core.Model):
 				if obj in getattr(self,attrname):
 					attrs.append(attrname)
 		return attrs
+		
+	def add(self,obj):
+		if isinstance(obj,list):
+			for x in obj:
+				self.add(x)
+			return self
+		compatible_attrs = self.get_compatible_attributes(obj)
+		if len(compatible_attrs)==0:
+			raise utils.AddError('Compatible Attribute not found.')
+		if len(compatible_attrs)>1:
+			raise utils.AddError('Multiple compatible Attributes found. Use add_by_attrname().')
+		self.add_by_attrname(obj,compatible_attrs[0])
+		return self
+		
+	def remove(self,obj,force=False):
+		if isinstance(obj,list):
+			for x in obj:
+				self.remove(x)
+			return self
+		attrs = self.attrs_that_contain(obj)
+		if len(attrs)==0:
+			raise utils.RemoveError('Object not found.')
+		if len(attrs)>1 and (not force):
+			raise utils.RemoveError('Multiple references found to object. Use add_by_attrname() or force=True.')
+		for attr in attrs:
+			self.remove_by_attrname(obj,attr)
+		return self
 	
 	##### Graph Methods #####
 	def get_graph(self,recurse=True,memo=None):
