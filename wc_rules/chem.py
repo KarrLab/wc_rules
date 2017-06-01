@@ -21,11 +21,6 @@ class Complex(BaseClass):
 			return self.molecules.get(label=label,**kwargs)	
 		else:
 			return self.molecules.get(**kwargs)
-	def add(self,v):
-		if type(v) is list: [self.add(w) for w in v]
-		elif isinstance(v,Molecule): self.molecules.append(v)
-		else: raise utils.AddObjectError(self,v,['Molecule'])
-		return self
 	
 	
 class Molecule(BaseClass):
@@ -38,28 +33,14 @@ class Molecule(BaseClass):
 			return self.sites.get(label=label,**kwargs)
 		else:
 			return self.sites.get(**kwargs)
-	def add(self,v):
-		if type(v) is list: [self.add(w) for w in v]
-		elif isinstance(v,Site): self.sites.append(v)
-		else: raise utils.AddObjectError(self,v,['Molecule','Bond'])
-		return self
-	
 		
 class Site(BaseClass):
 	molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
 	bond = core.OneToOneAttribute('Site',related_name='bond')
 	overlaps = core.ManyToManyAttribute('Site',related_name='overlaps')
 	class GraphMeta(BaseClass.GraphMeta):
-		#outward_edges = tuple(['boolvars','pairwise_overlap','binding_state'])
-		outward_edges = tuple(['bond','overlaps','boolvars','pairwise_overlap','binding_state'])
+		outward_edges = tuple(['bond','overlaps','boolvars'])
 		semantic = tuple()
-	def add(self,v,where=None): 
-		if where is None or where=='boolvars':
-			return self.add_boolvars(v)
-		if where=='overlaps':
-			return self.add_pairwise_overlap_targets(v)
-		if where=='bond':
-			return self.add_bond_to(v) 
 	
 	#### Boolean Variables ####
 	def get_boolvar(self,label,**kwargs):
@@ -67,118 +48,33 @@ class Site(BaseClass):
 			return self.boolvars.get(label=label,**kwargs)
 		else:
 			return self.boolvars.get(**kwargs)
-	def add_boolvars(self,vars):
-		for var in utils.listify(vars):
-			if isinstance(var,(BooleanStateVariable,)) is not True:
-				raise utils.AddObjectError(self,var,['BooleanStateVariable'])
-			self.boolvars.append(var)
-		return self
 	
 	#### Pairwise Overlaps ####
-	def init_pairwise_overlap(self):
-		self.pairwise_overlap = PairwiseOverlap(source=self)
-		return self
-	def add_pairwise_overlap_targets(self,targets,mutual=True):
-		if self.pairwise_overlap is None:
-			self.init_pairwise_overlap()
-		if mutual==True:
-			for target in targets:
-				if target.pairwise_overlap is None:
-					target.init_pairwise_overlap()
-		self.pairwise_overlap.add_targets(targets,mutual=mutual)
-		return self
-	def remove_pairwise_overlap_targets(self,targets):
-		return self.pairwise_overlap.remove_targets(targets)
-	def undef_pairwise_overlap(self):
-		targets = [t for t in self.pairwise_overlap.targets]
-		self.remove_pairwise_overlap_targets(targets)
-		self.pairwise_overlap = None
-		return self
+	def add_overlaps(self,other_sites,mutual=True):
+		return self.add_by_attrname(other_sites,'overlaps')
+
+	def remove_overlaps(self,other_sites):
+		return self.remove_by_attrname(other_sites,'overlaps')
+	
+	def undef_overlaps(self):
+		self.overlaps = None
+		return self 
+		
 	def get_overlaps(self):
-		if self.pairwise_overlap is None:
-			return None
-		if self.pairwise_overlap.n_targets == 0:
-			return None
-		return self.pairwise_overlap.targets
+		return self.overlaps
+		
 	@property
 	def has_overlaps(self):
-		if self.pairwise_overlap is not None:
-			if self.pairwise_overlap.n_targets > 0:
-				return True
-		return False
+		return self.overlaps is not None
 		
 	#### Binding State ####
-	def init_binding_state(self):
-		self.binding_state = BindingState(source=self)
-		return self
-	def add_bond_to(self,target):
-		if self.binding_state is None:
-			self.init_binding_state()
-		if target.binding_state is None:
-			target.init_binding_state()
-		if self.binding_state_value is 'bound':
-			raise utils.GenericError('Another bond already exists!')
-		if target.binding_state_value is 'bound':
-			raise utils.GenericError('Another bond already exists!')
-		self.binding_state.add_targets(target)
-	def remove_bond(self):
-		targets = [t for t in self.binding_state.targets]
-		return self.binding_state.remove_targets(targets)
+	def add_unbound_state(self):pass
+	def add_bond_to(self,target):pass
+	def remove_bond(self):pass
 	def undef_binding_state(self):
-		self.remove_bond()
-		self.binding_state = None
-		return self
-	def get_binding_partner(self):
-		if self.binding_state is None:
-			return None
-		return self.binding_state.targets[0]
 	@property
-	def binding_state_value(self):
-		if self.binding_state is None:
-			return None
-		if self.binding_state.n_targets==0:
-			return 'unbound'
-		if self.binding_state.n_targets==1:
-			return 'bound'
-		
-###### Site to Site Relationships ######
-class SiteRelationsManager(BaseClass):
-	source = core.OneToOneAttribute(Site)
-	targets = core.ManyToManyAttribute(Site)
-	attrname = core.StringAttribute()
-	class GraphMeta(BaseClass.GraphMeta):
-		outward_edges = tuple(['targets'])
-		semantic = tuple()
-	def add_targets(self,targets,mutual=True):
-		for target in utils.listify(targets):
-			self.targets.append(target)
-			if mutual==True:
-				getattr(target,self.attrname).add_targets([self.source],mutual=False)	
-		return self
-	def remove_targets(self,targets,mutual=True):
-		for target in utils.listify(targets):
-			self.targets.remove(target)
-			if mutual==True:
-				getattr(target,self.attrname).remove_targets([self.source],mutual=False)
-		return self
-	def get_targets(self): return self.targets
-	@property
-	def n_targets(self):
-		if self.targets is None: return 0
-		return len(self.targets)
-
-class PairwiseOverlap(SiteRelationsManager):
-	source = core.OneToOneAttribute(Site,related_name='pairwise_overlap')
-	targets = core.ManyToManyAttribute(Site,related_name='pairwise_overlap_targets')
-	attrname = core.StringAttribute(default='pairwise_overlap')
-	
-class BindingState(SiteRelationsManager):
-	source = core.OneToOneAttribute(Site,related_name='binding_state')
-	targets = core.ManyToManyAttribute(Site,related_name='binding_state_targets',max_related=1,max_related_rev=1)
-	attrname = core.StringAttribute(default='binding_state')
-	class GraphMeta(BaseClass.GraphMeta):
-		outward_edges = tuple(['targets'])
-		semantic = tuple(['n_targets'])
+	def binding_state_value(self):pass		
+	def get_binding_partner(self):pass
 		
 ###### Variables ######
 class BooleanStateVariable(BaseClass):
@@ -205,8 +101,7 @@ class Operation(BaseClass):
 	def set_target(self,value): 
 		self.target = value
 		return self
-	
-	
+
 class BondOperation(Operation):
 	sites = core.OneToManyAttribute(Site,related_name='bond_op')
 	@property
@@ -248,16 +143,35 @@ class Rule(BaseClass):
 	class GraphMeta(BaseClass.GraphMeta):
 		outward_edges = tuple(['reactants','operations'])
 		semantic = tuple()
-	def add(self,v):
-		if type(v) is list: [self.add(w) for w in v]
-		elif isinstance(v,Complex): self.reactants.append(v)
-		elif isinstance(v,Operation): self.operations.append(v)
-		else: raise utils.AddObjectError(self,v,['Complex','Operation'])
-		return self
 
 def main():
-	pass
-		
+	class A(Site):pass
+	class B(Site):pass
+	class C(Site):pass
+	
+	a1,b1,c1 = A(), B(), C()
+	a1.add_unbound_state()
+	print(a1.binding_state_value)
+	a1.add_bond_to(b1)
+	
+	print(a1.binding_state_value,a1.get_binding_partner())
+	print(b1.binding_state_value,b1.get_binding_partner())
+	print()
+	
+	a1.bond = None
+	a1.bond = a1
+	
+	print(a1.bond)
+	b1.remove_bond()
+	print(a1.binding_state_value,a1.get_binding_partner())
+	print(b1.binding_state_value,b1.get_binding_partner())
+	print()
+	a1.undef_binding_state()
+	print(a1.binding_state_value,a1.bond)
+	
+	
+	
+	
 if __name__ == '__main__': 
 	main()
 
