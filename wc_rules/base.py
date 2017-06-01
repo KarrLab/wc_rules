@@ -119,12 +119,16 @@ class BaseClass(core.Model):
 		return self
 		
 	def __contains__(self,obj):
+		return len(self.attrs_that_contain(obj))>0
+	
+	def attrs_that_contain(self,obj):
 		related_attrs = self.get_compatible_attributes(obj)
+		attrs = []
 		for attrname in related_attrs:
 			if getattr(self,attrname) is not None:
 				if obj in getattr(self,attrname):
-					return True
-		return False
+					attrs.append(attrname)
+		return attrs
 	
 	##### Graph Methods #####
 	def get_graph(self,recurse=True,memo=None):
