@@ -166,32 +166,7 @@ class Rule(BaseClass):
 		semantic = tuple()
 
 def main():
-	class A(Site):pass
-	class B(Site):pass
-	class C(Site):pass
-	
-	a1,b1,c1 = A(), B(), C()
-	a1.add_unbound_state()
-	print(a1.binding_state_value)
-	a1.add_bond_to(b1)
-	
-	print(a1.binding_state_value,a1.get_binding_partner())
-	print(b1.binding_state_value,b1.get_binding_partner())
-	print()
-	
-	a1.bond = None
-	a1.bond = a1
-	
-	print(a1.bond)
-	b1.remove_bond()
-	print(a1.binding_state_value,a1.get_binding_partner())
-	print(b1.binding_state_value,b1.get_binding_partner())
-	print()
-	a1.undef_binding_state()
-	print(a1.binding_state_value,a1.bond)
-	
-	
-	
+	pass
 	
 if __name__ == '__main__': 
 	main()
