@@ -68,13 +68,34 @@ class Site(BaseClass):
 		return self.overlaps is not None
 		
 	#### Binding State ####
-	def add_unbound_state(self):pass
-	def add_bond_to(self,target):pass
-	def remove_bond(self):pass
 	def undef_binding_state(self):
+		self.bond = None
+		return self
+	def add_unbound_state(self):
+		self.bond = self
+		return self
+	def add_bond_to(self,target):
+		for x in [self,target]:
+			x.undef_binding_state()
+		self.bond = target
+		return self
+	def remove_bond(self):
+		other = self.bond
+		for x in [self,other]:
+			x.undef_binding_state()
+			x.add_unbound_state()
+		return self
 	@property
-	def binding_state_value(self):pass		
-	def get_binding_partner(self):pass
+	def binding_state_value(self):
+		if self.bond is None: return None
+		elif self.bond is self: return 'unbound'
+		else: return 'bound'
+	
+	def get_binding_partner(self):
+		if self.bond is not None:
+			if self.bond is self:
+				return None
+		return self.bond
 		
 ###### Variables ######
 class BooleanStateVariable(BaseClass):
