@@ -1,4 +1,5 @@
-from wc_rules import bioschema as bio
+from wc_rules import bio
+from wc_rules import chem
 from wc_rules import ratelaw as rl
 from wc_rules import utils
 import unittest
@@ -6,7 +7,7 @@ import unittest
 class TestBioschema(unittest.TestCase):
 	
 	def test_site(self):
-		class A(bio.Site):pass
+		class A(chem.Site):pass
 		a = A()
 		self.assertEqual(a.label,'A')
 		
@@ -16,9 +17,9 @@ class TestBioschema(unittest.TestCase):
 		with self.assertRaises(utils.AddObjectError): a.add(object())
 	
 	def test_pairwise_overlap(self):
-		class a(bio.Site):pass
-		class b(bio.Site):pass
-		class c(bio.Site):pass
+		class a(chem.Site):pass
+		class b(chem.Site):pass
+		class c(chem.Site):pass
 		
 		a1,b1,c1 = a(),b(),c()
 		self.assertEqual(a1.pairwise_overlap,None)
@@ -45,9 +46,9 @@ class TestBioschema(unittest.TestCase):
 		self.assertEqual(a1.pairwise_overlap,None)
 		
 	def test_binding_state(self):
-		class a(bio.Site):pass
-		class b(bio.Site):pass
-		class c(bio.Site):pass
+		class a(chem.Site):pass
+		class b(chem.Site):pass
+		class c(chem.Site):pass
 		
 		a1,b1,c1 = a(),b(),c()
 		self.assertEqual(a1.binding_state,None)
@@ -73,8 +74,8 @@ class TestBioschema(unittest.TestCase):
 		self.assertEqual(a1.binding_state,None)
 			
 	def test_state(self):
-		class A(bio.Site):pass
-		class P(bio.BooleanStateVariable):pass
+		class A(chem.Site):pass
+		class P(chem.BooleanStateVariable):pass
 		a,p = A(), P()
 		self.assertEqual(p.label,'P')
 		
@@ -91,9 +92,9 @@ class TestBioschema(unittest.TestCase):
 		self.assertEqual(p.value,False)
 		
 	def test_molecule(self):
-		class A(bio.Molecule):pass
-		class B(bio.Site):pass
-		class C(bio.Site):pass
+		class A(chem.Molecule):pass
+		class B(chem.Site):pass
+		class C(chem.Site):pass
 		a,b,c = A(), B(), C()
 		self.assertEqual(a.label,'A')
 		
@@ -109,10 +110,10 @@ class TestBioschema(unittest.TestCase):
 		self.assertEqual(b.label,'B')
 		
 	def test_complex(self):
-		class A(bio.Molecule):pass
+		class A(chem.Molecule):pass
 		a1,a2 = A().set_id('1'), A().set_id('2')
 		
-		cplx = bio.Complex().add([a1,a2])
+		cplx = chem.Complex().add([a1,a2])
 		self.assertEqual([x.label for x in cplx.molecules],['A','A'])
 		
 		cplx.set_id('1')
@@ -125,17 +126,17 @@ class TestBioschema(unittest.TestCase):
 		
 		
 	def test_bond_op(self):
-		class A(bio.Site):pass
+		class A(chem.Site):pass
 		a1,a2 = A().set_id('1'), A().set_id('2')
-		bnd_op = bio.BondOperation().set_target([a1,a2])
+		bnd_op = chem.BondOperation().set_target([a1,a2])
 		self.assertEqual([x.label for x in bnd_op.target],['A','A'])
 		
 		with self.assertRaises(utils.AddObjectError): bnd_op.set_target(object())
 		
 	def test_state_op(self):
-		class P(bio.BooleanStateVariable):pass
+		class P(chem.BooleanStateVariable):pass
 		p = P()
-		state_op = bio.BooleanStateOperation().set_target(p)
+		state_op = chem.BooleanStateOperation().set_target(p)
 		self.assertEqual(state_op.target.label,'P')
 		
 		with self.assertRaises(utils.AddObjectError): state_op.set_target(object())
@@ -147,25 +148,25 @@ class TestBioschema(unittest.TestCase):
 		self.assertEqual([expr1.expr,expr1.parameters.get().symbol,expr1.parameters.get().value],['k1*k2','k1',1000.0])
 	
 	def test_rule(self):
-		class A(bio.Molecule): pass
-		class B(bio.Molecule): pass
-		class b(bio.Site): pass
-		class a(bio.Site): pass
-		class P(bio.BooleanStateVariable):pass
+		class A(chem.Molecule): pass
+		class B(chem.Molecule): pass
+		class b(chem.Site): pass
+		class a(chem.Site): pass
+		class P(chem.BooleanStateVariable):pass
 		
 		a1 = a()
 		b1 = b().add( P() )
 		A1 = A().add( a1  )
 		B1 = B().add( b1  )
 		
-		reac1 = bio.Complex().add(A1)
-		reac2 = bio.Complex().add(B1)
-		op1 = bio.AddBond().set_target([a1,b1])
+		reac1 = chem.Complex().add(A1)
+		reac2 = chem.Complex().add(B1)
+		op1 = chem.AddBond().set_target([a1,b1])
 		op2 = bio.Phosphorylate().set_target(b1.boolvars.get())
 		kf = rl.RateExpression(expr='kf')
 		kr = rl.RateExpression(expr='kr')
 		
-		rule1 = bio.Rule(reversible=True,forward=kf,reverse=kr).add([reac1,reac2,op1,op2])
+		rule1 = chem.Rule(reversible=True,forward=kf,reverse=kr).add([reac1,reac2,op1,op2])
  		
 		self.assertEqual([x.label for y in rule1.reactants for x in y.molecules],['A','B'])
 		self.assertEqual([y.label for y in rule1.operations[0].target],['a','b'])
@@ -173,16 +174,16 @@ class TestBioschema(unittest.TestCase):
 		self.assertEqual([rule1.forward.expr,rule1.reverse.expr],['kf','kr'])
 		
 	def test_graph_complex(self):
-		class A(bio.Molecule):pass
-		class B(bio.Molecule):pass
-		class x(bio.Site):pass
-		class y(bio.Site):pass
-		class z(bio.Site):pass
+		class A(chem.Molecule):pass
+		class B(chem.Molecule):pass
+		class x(chem.Site):pass
+		class y(chem.Site):pass
+		class z(chem.Site):pass
 		
 		A1, B1 = A(), B()
 		x1, y1, z1 = x(), y(), z()
 		p1, p2 = bio.PhosphorylationState(), bio.PhosphorylationState()
-		c1 = bio.Complex()
+		c1 = chem.Complex()
 		
 		A1.add(x1).add(y1.add(p1))
 		B1.add(z1.add(p1))
