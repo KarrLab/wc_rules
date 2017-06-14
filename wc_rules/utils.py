@@ -25,6 +25,8 @@ class GenericError(Exception):
 		
 class AddError(GenericError):pass
 class RemoveError(GenericError):pass
+class SetError(GenericError):pass
+class FindError(GenericError):pass
 		
 class AddObjectError(Exception):
 	def __init__(self,parentobject,currentobject,allowedobjects,methodname='add()'):
