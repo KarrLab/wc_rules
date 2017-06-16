@@ -9,7 +9,7 @@
 from obj_model import core
 import wc_rules.graph_utils as g
 import wc_rules.utils as utils
-
+	
 ###### Structures ######
 class BaseClass(core.Model):
 	"""	Base class for bioschema objects.
@@ -19,9 +19,58 @@ class BaseClass(core.Model):
 	* label (:obj:`str`): name of the leaf class from which object is created
 	"""
 	id = core.StringAttribute(primary=True,unique=True)
+	attribute_properties = dict()
+	
 	class GraphMeta(g.GraphMeta): 
 		outward_edges = tuple()
 		semantic = tuple()
+		
+	def __init__(self,**kwargs):
+		super().__init__(**kwargs)
+		self.attribute_properties = self.make_attribute_properties_dict()
+		self.addable_classes = self.make_addable_class_dict()
+		
+	def make_attribute_properties_dict(self):
+		attrdict = dict()
+		cls = self.__class__
+		
+		def populate_attribute(attrname,attr,check = 'related_class'):
+			x = {'related':False,'append':False,'related_class':None}
+			if check=='related_class' and hasattr(attr,'related_class'):
+				x['related'] = True
+				x['related_class'] = attr.related_class
+				if isinstance(attr,(core.OneToManyAttribute,core.ManyToManyAttribute,)):
+					x['append'] = True
+			elif check=='primary_class' and hasattr(attr,'primary_class'):
+				x['related'] = True
+				x['related_class'] = attr.primary_class
+				if isinstance(attr,(core.ManyToManyAttribute,core.ManyToOneAttribute,)):
+					x['append'] = True
+			return x
+			
+		for attrname,attr in cls.Meta.attributes.items():
+			attrdict[attrname] = dict()
+			attrdict[attrname].update(populate_attribute(attrname,attr,'related_class'))
+		for attrname,attr in cls.Meta.related_attributes.items():
+			if attrname not in attrdict:
+				attrdict[attrname] = dict()
+			attrdict[attrname].update(populate_attribute(attrname,attr,'primary_class'))
+		return attrdict
+	
+	def make_addable_class_dict(self):
+		d = self.attribute_properties
+		clsdict = dict()
+		
+		for attrname in d:
+			if d[attrname]['related']:
+				rel = d[attrname]['related_class']
+				if rel not in clsdict:
+					clsdict[rel] = {'attrnames':list(),'easy_add':True}
+				else:
+					clsdict[rel]['easy_add'] = False
+				clsdict[rel]['attrnames'].append(attrname)
+		return clsdict		
+					
 	def set_id(self,id):
 		""" Sets id attribute.
 		Args:
@@ -37,59 +86,7 @@ class BaseClass(core.Model):
 		""" Name of the leaf class from which object is created.
 		"""
 		return self.__class__.__name__
-	
-	
-	_attribute_properties = dict()
-	_attributes_populated = False
-	_where_to_add = dict()
-	
-	def __init__(self,**kwargs):
-		super(BaseClass,self).__init__(**kwargs)
-		if not self.__class__._attributes_populated:
-			self.__class__.populate_attribute_properties()
-			self.__class__._attributes_populated = True
-		return
-	
-	@classmethod
-	def populate_attribute_properties(cls):
-		if len(cls._attribute_properties) == 0:
-			to_one_types = (core.OneToOneAttribute,core.ManyToOneAttribute,)
-			to_many_types = (core.OneToManyAttribute,core.ManyToManyAttribute,)
-			one_to_types = (core.OneToOneAttribute,core.OneToManyAttribute,)
-			many_to_types = (core.ManyToManyAttribute,core.ManyToOneAttribute,)
-					
-			for attrname,attr in list(cls.Meta.attributes.items()):
-				cls._attribute_properties[attrname] = dict()
-				if hasattr(attr,'related_class'):
-					cls._attribute_properties[attrname]['related'] = True
-					cls._attribute_properties[attrname]['related_class'] = attr.related_class
-					if isinstance(attr,to_one_types):
-						cls._attribute_properties[attrname]['append'] = False
-					if isinstance(attr,to_many_types):
-						cls._attribute_properties[attrname]['append'] = True
-				else:
-					cls._attribute_properties[attrname]['related'] = False
-					cls._attribute_properties[attrname]['append'] = False
-			for attrname,attr in list(cls.Meta.related_attributes.items()):
-				cls._attribute_properties[attrname] = dict()
-				if hasattr(attr,'primary_class'):
-					cls._attribute_properties[attrname]['related'] = True
-					cls._attribute_properties[attrname]['related_class'] = attr.primary_class
-					if isinstance(attr,one_to_types):
-						cls._attribute_properties[attrname]['append'] = False
-					if isinstance(attr,many_to_types):
-						cls._attribute_properties[attrname]['append'] = True
-				else:
-					cls._attribute_properties[attrname]['related'] = False
-					cls._attribute_properties[attrname]['append'] = False
-		for attrname in cls._attribute_properties:
-			if cls._attribute_properties[attrname]['related']:
-				related_class = cls._attribute_properties[attrname]['related_class']
-				if related_class not in cls._where_to_add:
-					cls._where_to_add[related_class] = []
-				cls._where_to_add[related_class].append(attrname)	
-		return
-
+		
 	def find_attr_by_name(self,attrname):
 		try:
 			attr = getattr(self,attrname)
@@ -97,6 +94,7 @@ class BaseClass(core.Model):
 			raise utils.FindError('Could not get attribute {}'.format(attrname))
 		return attr
 		
+	# not-so-clever methods
 	def add_by_attrname(self,obj,attrname):
 		attr = self.find_attr_by_name(attrname)
 		try:
@@ -120,6 +118,9 @@ class BaseClass(core.Model):
 		if force or attr is None:
 			try:
 				setattr(self,attrname,obj)
+				str1 = '\'' + attrname + '\''
+				if str1 in str(getattr(self,attrname).validate()):
+					raise utils.SetError('Data type incompatible with attribute \'{}\'.'.format(attrname))
 			except:
 				raise utils.SetError('Unable to set value of attribute \'{}\'.'.format(attrname))
 		else:
@@ -133,6 +134,60 @@ class BaseClass(core.Model):
 		except:
 			raise utils.SetError('Unable to unset value of attribute \'{}\'.'.format(attrname))
 		return self
+	
+	# clever methods
+	def get_compatible_attribute_names(self,obj):
+		attrnames = []
+		for x in self.addable_classes:
+			if isinstance(obj,x):
+				for y in self.addable_classes[x]['attrnames']:
+					if y not in attrnames:
+						attrnames.append(y)
+		return attrnames
+	
+	def add(self,obj,attrname=None):
+		if type(obj) is list:
+			for x  in obj:
+				self.add(x,attrname)
+			return self
+		if attrname is None:
+			compatible_attrnames = self.get_compatible_attribute_names(obj)
+			if len(compatible_attrnames) == 0:
+				raise utils.AddError('No compatible attribute found.')
+			if len(compatible_attrnames) > 1:
+				raise utils.AddError('Multiple compatible attributes found. Be more specific.')
+			attrname = compatible_attrnames[0]
+		if self.attribute_properties[attrname]['append']:
+				self.add_by_attrname(obj,attrname)
+		else:
+				self.set_by_attrname(obj,attrname)
+		return self
+		
+	def remove(self,obj,attrname=None):
+		if type(obj) is list:
+			for x in obj:
+				self.remove(x,attrname)
+		if attrname is None:
+			compatible_attrnames = self.get_compatible_attribute_names(obj)
+			attrs_present = []
+			for x in compatible_attrnames:
+				if self.attribute_properties[x]['append']:
+					if obj in getattr(self,x):
+						attrs_present.append(x)
+				else:
+					if getattr(self,x) is obj:
+						attrs_present.append(x)
+			if len(attrs_present)==0:
+				raise utils.RemoveError('Object not found.')
+			if len(attrs_present)>1:
+				raise utils.RemoveError('Multiple instances found. Be more specific.')
+			attrname = attrs_present[0]
+		if self.attribute_properties[attrname]['append']:
+			self.remove_by_attrname(obj,attrname)
+		else:
+			self.unset_by_attrname(attrname)
+		return self
+						
 
 	##### Graph Methods #####
 	def get_graph(self,recurse=True,memo=None):
@@ -145,6 +200,8 @@ class BaseClass(core.Model):
 class Entity(BaseClass):pass
 class Operation(BaseClass):
 	targets = core.ManyToManyAttribute(Entity,related_name='operations')
+	
+
 	
 
 def main():
