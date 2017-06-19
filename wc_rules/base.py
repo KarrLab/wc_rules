@@ -95,6 +95,14 @@ class BaseClass(core.Model):
 		return attr
 		
 	# not-so-clever methods
+	def filter_by_attrname(self,attrname,**kwargs):
+		attr = self.find_attr_by_name(attrname)
+		return attr.filter(**kwargs)
+		
+	def get_by_attrname(self,attrname,**kwargs):
+		attr = self.find_attr_by_name(attrname)
+		return attr.get(**kwargs)
+	
 	def add_by_attrname(self,obj,attrname):
 		attr = self.find_attr_by_name(attrname)
 		try:
@@ -136,6 +144,28 @@ class BaseClass(core.Model):
 		return self
 	
 	# clever methods
+	def ifilter(self,**kwargs):
+		ret = []
+		for attrname in self.attribute_properties:
+			attr = self.find_attr_by_name(attrname)
+			if self.attribute_properties[attrname]['related']:
+					ret.extend(attr.filter(**kwargs))
+		ret2 = []
+		for x in ret:
+			if x not in ret2:
+				ret2.append(x)
+		return ret2
+	
+	def iget(self,**kwargs):
+		ret = self.ifilter(**kwargs)
+		if len(ret)>1:
+			raise utils.FindError('More than one instance found.')
+		elif len(ret)==1:
+			ret = ret[0]
+		elif len(ret)==0:
+			ret = None
+		return ret
+	
 	def get_compatible_attribute_names(self,obj):
 		attrnames = []
 		for x in self.addable_classes:
@@ -145,10 +175,10 @@ class BaseClass(core.Model):
 						attrnames.append(y)
 		return attrnames
 	
-	def add(self,obj,attrname=None,force=False):
+	def iadd(self,obj,attrname=None,force=False):
 		if type(obj) is list:
 			for x  in obj:
-				self.add(x,attrname)
+				self.iadd(x,attrname)
 			return self
 		if attrname is None:
 			compatible_attrnames = self.get_compatible_attribute_names(obj)
@@ -163,10 +193,10 @@ class BaseClass(core.Model):
 				self.set_by_attrname(obj,attrname,force=force)
 		return self
 		
-	def remove(self,obj,attrname=None):
+	def iremove(self,obj,attrname=None):
 		if type(obj) is list:
 			for x in obj:
-				self.remove(x,attrname)
+				self.iremove(x,attrname)
 			return self
 		if attrname is None:
 			compatible_attrnames = self.get_compatible_attribute_names(obj)
@@ -189,6 +219,7 @@ class BaseClass(core.Model):
 			self.unset_by_attrname(attrname)
 		return self
 		
+
 	def attributes_that_contain(self,obj):
 		attrlist = self.get_compatible_attribute_names(obj)
 		ret = []
@@ -198,7 +229,7 @@ class BaseClass(core.Model):
 					ret.append(attrname)
 			else:
 				if obj is getattr(self,attrname):
-					ret += attrname
+					ret.append(attrname)
 		return ret
 		
 	def __contains__(self,obj):

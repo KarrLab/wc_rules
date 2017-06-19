@@ -100,39 +100,65 @@ class TestBase(unittest.TestCase):
 		self.assertEqual(self.Sherlock.pets,[])
 		self.assertEqual(self.Dog001.owner,None)
 		
+		self.Kid001.iadd([self.John,self.Mary],'parents')
+		x = self.list_names(self.Kid001.filter_by_attrname('parents',label='Person'))
+		self.assertEqual(x, 'John Mary'.split())
+		x = self.list_names(self.Kid001.filter_by_attrname('parents',label='Persona'))
+		self.assertEqual(x, [])
+		x = self.Kid001.get_by_attrname('parents',name='John')
+		self.assertEqual(x.name, 'John')
+		x = self.Kid001.get_by_attrname('parents',name='Johny')
+		self.assertEqual(x, None)
+		with self.assertRaises(ValueError):
+			self.Kid001.get_by_attrname('parents')
+		
+		self.Kid001.iremove([self.John,self.Mary])
+		
+		
+		
 	def test_intelligent_methods(self):
 		attrlist = self.John.get_compatible_attribute_names(self.Sherlock)
 		self.assertEqual(attrlist,'parents children'.split())
 		
 		with self.assertRaises(utils.AddError):
-			self.John.add(object())
+			self.John.iadd(object())
 		with self.assertRaises(utils.AddError):
-			self.John.add(self.Mary)
-		self.Kid001.add([self.John,self.Mary],'parents')
+			self.John.iadd(self.Mary)
+		self.Kid001.iadd([self.John,self.Mary],'parents')
 		self.assertEqual(self.list_names(self.Kid001.parents),'John Mary'.split())
-		self.Dog001.add(self.Sherlock)
+		self.Dog001.iadd(self.Sherlock)
 		self.assertEqual(self.Dog001.owner.name,'Sherlock')
 		
 		with self.assertRaises(utils.RemoveError):
-			self.Kid001.remove(self.Sherlock)
+			self.Kid001.iremove(self.Sherlock)
 			
-		self.Kid001.remove([self.John,self.Mary])
+		self.Kid001.iremove([self.John,self.Mary])
 		self.assertEqual(self.Kid001.parents,[])
-		self.Dog001.remove(self.Sherlock)
+		self.Dog001.iremove(self.Sherlock)
 		self.assertEqual(self.Dog001.owner,None)
 			
-		self.John.add(self.Sherlock,'parents')
-		self.John.add(self.Sherlock,'children')
+		self.John.iadd(self.Sherlock,'parents')
+		self.John.iadd(self.Sherlock,'children')
 		self.assertTrue(self.Sherlock in self.John)
 		self.assertEqual(self.John.attributes_that_contain(self.Sherlock),'parents children'.split())
 		
 		with self.assertRaises(utils.RemoveError):
-			self.John.remove(self.Sherlock)
+			self.John.iremove(self.Sherlock)
 			
-		self.John.remove(self.Sherlock,'parents')
-		self.John.remove(self.Sherlock,'children')
+		self.John.iremove(self.Sherlock,'parents')
+		self.John.iremove(self.Sherlock,'children')
 		self.assertTrue(self.Sherlock not in self.John)
-			
 		
-		
+		self.Kid001.iadd([self.John,self.Mary],'parents')
+		x = self.list_names(self.Kid001.ifilter(label='Person'))
+		self.assertEqual(x, 'John Mary'.split())
+		x = self.list_names(self.Kid001.ifilter(label='Persona'))
+		self.assertEqual(x, [])
+		x = self.Kid001.iget(name='John')
+		self.assertEqual(x.name, 'John')
+		x = self.Kid001.iget(name='Johny')
+		self.assertEqual(x, None)
+		with self.assertRaises(utils.FindError):
+			self.Kid001.iget(label='Person')
+		self.Kid001.iremove([self.John,self.Mary])
 		
