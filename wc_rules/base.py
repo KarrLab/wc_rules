@@ -113,7 +113,7 @@ class BaseClass(core.Model):
 			raise utils.RemoveError('Could not remove object from attribute \'{}\'.'.format(attrname))
 		return self
 		
-	def set_by_attrname(self,obj,attrname,force=True):
+	def set_by_attrname(self,obj,attrname,force=False):
 		attr = self.find_attr_by_name(attrname)
 		if force or attr is None:
 			try:
@@ -124,13 +124,13 @@ class BaseClass(core.Model):
 			except:
 				raise utils.SetError('Unable to set value of attribute \'{}\'.'.format(attrname))
 		else:
-			raise utils.SetError('Attribute {} already set. Unset or use force=True.'.format(attrname))
+			raise utils.SetError('Attribute \'{}\' already set. Unset or use force=True.'.format(attrname))
 		return self
 		
 	def unset_by_attrname(self,attrname):
 		attr = self.find_attr_by_name(attrname)
 		try:
-			setattr(self,attrname,None)
+				setattr(self,attrname,None)
 		except:
 			raise utils.SetError('Unable to unset value of attribute \'{}\'.'.format(attrname))
 		return self
@@ -145,7 +145,7 @@ class BaseClass(core.Model):
 						attrnames.append(y)
 		return attrnames
 	
-	def add(self,obj,attrname=None):
+	def add(self,obj,attrname=None,force=False):
 		if type(obj) is list:
 			for x  in obj:
 				self.add(x,attrname)
@@ -160,13 +160,14 @@ class BaseClass(core.Model):
 		if self.attribute_properties[attrname]['append']:
 				self.add_by_attrname(obj,attrname)
 		else:
-				self.set_by_attrname(obj,attrname)
+				self.set_by_attrname(obj,attrname,force=force)
 		return self
 		
 	def remove(self,obj,attrname=None):
 		if type(obj) is list:
 			for x in obj:
 				self.remove(x,attrname)
+			return self
 		if attrname is None:
 			compatible_attrnames = self.get_compatible_attribute_names(obj)
 			attrs_present = []
@@ -187,6 +188,21 @@ class BaseClass(core.Model):
 		else:
 			self.unset_by_attrname(attrname)
 		return self
+		
+	def attributes_that_contain(self,obj):
+		attrlist = self.get_compatible_attribute_names(obj)
+		ret = []
+		for attrname in attrlist:
+			if self.attribute_properties[attrname]['append']:
+				if obj in getattr(self,attrname):
+					ret.append(attrname)
+			else:
+				if obj is getattr(self,attrname):
+					ret += attrname
+		return ret
+		
+	def __contains__(self,obj):
+		return len(self.attributes_that_contain(obj))>0
 						
 
 	##### Graph Methods #####
@@ -206,7 +222,7 @@ class Operation(BaseClass):
 
 def main():
 	pass
-		
+	
 if __name__ == '__main__': 
 	main()
 
