@@ -245,6 +245,11 @@ class BaseClass(core.Model):
 		return self.get_graph(recurse=True)
 
 class Entity(BaseClass):pass
+
+class StateVariable(BaseClass):
+	entity = core.ManyToOneAttribute(Entity,related_name='variables')
+	value = core.Attribute()
+
 class Operation(BaseClass):
 	targets = core.ManyToManyAttribute(Entity,related_name='operations')
 	
