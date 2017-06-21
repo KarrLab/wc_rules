@@ -248,7 +248,7 @@ class Entity(BaseClass):pass
 
 class StateVariable(BaseClass):
 	entity = core.ManyToOneAttribute(Entity,related_name='variables')
-	value = core.Attribute()
+	value = core.LiteralAttribute()
 
 class Operation(BaseClass):
 	targets = core.ManyToManyAttribute(Entity,related_name='operations')
