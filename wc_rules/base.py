@@ -9,6 +9,7 @@
 from obj_model import core
 import wc_rules.graph_utils as g
 import wc_rules.utils as utils
+
 	
 ###### Structures ######
 class BaseClass(core.Model):
@@ -249,6 +250,10 @@ class Entity(BaseClass):pass
 class StateVariable(BaseClass):
 	entity = core.ManyToOneAttribute(Entity,related_name='variables')
 	value = core.LiteralAttribute()
+	filters = core.OneToManyAttribute(fil.Filter,related_name='variable')
+	
+	class FilterMeta(object):
+		allowed_filters = ()
 
 class Operation(BaseClass):
 	targets = core.ManyToManyAttribute(Entity,related_name='operations')
