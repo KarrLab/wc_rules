@@ -10,9 +10,12 @@ from obj_model import core
 import wc_rules.ratelaw as rl
 import wc_rules.graph_utils as g
 from wc_rules.base import BaseClass
+from wc_rules.entity import Entity
 import wc_rules.utils as utils
+import wc_rules.variables as var
+import wc_rules.filter as fil
 
-class Complex(BaseClass):
+class Complex(Entity):
 	class GraphMeta(BaseClass.GraphMeta):
 		outward_edges = tuple(['molecules'])
 		semantic = tuple()
@@ -23,7 +26,7 @@ class Complex(BaseClass):
 			return self.molecules.get(**kwargs)
 	
 	
-class Molecule(BaseClass):
+class Molecule(Entity):
 	complex = core.ManyToOneAttribute(Complex,related_name='molecules')
 	class GraphMeta(BaseClass.GraphMeta):
 		outward_edges = tuple(['sites'])
@@ -34,7 +37,7 @@ class Molecule(BaseClass):
 		else:
 			return self.sites.get(**kwargs)
 		
-class Site(BaseClass):
+class Site(Entity):
 	molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
 	bond = core.OneToOneAttribute('Site',related_name='bond')
 	overlaps = core.ManyToManyAttribute('Site',related_name='overlaps')
@@ -167,6 +170,7 @@ class Rule(BaseClass):
 
 def main():
 	pass
+	
 if __name__ == '__main__': 
 	main()
 

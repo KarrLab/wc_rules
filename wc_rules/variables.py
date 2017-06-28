@@ -1,12 +1,27 @@
 from obj_model import core
+from wc_rules import base
 import wc_rules.filter as fil
 
-
+class StateVariable(base.BaseClass):
+	value = core.LiteralAttribute()
+	filters = core.OneToManyAttribute(fil.Filter,related_name='var')
 	
-class BooleanVariable(core.StateVariable):
+	def __init__(self,value=None):
+		super().__init__(value=value)
+		
+	#### used in graph-matching ####
+	def compare_values(self,value):
+		if self.value is not None:
+			return self.value==value
+		if len(self.filters)>0:
+			return all(x.does_it_match(value) for x in self.filters)
+		return True
+	
+	
+class BooleanVariable(StateVariable):
 	value = core.BooleanAttribute()
 	
-class NumericVariable(core.StateVariable):
+class NumericVariable(StateVariable):
 	value = core.NumericAttribute()
 	
 class IntegerVariable(NumericVariable):
@@ -16,9 +31,7 @@ class FloatVariable(NumericVariable):
 	value = core.FloatAttribute()
 	
 def main():
-	a = StateVariable()
-	print(len(a.filters))
-	
+	pass
 	
 if __name__ == '__main__': 
 	main()

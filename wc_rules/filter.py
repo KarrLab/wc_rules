@@ -2,11 +2,17 @@ from obj_model import core
 
 class Filter(core.Model):
 	value = core.LiteralAttribute()
+	
 	def __init__(self,value):
-		self.value = value
+		super().__init__(value=value)
+		
+	def does_it_match(self,value):
+		return self.get_comparison_function()(value)
+		
 	
 class NumericFilter(Filter):
 	value = core.NumericAttribute()
+	
 class Lt(NumericFilter):	
 	def get_comparison_function(self):
 		return lambda x: x < self.value	
@@ -24,13 +30,7 @@ class Ge(NumericFilter):
 	
 
 def main():
-	a = Lt(5)
-	cmp = a.get_comparison_function()
-	print(cmp)
-	print(cmp(4))
-	print(cmp(5))
-	print(cmp(6))
-	print(a.validate())
+	pass
 	
 	
 if __name__ == '__main__': 

@@ -37,10 +37,19 @@ def node_compare(current,other):
 		is_unspecified = getattr(current,attrname,None) is None
 		is_matched = getattr(current,attrname,None)==getattr(other,attrname,None)
 		return is_unspecified or is_matched
+	def attrs_match(current,other):
+		attrlist = current.__class__.GraphMeta.semantic
+		return all(attr_match(current,other,x) for x in attrlist)
+		
+	def filter_match(current,other):
+		if hasattr(current,'value') and hasattr(other,'value'):
+			return current.compare_values(other.value)
+		return True
 
-	attrlist = current.__class__.GraphMeta.semantic
-	match = type_match(current,other) and all( attr_match(current,other,x) for x in attrlist )
-	
+	match = True
+	funcs = [type_match,attrs_match,filter_match]
+	for f in funcs:
+		match = match and f(current,other)
 	return match
 	
 def get_graph(current_obj,recurse=True,memo=None):
@@ -60,6 +69,13 @@ def get_graph(current_obj,recurse=True,memo=None):
 	# and the relationship to those nodes
 	next_nodes = []
 	node_relation = {}
+	outward_edges = []
+	outward_edges.extend(current_obj.__class__.GraphMeta.outward_edges)
+	
+	for attrname,props in self.attribute_properties:
+		if props['variable']:
+			outward_edges.append(attrname)
+	
 	for attrname in current_obj.__class__.GraphMeta.outward_edges:
 		if getattr(current_obj,attrname) is not None:
 			attr = getattr(current_obj,attrname)

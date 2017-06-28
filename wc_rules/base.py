@@ -10,6 +10,7 @@ from obj_model import core
 import wc_rules.graph_utils as g
 import wc_rules.utils as utils
 
+
 	
 ###### Structures ######
 class BaseClass(core.Model):
@@ -56,6 +57,7 @@ class BaseClass(core.Model):
 			if attrname not in attrdict:
 				attrdict[attrname] = dict()
 			attrdict[attrname].update(populate_attribute(attrname,attr,'primary_class'))
+			
 		return attrdict
 	
 	def make_addable_class_dict(self):
@@ -72,6 +74,7 @@ class BaseClass(core.Model):
 				clsdict[rel]['attrnames'].append(attrname)
 		return clsdict		
 					
+	
 	def set_id(self,id):
 		""" Sets id attribute.
 		Args:
@@ -240,26 +243,10 @@ class BaseClass(core.Model):
 	##### Graph Methods #####
 	def get_graph(self,recurse=True,memo=None):
 		return g.get_graph(self,recurse=recurse,memo=memo)
-		
+			
 	@property
 	def graph(self):
 		return self.get_graph(recurse=True)
-
-class Entity(BaseClass):pass
-
-class StateVariable(BaseClass):
-	entity = core.ManyToOneAttribute(Entity,related_name='variables')
-	value = core.LiteralAttribute()
-	filters = core.OneToManyAttribute(fil.Filter,related_name='variable')
-	
-	class FilterMeta(object):
-		allowed_filters = ()
-
-class Operation(BaseClass):
-	targets = core.ManyToManyAttribute(Entity,related_name='operations')
-	
-
-	
 
 def main():
 	pass
