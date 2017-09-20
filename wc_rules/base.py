@@ -9,8 +9,14 @@
 from obj_model import core
 import wc_rules.graph_utils as g
 import wc_rules.utils as utils
+import uuid
+import random
 
 
+# Seed for creating ids
+# To modify this seed, load base module, then execute base.idgen.seed(<new_seed>)
+idgen = random.Random()
+idgen.seed(0)
 	
 ###### Structures ######
 class BaseClass(core.Model):
@@ -29,6 +35,9 @@ class BaseClass(core.Model):
 		
 	def __init__(self,**kwargs):
 		super().__init__(**kwargs)
+		if 'id' not in kwargs.keys():
+			self.id = str(uuid.UUID(int=idgen.getrandbits(128)))
+			
 		self.attribute_properties = self.make_attribute_properties_dict()
 		self.addable_classes = self.make_addable_class_dict()
 		
