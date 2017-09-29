@@ -36,6 +36,10 @@ class Molecule(Entity):
 			return self.sites.get(label=label,**kwargs)
 		else:
 			return self.sites.get(**kwargs)
+			
+	def compute_overlaps(self): return self
+		
+		
 		
 class Site(Entity):
 	molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
@@ -44,6 +48,17 @@ class Site(Entity):
 	class GraphMeta(BaseClass.GraphMeta):
 		outward_edges = tuple(['bond','overlaps','boolvars'])
 		semantic = tuple()
+	
+	available_to_bind = core.BooleanAttribute(default=True)
+	
+	def sync_binding_state(self):
+		if self.available_to_bind is True:
+			if self.bond is not None or any(x.bond is not None for x in self.overlaps):
+				self.available_to_bind = False
+		if self.available_to_bind is False:
+			if self.bond is None and all(x.bond is None for x in self.overlaps):
+				self.available_to_bind = True
+		return self	
 	
 	#### Boolean Variables ####
 	def get_boolvar(self,label,**kwargs):
