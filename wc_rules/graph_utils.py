@@ -46,11 +46,12 @@ def node_compare(current,other):
 			return current.compare_values(other.value)
 		return True
 
-	match = True
+
 	funcs = [type_match,attrs_match,filter_match]
 	for f in funcs:
-		match = match and f(current,other)
-	return match
+		if f(current,other)==False:
+			return False
+	return True
 	
 def get_graph(current_obj,recurse=True,memo=None):
 	def update_graph(graph,obj1):
