@@ -45,6 +45,7 @@ class Site(Entity):
 	molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
 	bond = core.OneToOneAttribute('Site',related_name='bond')
 	overlaps = core.ManyToManyAttribute('Site',related_name='overlaps')
+	boolvars = core.OneToManyAttribute(var.BooleanVariable,related_name='site')
 	class GraphMeta(BaseClass.GraphMeta):
 		outward_edges = tuple(['bond','overlaps','boolvars'])
 		semantic = tuple()
@@ -114,19 +115,6 @@ class Site(Entity):
 			if self.bond is self:
 				return None
 		return self.bond
-		
-###### Variables ######
-class BooleanStateVariable(BaseClass):
-	site = core.ManyToOneAttribute(Site,related_name='boolvars')
-	value = core.BooleanAttribute(default=None)
-	class GraphMeta(BaseClass.GraphMeta):
-		outward_edges = tuple()
-		semantic = tuple(['value'])
-	def set_value(self,value):
-		self.value = value
-		return self
-	def set_true(self): return self.set_value(True)
-	def set_false(self): return self.set_value(False)
 	
 ###### Operations ######
 class Operation(BaseClass):
@@ -158,7 +146,7 @@ class AddBond(BondOperation):pass
 class DeleteBond(BondOperation):pass
 
 class BooleanStateOperation(Operation):
-	boolvar = core.OneToOneAttribute(BooleanStateVariable,related_name='boolean_state_op')
+	boolvar = core.OneToOneAttribute(var.BooleanVariable,related_name='boolean_op')
 	@property
 	def target(self): return self.boolvar
 	@target.setter
