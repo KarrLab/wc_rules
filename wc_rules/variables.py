@@ -9,6 +9,10 @@ class StateVariable(base.BaseClass):
 	def __init__(self,value=None):
 		super().__init__(value=value)
 		
+	def set_value(self,value):
+		self.value = value
+		return self
+	
 	#### used in graph-matching ####
 	def compare_values(self,value):
 		if self.value is not None:
@@ -16,6 +20,7 @@ class StateVariable(base.BaseClass):
 		if len(self.filters)>0:
 			return all(x.does_it_match(value) for x in self.filters)
 		return True
+		
 	
 	
 class BooleanVariable(StateVariable):
