@@ -13,8 +13,8 @@ class NewObject(base.BaseClass):
 
 class AnotherObject(base.BaseClass):pass
 
-class TestBase(unittest.TestCase):
-    def test_queries(self):
+class TestQuery(unittest.TestCase):
+    def test_nodequery(self):
         # We test two queries 1x and x0 against
         # instances 00, 01, 10, 11
         nq1 = NodeQuery(query=NewObject(prop1=True,id='nq1'))
