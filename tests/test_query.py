@@ -70,11 +70,13 @@ class TestQuery(unittest.TestCase):
             nq.remove_existing_match_candidate(instances[3])
 
         nq = queries[0]
+        self.assertEqual(len(nq.match_candidates),len(nq.match_dict))
         vals = [nq.match_dict[x] for x in nq.match_candidates]
         self.assertEqual(len(nq.match_candidates),3)
         self.assertEqual(vals,[False,False,True])
 
         nq = queries[1]
+        self.assertEqual(len(nq.match_candidates),len(nq.match_dict))
         vals = [nq.match_dict[x] for x in nq.match_candidates]
         self.assertEqual(len(nq.match_candidates),3)
         self.assertEqual(vals,[False,True,False])
