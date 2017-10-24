@@ -15,7 +15,7 @@ class AnotherObject(base.BaseClass):pass
 
 class TestQuery(unittest.TestCase):
     def test_nodequery(self):
-        # We test two queries 1x and x0 against
+        # We test two queries 1x and x1 against
         # instances 00, 01, 10, 11
         nq1 = NodeQuery(query=NewObject(prop1=True,id='nq1'))
         nq2 = NodeQuery(query=NewObject(prop2=True,id='nq2'))
@@ -25,58 +25,28 @@ class TestQuery(unittest.TestCase):
         for x,y in product([False,True],repeat=2):
             instances.append( NewObject(prop1=x,prop2=y) )
 
-        # checking initial state of match_candidates and match_dict
+        # checking initial state
         for nq in queries:
-            self.assertEqual(len(nq.match_candidates),0)
-            self.assertEqual(len(nq.match_dict),0)
+            self.assertEqual(len(nq.matches),0)
 
+        # updating 4 correct matches and 1 incorrect match
         for nq in queries:
             for inst in instances:
                 # these should be added
-                nq.add_new_match_candidate(inst)
+                nq.update_match(inst)
             # this should not be added
-            nq.add_new_match_candidate( AnotherObject() )
+            nq.update_match( AnotherObject() )
 
-        # checking after adding match candidates
+        # checking number of matches
         for nq in queries:
-            self.assertEqual(len(nq.match_candidates),4)
-            self.assertEqual(len(nq.match_dict),4)
-
-        # checking if matching works properly
-        nq = queries[0]
-        vals = [nq.match_dict[x] for x in nq.match_candidates]
-        self.assertEqual(vals,[False,False,True,True])
-
-        nq = queries[1]
-        vals = [nq.match_dict[x] for x in nq.match_candidates]
-        self.assertEqual(vals,[False,True,False,True])
+            self.assertEqual(len(nq.matches),2)
 
         # checking if updating a match works properly
         instances[3].prop1=False
         instances[3].prop2=False
         for nq in queries:
-            nq.update_existing_match_candidate(instances[3])
+            nq.update_match(instances[3])
 
-        nq = queries[0]
-        vals = [nq.match_dict[x] for x in nq.match_candidates]
-        self.assertEqual(vals,[False,False,True,False])
-
-        nq = queries[1]
-        vals = [nq.match_dict[x] for x in nq.match_candidates]
-        self.assertEqual(vals,[False,True,False,False])
-
-        # checking if removing a match works properly
         for nq in queries:
-            nq.remove_existing_match_candidate(instances[3])
-
-        nq = queries[0]
-        self.assertEqual(len(nq.match_candidates),len(nq.match_dict))
-        vals = [nq.match_dict[x] for x in nq.match_candidates]
-        self.assertEqual(len(nq.match_candidates),3)
-        self.assertEqual(vals,[False,False,True])
-
-        nq = queries[1]
-        self.assertEqual(len(nq.match_candidates),len(nq.match_dict))
-        vals = [nq.match_dict[x] for x in nq.match_candidates]
-        self.assertEqual(len(nq.match_candidates),3)
-        self.assertEqual(vals,[False,True,False])
+            self.assertTrue(instances[3] not in nq)
+        return

@@ -5,51 +5,40 @@ import wc_rules.graph_utils as g
 
 class NodeQuery(BaseClass):
 	query = core.OneToOneAttribute(BaseClass,related_name='nq_query')
-	# list of candidate matches
-	# i.e., candiate.__class__ is compatible with query.__class__
-	match_candidates = core.ManyToManyAttribute(BaseClass,related_name='nq_matches')
+	matches = core.ManyToManyAttribute(BaseClass,related_name='nq_matches')
 
-	# keys are node instances
-	# The presence of a key indicates that it is a candidate match, i.e.,
-	# values are booleans
-	# value=True implies that a match exists
-	# value=False implies that a match does not exist
-	def __init__(self,**kwargs):
-		super(NodeQuery,self).__init__(**kwargs)
-		self.match_dict=dict()
-
-	# Boolean methods used for verifying a match
-	def already_matched(self,node):
-		return node in self.match_candidates
-	def verify_candidate_match(self,node):
-		return isinstance(node,self.query.__class__)
 	def verify_match(self,node):
 		return g.node_compare(self.query,node)
 
-	# updating match_dict
-	def update_match_dict(self,node,remove=False):
-		self.match_dict[node] = None
-		if remove:
-			del self.match_dict[node]
+	# Methods for dealing with a single match
+	def add_match(self,node):
+		self.matches.append(node)
+		return self
+	def remove_match(self,node):
+		self.matches.discard(node)
+		return self
+	def update_match(self,node):
+		# this is a method that ONLY checks verify_match
+		if self.verify_match(node):
+			if node not in self.matches:
+				self.add_match(node)
 		else:
-			self.match_dict[node] = self.verify_match(node)
+			if node in self.matches:
+				self.remove_match(node)
 		return self
 
-	# Methods for dealing with a single match or match candidate
-	def add_new_match_candidate(self,node):
-		if self.verify_candidate_match(node):
-			self.match_candidates.append(node)
-			self.update_match_dict(node)
-		return self
-	def remove_existing_match_candidate(self,node):
-		if self.already_matched(node):
-			self.match_candidates.remove(node)
-			self.update_match_dict(node,remove=True)
-		return self
-	def update_existing_match_candidate(self,node):
-		self.update_match_dict(node)
-		return self
-
-
+def main():
+	class A(BaseClass):pass
+	class B(BaseClass):pass
+	x = A()
+	a = [A(),A(),A()]
+	b = [B(),B()]
+	nq = NodeQuery(query=x)
+	for item in a+b:
+		nq.update_match(item)
+	print(len(nq.matches))
+	for item in a:
+		nq.remove_match(item)
+	print(len(nq.matches))
 if __name__=='__main__':
 	main()
