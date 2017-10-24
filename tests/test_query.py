@@ -1,6 +1,6 @@
 from obj_model import core
 from wc_rules import base
-from wc_rules.query import NodeQuery
+from wc_rules.query import NodeTypeQuery,NodeQuery
 import wc_rules.graph_utils as g
 import unittest
 from itertools import product
@@ -13,7 +13,26 @@ class NewObject(base.BaseClass):
 
 class AnotherObject(base.BaseClass):pass
 
+class A(base.BaseClass):pass
+class B(A):pass
+class C(base.BaseClass):pass
+class D(C):pass
+
 class TestQuery(unittest.TestCase):
+    def test_nodetypequery(self):
+        ntq = NodeTypeQuery()
+        for x in [A(id='nqA'), B(id='nqB'), D(id='nqD'), C(id='nqC')]:
+            nq = NodeQuery(query=x)
+            ntq.register_new_nq(nq)
+
+        instances = [A(id='instA'), B(id='instB'), C(id='instC'), D(id='instD')]
+        compares = [['nqA'],['nqA','nqB'],['nqC'],['nqC','nqD']]
+        for x,y in zip(instances,compares):
+            vec = ntq[x.__class__]
+            cmp = sorted([z.query.id for z in vec])
+            self.assertEqual(cmp,y)
+
+
     def test_nodequery(self):
         # We test two queries 1x and x1 against
         # instances 00, 01, 10, 11
