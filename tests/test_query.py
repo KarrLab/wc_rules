@@ -1,10 +1,11 @@
 from obj_model import core
 from wc_rules import base
-from wc_rules.query import NodeTypeQuery,NodeQuery
+from wc_rules.query import NodeTypeQuery,NodeQuery,GraphQuery
 import wc_rules.graph_utils as g
 import unittest
 from itertools import product
 
+# used for test_nodequery
 class NewObject(base.BaseClass):
     prop1 = core.BooleanAttribute(default=None)
     prop2 = core.BooleanAttribute(default=None)
@@ -13,10 +14,20 @@ class NewObject(base.BaseClass):
 
 class AnotherObject(base.BaseClass):pass
 
+# used for test_nodetypequery
 class A(base.BaseClass):pass
 class B(A):pass
 class C(base.BaseClass):pass
 class D(C):pass
+
+# used for test_graphquery_compile_nodequeries
+class A1(base.BaseClass):
+	b = core.OneToOneAttribute('B1',related_name='a')
+	c = core.OneToManyAttribute('C1',related_name='a')
+	d = core.ManyToManyAttribute('D1',related_name='a')
+class B1(base.BaseClass):pass
+class C1(base.BaseClass):pass
+class D1(base.BaseClass):pass
 
 class TestQuery(unittest.TestCase):
     def test_nodetypequery(self):
@@ -68,4 +79,31 @@ class TestQuery(unittest.TestCase):
 
         for nq in queries:
             self.assertTrue(instances[3] not in nq)
+        return
+
+    def test_graphquery_compile_nodequeries(self):
+        a_vec = [A1(),A1()]
+        b_vec = [B1()]
+        c_vec = [C1(),C1()]
+        d_vec = [D1(),D1()]
+
+        a_vec[0].b = b_vec[0]
+        a_vec[1].c.extend(c_vec)
+        a_vec[0].d.extend(d_vec)
+        a_vec[1].d.extend(d_vec)
+        abcd = a_vec+b_vec+c_vec+d_vec
+        gq = GraphQuery()
+
+        for i,x in enumerate(abcd):
+        	name = 'nq'+str(i)
+        	gq.add_nodequery( NodeQuery(query=x,id=name) )
+        gq.compile_nodequery_relations()
+
+        str1_arr = []
+        for nq in gq.nodequeries:
+            str1_arr.append(' '.join(['from',nq.id,'to',*[x.id for x in nq.next_nq]]))
+        str2_arr = ['from nq0 to nq2 nq5 nq6','from nq1 to nq3 nq4 nq5 nq6',
+        'from nq2 to nq0','from nq3 to nq1','from nq4 to nq1','from nq5 to nq0 nq1',
+        'from nq6 to nq0 nq1']
+        self.assertEqual(str1_arr,str2_arr)
         return

@@ -2,6 +2,7 @@ from obj_model import core
 from wc_rules.base import BaseClass
 from wc_rules.entity import Entity
 import wc_rules.graph_utils as g
+from itertools import permutations,combinations
 
 class NodeTypeQuery(dict):
 	# Keys: Classes
@@ -38,6 +39,11 @@ class NodeQuery(BaseClass):
 	query = core.OneToOneAttribute(BaseClass,related_name='nq_query')
 	matches = core.ManyToManyAttribute(BaseClass,related_name='nq_matches')
 
+	def __init__(self,**kwargs):
+		super().__init__(**kwargs)
+		# This will be used by GraphQuery for propagating a match
+		self.next_nq = dict()
+
 	def verify_match(self,node):
 		return g.node_compare(self.query,node)
 
@@ -58,18 +64,37 @@ class NodeQuery(BaseClass):
 				self.remove_match(node)
 		return self
 
+	# identifying relationships with another NodeQuery
+	# will be used by GraphQuery
+	def identify_relationships(self,nq):
+		node1 = self.query
+		node2 = nq.query
+		# list of dicts with keys: attrname, append
+		relations =[]
+		for attr in node1.attributes_that_contain(node2):
+			apnd = node1.attribute_properties[attr]['append']
+			relations.append({'attrname':attr,'append':apnd})
+		if len(relations)>0:
+			return relations
+		return None
+
+class GraphQuery(BaseClass):
+	nodequeries = core.OneToManyAttribute(NodeQuery,related_name='graphquery')
+
+	def add_nodequery(self,nq):
+		self.nodequeries.append(nq)
+		return self
+	def compile_nodequery_relations(self):
+		for x,y in permutations(self.nodequeries,2):
+			d = x.identify_relationships(y)
+			# d is either None or a list of dicts {'attrname':str,'append':bool}
+			if d is not None:
+				x.next_nq[y] = d
+		return self
+
+
 def main():
-	class A(BaseClass):pass
-	class B(BaseClass):pass
-	x = A()
-	a = [A(),A(),A()]
-	b = [B(),B()]
-	nq = NodeQuery(query=x)
-	for item in a+b:
-		nq.update_match(item)
-	print(len(nq.matches))
-	for item in a:
-		nq.remove_match(item)
-	print(len(nq.matches))
+	pass
+
 if __name__=='__main__':
 	main()
