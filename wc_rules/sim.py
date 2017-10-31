@@ -5,6 +5,7 @@ from wc_rules.query import NodeTypeQuery, NodeQuery
 class SimulationState(core.Model):
     agents = core.OneToManyAttribute(BaseClass,related_name='ss_agent')
     nodequeries = core.OneToManyAttribute(NodeQuery,related_name='ss_nq')
+    nodetypequery = core.OneToOneAttribute(NodeTypeQuery,related_name='ss_ntq')
 
     def __init__(self,**kwargs):
         super().__init__(**kwargs)

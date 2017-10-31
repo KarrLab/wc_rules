@@ -1,10 +1,10 @@
 from obj_model import core
-from wc_rules.base import BaseClass
+from wc_rules.base import BaseClass,DictClass
 from wc_rules.entity import Entity
 import wc_rules.graph_utils as g
 from itertools import permutations,combinations
 
-class NodeTypeQuery(dict):
+class NodeTypeQuery(DictClass):
 	# Keys: Classes
 	# Values: NodeQuery objects
 	# Purpose is to look up a class, then find the NodeQuery objects to update
