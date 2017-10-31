@@ -78,12 +78,47 @@ class NodeQuery(BaseClass):
 			return relations
 		return None
 
+class GraphMatch(DictClass):
+	def __init__(self,**kwargs):
+		super().__init__(**kwargs)
+		self.keyorder = dict()
+		self._signature = None
+		self.new_nq = []
+		return
+
+	def orderedkeys(self):
+		return list(sorted(self.keys(),key=lambda t:self.keyorder[t]))
+	def nonekeys(self):
+		return [x for x in self.orderedkeys() if self[x] is None]
+	def not_nonekeys(self):
+		return [x for x in self.orderedkeys() if self[x] is not None]
+
+	def signature(self):
+		if self._signature is None:
+			strs = []
+			for x in self.not_nonekeys():
+				strs.append(''.join(x.id,':',self[x].id))
+			if len(strs)>0:
+				self._signature = ','.join(strs)
+		return self._signature
+
+	def to_string(self):
+		a = dict()
+		for x in self.not_nonekeys():
+			a[x.id] = self[x].id
+		for x in self.nonekeys():
+			a[x.id] = None
+		return a.__str__()
+
 class GraphQuery(BaseClass):
 	nodequeries = core.OneToManyAttribute(NodeQuery,related_name='graphquery')
+	matches = core.OneToManyAttribute(GraphMatch,related_name='gq_matches')
+	partial_matches = core.OneToManyAttribute(GraphMatch,related_name='gq_partial_matches')
 
 	def add_nodequery(self,nq):
 		self.nodequeries.append(nq)
 		return self
+
 	def compile_nodequery_relations(self):
 		for x,y in permutations(self.nodequeries,2):
 			d = x.identify_relationships(y)
@@ -92,9 +127,57 @@ class GraphQuery(BaseClass):
 				x.next_nq[y] = d
 		return self
 
+	def make_default_graphmatch(self):
+		gm = GraphMatch()
+		for i,x in enumerate(self.nodequeries):
+			gm[x] = None
+			gm.keyorder[x] = i
+		return gm
+
+	def update_for_new_nodequery_matches(self,nq_instance_dict=dict()):
+		pmatches = []
+		if len(nq_instance_dict)>0:
+			for nq,node in nq_instance_dict.items():
+				pmatch = self.make_default_graphmatch()
+				pmatch[nq] = node
+				pmatches.append(pmatch)
+		self.partial_matches.extend(pmatches)
+		self.process_partial_matches()
+		return self
+
+	def process_partial_matches(self):
+		while(len(self.partial_matches)>0):
+			current_pmatch = self.partial_matches.pop()
+			print('processing ',current_pmatch.to_string())
+		return
+
 
 def main():
-	pass
+	class A(BaseClass):
+		b = core.OneToOneAttribute('B',related_name='a')
+	class B(BaseClass):pass
+
+	# query graph
+	a1 = A(id='a1')
+	b1 = B(id='b1')
+	a1.b = b1
+	gq = GraphQuery(id='gq')
+	gq.add_nodequery( NodeQuery(query=a1,id='nq_a1') )
+	gq.add_nodequery( NodeQuery(query=b1,id='nq_b1') )
+	gq.compile_nodequery_relations()
+
+	# instance graph
+	a2 = A(id='a2')
+	b2 = B(id='b2')
+	a2.b = b2
+	for nq in gq.nodequeries:
+		for m in [a2,b2]:
+			nq.update_match(m)
+
+	nq_instance_dict = dict(zip(gq.nodequeries,[a2,b2]))
+	gq.update_for_new_nodequery_matches(nq_instance_dict)
+
+
 
 if __name__=='__main__':
 	main()
