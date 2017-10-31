@@ -17,7 +17,7 @@ import random
 # To modify this seed, load base module, then execute base.idgen.seed(<new_seed>)
 idgen = random.Random()
 idgen.seed(0)
-	
+
 ###### Structures ######
 class BaseClass(core.Model):
 	"""	Base class for bioschema objects.
@@ -28,23 +28,23 @@ class BaseClass(core.Model):
 	"""
 	id = core.StringAttribute(primary=True,unique=True)
 	attribute_properties = dict()
-	
-	class GraphMeta(g.GraphMeta): 
+
+	class GraphMeta(g.GraphMeta):
 		outward_edges = tuple()
 		semantic = tuple()
-		
+
 	def __init__(self,**kwargs):
 		super().__init__(**kwargs)
 		if 'id' not in kwargs.keys():
 			self.id = str(uuid.UUID(int=idgen.getrandbits(128)))
-			
+
 		self.attribute_properties = self.make_attribute_properties_dict()
 		self.addable_classes = self.make_addable_class_dict()
-		
+
 	def make_attribute_properties_dict(self):
 		attrdict = dict()
 		cls = self.__class__
-		
+
 		def populate_attribute(attrname,attr,check = 'related_class'):
 			x = {'related':False,'append':False,'related_class':None}
 			if check=='related_class' and hasattr(attr,'related_class'):
@@ -58,7 +58,7 @@ class BaseClass(core.Model):
 				if isinstance(attr,(core.ManyToManyAttribute,core.ManyToOneAttribute,)):
 					x['append'] = True
 			return x
-			
+
 		for attrname,attr in cls.Meta.attributes.items():
 			attrdict[attrname] = dict()
 			attrdict[attrname].update(populate_attribute(attrname,attr,'related_class'))
@@ -66,13 +66,13 @@ class BaseClass(core.Model):
 			if attrname not in attrdict:
 				attrdict[attrname] = dict()
 			attrdict[attrname].update(populate_attribute(attrname,attr,'primary_class'))
-			
+
 		return attrdict
-	
+
 	def make_addable_class_dict(self):
 		d = self.attribute_properties
 		clsdict = dict()
-		
+
 		for attrname in d:
 			if d[attrname]['related']:
 				rel = d[attrname]['related_class']
@@ -81,41 +81,41 @@ class BaseClass(core.Model):
 				else:
 					clsdict[rel]['easy_add'] = False
 				clsdict[rel]['attrnames'].append(attrname)
-		return clsdict		
-					
-	
+		return clsdict
+
+
 	def set_id(self,id):
 		""" Sets id attribute.
 		Args:
-			id (:obj:`str`) 
+			id (:obj:`str`)
 		Returns:
 			self
 		"""
 		self.id = id
 		return self
-	
+
 	@property
-	def label(self): 
+	def label(self):
 		""" Name of the leaf class from which object is created.
 		"""
 		return self.__class__.__name__
-		
+
 	def find_attr_by_name(self,attrname):
 		try:
 			attr = getattr(self,attrname)
 		except:
 			raise utils.FindError('Could not get attribute {}'.format(attrname))
 		return attr
-		
+
 	# not-so-clever methods
 	def filter_by_attrname(self,attrname,**kwargs):
 		attr = self.find_attr_by_name(attrname)
 		return attr.filter(**kwargs)
-		
+
 	def get_by_attrname(self,attrname,**kwargs):
 		attr = self.find_attr_by_name(attrname)
 		return attr.get(**kwargs)
-	
+
 	def add_by_attrname(self,obj,attrname):
 		attr = self.find_attr_by_name(attrname)
 		try:
@@ -123,7 +123,7 @@ class BaseClass(core.Model):
 		except:
 			raise utils.AddError('Could not add object to attribute \'{}\'.'.format(attrname))
 		return self
-		
+
 	def remove_by_attrname(self,obj,attrname,force=True):
 		attr = self.find_attr_by_name(attrname)
 		if obj not in attr:
@@ -133,7 +133,7 @@ class BaseClass(core.Model):
 		except:
 			raise utils.RemoveError('Could not remove object from attribute \'{}\'.'.format(attrname))
 		return self
-		
+
 	def set_by_attrname(self,obj,attrname,force=False):
 		attr = self.find_attr_by_name(attrname)
 		if force or attr is None:
@@ -147,7 +147,7 @@ class BaseClass(core.Model):
 		else:
 			raise utils.SetError('Attribute \'{}\' already set. Unset or use force=True.'.format(attrname))
 		return self
-		
+
 	def unset_by_attrname(self,attrname):
 		attr = self.find_attr_by_name(attrname)
 		try:
@@ -155,20 +155,21 @@ class BaseClass(core.Model):
 		except:
 			raise utils.SetError('Unable to unset value of attribute \'{}\'.'.format(attrname))
 		return self
-	
+
 	# clever methods
 	def ifilter(self,**kwargs):
 		ret = []
 		for attrname in self.attribute_properties:
 			attr = self.find_attr_by_name(attrname)
-			if self.attribute_properties[attrname]['related']:
+			if attr is not None:
+				if self.attribute_properties[attrname]['related']:
 					ret.extend(attr.filter(**kwargs))
 		ret2 = []
 		for x in ret:
 			if x not in ret2:
 				ret2.append(x)
 		return ret2
-	
+
 	def iget(self,**kwargs):
 		ret = self.ifilter(**kwargs)
 		if len(ret)>1:
@@ -178,7 +179,7 @@ class BaseClass(core.Model):
 		elif len(ret)==0:
 			ret = None
 		return ret
-	
+
 	def get_compatible_attribute_names(self,obj):
 		attrnames = []
 		for x in self.addable_classes:
@@ -187,7 +188,7 @@ class BaseClass(core.Model):
 					if y not in attrnames:
 						attrnames.append(y)
 		return attrnames
-	
+
 	def iadd(self,obj,attrname=None,force=False):
 		if type(obj) is list:
 			for x  in obj:
@@ -205,7 +206,7 @@ class BaseClass(core.Model):
 		else:
 				self.set_by_attrname(obj,attrname,force=force)
 		return self
-		
+
 	def iremove(self,obj,attrname=None):
 		if type(obj) is list:
 			for x in obj:
@@ -231,7 +232,7 @@ class BaseClass(core.Model):
 		else:
 			self.unset_by_attrname(attrname)
 		return self
-		
+
 
 	def attributes_that_contain(self,obj):
 		attrlist = self.get_compatible_attribute_names(obj)
@@ -244,22 +245,23 @@ class BaseClass(core.Model):
 				if obj is getattr(self,attrname):
 					ret.append(attrname)
 		return ret
-		
+
 	def __contains__(self,obj):
 		return len(self.attributes_that_contain(obj))>0
-						
+
 
 	##### Graph Methods #####
 	def get_graph(self,recurse=True,memo=None):
 		return g.get_graph(self,recurse=recurse,memo=memo)
-			
+
 	@property
 	def graph(self):
 		return self.get_graph(recurse=True)
 
+class DictClass(core.Model,dict):pass
+
 def main():
 	pass
-	
-if __name__ == '__main__': 
-	main()
 
+if __name__ == '__main__':
+	main()
