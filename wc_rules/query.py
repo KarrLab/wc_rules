@@ -134,10 +134,10 @@ class GraphQuery(BaseClass):
 			gm.keyorder[x] = i
 		return gm
 
-	def update_for_new_nodequery_matches(self,nq_instance_dict=dict()):
+	def update_for_new_nodequery_matches(self,nq_instance_zip=[]):
 		pmatches = []
-		if len(nq_instance_dict)>0:
-			for nq,node in nq_instance_dict.items():
+		if len(nq_instance_zip)>0:
+			for nq,node in nq_instance_zip:
 				pmatch = self.make_default_graphmatch()
 				pmatch[nq] = node
 				pmatches.append(pmatch)
@@ -174,7 +174,7 @@ def main():
 		for m in [a2,b2]:
 			nq.update_match(m)
 
-	nq_instance_dict = dict(zip(gq.nodequeries,[a2,b2]))
+	nq_instance_dict = list(zip(gq.nodequeries,[a2,b2]))
 	gq.update_for_new_nodequery_matches(nq_instance_dict)
 
 
