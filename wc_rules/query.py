@@ -95,19 +95,16 @@ class GraphMatch(DictClass):
 
 	def signature(self):
 		if self._signature is None:
-			strs = []
-			for x in self.not_nonekeys():
-				strs.append(''.join(x.id,':',self[x].id))
-			if len(strs)>0:
-				self._signature = ','.join(strs)
+			self._signature = self.to_string()
 		return self._signature
 
 	def to_string(self):
 		a = dict()
-		for x in self.not_nonekeys():
-			a[x.id] = self[x].id
-		for x in self.nonekeys():
-			a[x.id] = None
+		for x in self.orderedkeys():
+			if x in self.not_nonekeys():
+				a[x.id] = self[x].id
+			else:
+				a[x.id] = None
 		return a.__str__()
 
 class GraphQuery(BaseClass):
