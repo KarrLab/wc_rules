@@ -92,6 +92,8 @@ class GraphMatch(DictClass):
 		return [x for x in self.orderedkeys() if self[x] is None]
 	def not_nonekeys(self):
 		return [x for x in self.orderedkeys() if self[x] is not None]
+	def is_complete(self):
+		return len(self.nonekeys())==0
 
 	def signature(self):
 		if self._signature is None:
@@ -112,6 +114,11 @@ class GraphQuery(BaseClass):
 	matches = core.OneToManyAttribute(GraphMatch,related_name='gq_matches')
 	partial_matches = core.OneToManyAttribute(GraphMatch,related_name='gq_partial_matches')
 
+	def __init__(self,**kwargs):
+		super().__init__(**kwargs)
+		self._match_signatures = []
+		self._partial_match_signatures = []
+
 	def add_nodequery(self,nq):
 		self.nodequeries.append(nq)
 		return self
@@ -130,6 +137,26 @@ class GraphQuery(BaseClass):
 			gm[x] = None
 			gm.keyorder[x] = i
 		return gm
+
+	def add_match(self,match):
+		# add_match is intelligent w.r.t. whether match is partial or total
+		if match.is_complete() and match.signature() not in self._match_signatures:
+			self.matches.append(match)
+			self._match_signatures.append(match.signature())
+		elif match.signature() not in self._partial_match_signatures:
+			self.partial_matches.append(match)
+			self._partial_match_signatures.append(match.signature())
+		return self
+
+	def remove_match(self,match):
+		# remove_match is intelligent w.r.t. whether match is partial or total
+		if match.is_complete() and match.signature() in self._match_signatures:
+			self.matches.discard(match)
+			self._match_signatures.remove(match.signature())
+		elif match.signature() in self._partial_match_signatures:
+			self.partial_matches.discard(match)
+			self._partial_match_signatures.remove(match.signature())
+		return self
 
 	def update_for_new_nodequery_matches(self,nq_instance_tuplist=[]):
 		pmatches = []
