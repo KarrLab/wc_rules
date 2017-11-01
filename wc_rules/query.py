@@ -174,8 +174,8 @@ def main():
 		for m in [a2,b2]:
 			nq.update_match(m)
 
-	nq_instance_dict = dict(zip(gq.nodequeries,[a2,b2]))
-	gq.update_for_new_nodequery_matches(nq_instance_dict)
+	nq_instance_tuplist = list(zip(gq.nodequeries,[a2,b2]))
+	gq.update_for_new_nodequery_matches(nq_instance_tuplist)
 
 
 
