@@ -159,20 +159,38 @@ class GraphQuery(BaseClass):
 		return self
 
 	def update_for_new_nodequery_matches(self,nq_instance_tuplist=[]):
+		# accepts a list of tuples of form (nq,node)
+		# creates new partial graphmatches seeded with these tuples
+		# calls process_partial_matches()
 		pmatches = []
 		for nq,node in nq_instance_tuplist:
 			pmatch = self.make_default_graphmatch()
 			pmatch[nq] = node
-			pmatches.append(pmatch)
-		self.partial_matches.extend(pmatches)
+			self.add_match(pmatch)
 		self.process_partial_matches()
 		return self
 
+	def pop_partial_match(self):
+		x = self.partial_matches[-1]
+		self.remove_match(x)
+		return x
+
 	def process_partial_matches(self):
+		# This works as a LIFO stack
 		while(len(self.partial_matches)>0):
-			current_pmatch = self.partial_matches.pop()
+			current_pmatch = self.pop_partial_match()
 			print('processing ',current_pmatch.to_string())
-		return
+			pmatches = self.expand_partial_match(current_pmatch)
+			for pmatch in pmatches:
+				self.add_match(pmatch)
+		return self
+
+	def expand_partial_match(self,pmatch):
+		# expands a match in different possible ways and returns the new matches
+		# here, different graph-match expansion algorithms can be used
+		print('expanding ',pmatch.to_string())
+		#return [pmatch]
+		return []
 
 
 def main():
