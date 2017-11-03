@@ -92,28 +92,32 @@ class GraphMatch(DictClass):
 		return [x for x in self.orderedkeys() if self[x] is None]
 	def not_nonekeys(self):
 		return [x for x in self.orderedkeys() if self[x] is not None]
+	def is_complete(self):
+		return len(self.nonekeys())==0
 
 	def signature(self):
 		if self._signature is None:
-			strs = []
-			for x in self.not_nonekeys():
-				strs.append(''.join(x.id,':',self[x].id))
-			if len(strs)>0:
-				self._signature = ','.join(strs)
+			self._signature = self.to_string()
 		return self._signature
 
 	def to_string(self):
 		a = dict()
-		for x in self.not_nonekeys():
-			a[x.id] = self[x].id
-		for x in self.nonekeys():
-			a[x.id] = None
+		for x in self.orderedkeys():
+			if x in self.not_nonekeys():
+				a[x.id] = self[x].id
+			else:
+				a[x.id] = None
 		return a.__str__()
 
 class GraphQuery(BaseClass):
 	nodequeries = core.OneToManyAttribute(NodeQuery,related_name='graphquery')
 	matches = core.OneToManyAttribute(GraphMatch,related_name='gq_matches')
 	partial_matches = core.OneToManyAttribute(GraphMatch,related_name='gq_partial_matches')
+
+	def __init__(self,**kwargs):
+		super().__init__(**kwargs)
+		self._match_signatures = []
+		self._partial_match_signatures = []
 
 	def add_nodequery(self,nq):
 		self.nodequeries.append(nq)
@@ -134,22 +138,59 @@ class GraphQuery(BaseClass):
 			gm.keyorder[x] = i
 		return gm
 
-	def update_for_new_nodequery_matches(self,nq_instance_zip=[]):
+	def add_match(self,match):
+		# add_match is intelligent w.r.t. whether match is partial or total
+		if match.is_complete() and match.signature() not in self._match_signatures:
+			self.matches.append(match)
+			self._match_signatures.append(match.signature())
+		elif match.signature() not in self._partial_match_signatures:
+			self.partial_matches.append(match)
+			self._partial_match_signatures.append(match.signature())
+		return self
+
+	def remove_match(self,match):
+		# remove_match is intelligent w.r.t. whether match is partial or total
+		if match.is_complete() and match.signature() in self._match_signatures:
+			self.matches.discard(match)
+			self._match_signatures.remove(match.signature())
+		elif match.signature() in self._partial_match_signatures:
+			self.partial_matches.discard(match)
+			self._partial_match_signatures.remove(match.signature())
+		return self
+
+	def update_for_new_nodequery_matches(self,nq_instance_tuplist=[]):
+		# accepts a list of tuples of form (nq,node)
+		# creates new partial graphmatches seeded with these tuples
+		# calls process_partial_matches()
 		pmatches = []
-		if len(nq_instance_zip)>0:
-			for nq,node in nq_instance_zip:
-				pmatch = self.make_default_graphmatch()
-				pmatch[nq] = node
-				pmatches.append(pmatch)
-		self.partial_matches.extend(pmatches)
+		for nq,node in nq_instance_tuplist:
+			pmatch = self.make_default_graphmatch()
+			pmatch[nq] = node
+			self.add_match(pmatch)
 		self.process_partial_matches()
 		return self
 
+	def pop_partial_match(self):
+		x = self.partial_matches[-1]
+		self.remove_match(x)
+		return x
+
 	def process_partial_matches(self):
+		# This works as a LIFO stack
 		while(len(self.partial_matches)>0):
-			current_pmatch = self.partial_matches.pop()
+			current_pmatch = self.pop_partial_match()
 			print('processing ',current_pmatch.to_string())
-		return
+			pmatches = self.expand_partial_match(current_pmatch)
+			for pmatch in pmatches:
+				self.add_match(pmatch)
+		return self
+
+	def expand_partial_match(self,pmatch):
+		# expands a match in different possible ways and returns the new matches
+		# here, different graph-match expansion algorithms can be used
+		print('expanding ',pmatch.to_string())
+		#return [pmatch]
+		return []
 
 
 def main():
@@ -174,8 +215,8 @@ def main():
 		for m in [a2,b2]:
 			nq.update_match(m)
 
-	nq_instance_dict = list(zip(gq.nodequeries,[a2,b2]))
-	gq.update_for_new_nodequery_matches(nq_instance_dict)
+	nq_instance_tuplist = list(zip(gq.nodequeries,[a2,b2]))
+	gq.update_for_new_nodequery_matches(nq_instance_tuplist)
 
 
 
