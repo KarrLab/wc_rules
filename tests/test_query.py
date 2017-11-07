@@ -29,6 +29,13 @@ class B1(base.BaseClass):pass
 class C1(base.BaseClass):pass
 class D1(base.BaseClass):pass
 
+# used for testing graph isomorphism
+class A2(base.BaseClass):
+    b = core.OneToOneAttribute('B2',related_name='a')
+class B2(base.BaseClass):pass
+
+
+
 class TestQuery(unittest.TestCase):
     def test_nodetypequery(self):
         ntq = NodeTypeQuery()
@@ -106,4 +113,28 @@ class TestQuery(unittest.TestCase):
         'from nq2 to nq0','from nq3 to nq1','from nq4 to nq1','from nq5 to nq0 nq1',
         'from nq6 to nq0 nq1']
         self.assertEqual(str1_arr,str2_arr)
+        return
+
+    def test_graph_isomorphism(self):
+
+        # query graph
+        a1 = A2(id='a1')
+        b1 = B2(id='b1')
+        a1.b = b1
+        gq = GraphQuery(id='gq')
+        gq.add_nodequery( NodeQuery(query=a1,id='nq_a1') )
+        gq.add_nodequery( NodeQuery(query=b1,id='nq_b1') )
+        gq.compile_nodequery_relations()
+
+        # instance graph
+        a2 = A2(id='a2')
+        b2 = B2(id='b2')
+        a2.b = b2
+        for nq in gq.nodequeries:
+            for m in [a2,b2]:
+                nq.update_match(m)
+
+        nq_instance_tuplist = list(zip(gq.nodequeries,[a2,b2]))
+        gq.update_for_new_nodequery_matches(nq_instance_tuplist)
+        self.assertEqual(len(gq.matches),1)
         return

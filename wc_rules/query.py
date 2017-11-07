@@ -69,13 +69,19 @@ class NodeQuery(BaseClass):
 	def identify_relationships(self,nq):
 		node1 = self.query
 		node2 = nq.query
-		# list of dicts with keys: attrname, append
-		relations =[]
+		# list of funcs
+		# each func enables comparing two nodequery matches to see
+		# if they have the same relationship as two nodequeries
+		funcs =[]
 		for attr in node1.attributes_that_contain(node2):
 			apnd = node1.attribute_properties[attr]['append']
-			relations.append({'attrname':attr,'append':apnd})
-		if len(relations)>0:
-			return relations
+			if apnd:
+				f = lambda x: getattr(x,attr)
+			else:
+				f = lambda x: [getattr(x,attr)]
+			funcs.append(f)
+		if len(funcs)>0:
+			return funcs
 		return None
 
 class GraphMatch(DictClass):
@@ -95,10 +101,14 @@ class GraphMatch(DictClass):
 	def is_complete(self):
 		return len(self.nonekeys())==0
 
-	def signature(self):
-		if self._signature is None:
+	def signature(self,update=True):
+		if self._signature is None or update is True:
 			self._signature = self.to_string()
 		return self._signature
+
+	def __setitem__(self,key,value):
+		super().__setitem__(key,value)
+		self._signature = None
 
 	def to_string(self):
 		a = dict()
@@ -108,6 +118,16 @@ class GraphMatch(DictClass):
 			else:
 				a[x.id] = None
 		return a.__str__()
+
+	def next_feasible_set_of_matches(self,next_nq):
+		sets = []
+		for current_nq in self.not_nonekeys():
+			if next_nq in current_nq.next_nq:
+				for func in current_nq.next_nq[next_nq]:
+					target = self[current_nq]
+					targetset = set(func(target)) - set(self.values())
+					sets.append(targetset)
+		return list(set.intersection(*sets))
 
 class GraphQuery(BaseClass):
 	nodequeries = core.OneToManyAttribute(NodeQuery,related_name='graphquery')
@@ -126,36 +146,56 @@ class GraphQuery(BaseClass):
 	def compile_nodequery_relations(self):
 		for x,y in permutations(self.nodequeries,2):
 			d = x.identify_relationships(y)
-			# d is either None or a list of dicts {'attrname':str,'append':bool}
+			# d is either None or a list of funcs
 			if d is not None:
 				x.next_nq[y] = d
 		return self
 
-	def make_default_graphmatch(self):
+	def make_default_graphmatch(self,match=None,update_dict=None):
 		gm = GraphMatch()
 		for i,x in enumerate(self.nodequeries):
-			gm[x] = None
 			gm.keyorder[x] = i
+		if match is not None:
+			for x,y in match.items():
+				if x in gm.keyorder.keys():
+					gm[x] = y
+		if update_dict is not None:
+			for x,y in update_dict.items():
+				if x in gm.keyorder.keys():
+					gm[x] = y
+		for x in gm.keyorder.keys():
+			if x not in gm.keys():
+				gm[x] = None
 		return gm
 
 	def add_match(self,match):
 		# add_match is intelligent w.r.t. whether match is partial or total
-		if match.is_complete() and match.signature() not in self._match_signatures:
+		iscomplete = match.is_complete()
+		signature = match.signature()
+		#print('trying to add match ',signature)
+		if iscomplete and signature not in self._match_signatures:
+			#print('added complete match ',signature)
 			self.matches.append(match)
-			self._match_signatures.append(match.signature())
-		elif match.signature() not in self._partial_match_signatures:
+			self._match_signatures.append(signature)
+		if not iscomplete and signature not in self._partial_match_signatures:
+			#print('added incomplete match ',signature)
 			self.partial_matches.append(match)
-			self._partial_match_signatures.append(match.signature())
+			self._partial_match_signatures.append(signature)
 		return self
 
 	def remove_match(self,match):
 		# remove_match is intelligent w.r.t. whether match is partial or total
-		if match.is_complete() and match.signature() in self._match_signatures:
+		iscomplete = match.is_complete()
+		signature = match.signature()
+		#print('trying to remove match ',signature)
+		if iscomplete and signature in self._match_signatures:
+			#print('removed complete match ',signature)
 			self.matches.discard(match)
-			self._match_signatures.remove(match.signature())
-		elif match.signature() in self._partial_match_signatures:
+			self._match_signatures.remove(signature)
+		if not iscomplete and signature in self._partial_match_signatures:
+			#print('removed incomplete match ',signature)
 			self.partial_matches.discard(match)
-			self._partial_match_signatures.remove(match.signature())
+			self._partial_match_signatures.remove(signature)
 		return self
 
 	def update_for_new_nodequery_matches(self,nq_instance_tuplist=[]):
@@ -164,8 +204,7 @@ class GraphQuery(BaseClass):
 		# calls process_partial_matches()
 		pmatches = []
 		for nq,node in nq_instance_tuplist:
-			pmatch = self.make_default_graphmatch()
-			pmatch[nq] = node
+			pmatch = self.make_default_graphmatch(update_dict={nq:node})
 			self.add_match(pmatch)
 		self.process_partial_matches()
 		return self
@@ -179,45 +218,59 @@ class GraphQuery(BaseClass):
 		# This works as a LIFO stack
 		while(len(self.partial_matches)>0):
 			current_pmatch = self.pop_partial_match()
-			print('processing ',current_pmatch.to_string())
+			#print('processing ',current_pmatch.to_string())
 			pmatches = self.expand_partial_match(current_pmatch)
 			for pmatch in pmatches:
 				self.add_match(pmatch)
 		return self
 
 	def expand_partial_match(self,pmatch):
-		# expands a match in different possible ways and returns the new matches
-		# here, different graph-match expansion algorithms can be used
-		print('expanding ',pmatch.to_string())
-		#return [pmatch]
+		# a graphmatch is 1-1 map between a set of nqs and a set of nq_matches
+		# given a partial match, we first select_next_nq
+		# then we select_next_nq_matches
+		# one could potentially replace these with more efficient algorithms
+
+		next_nq = self.select_next_nq(pmatch)
+		if next_nq is None: return []
+		valid_nodequery_matches = self.select_next_nq_matches(pmatch,next_nq)
+		if len(valid_nodequery_matches)==0: return []
+		elif len(valid_nodequery_matches)==1:
+			# if there is only one possible nq_match, reuse the same pmatch
+			pmatch[next_nq] = valid_nodequery_matches[0]
+			return [pmatch]
+		else:
+			# if there are many possible nq_matches,
+			# make a new copy for each possibility
+			len2 = len(valid_nodequery_matches)
+			pmatches = []
+			for x in valid_nodequery_matches:
+				pmatch2 = self.make_default_graphmatch(match=pmatch,update_dict={next_nq:x})
+				pmatches.append(pmatch2)
+			return pmatches
 		return []
+
+	def select_next_nq(self,pmatch):
+		# Order nqs from nonekeys() depending on which one has
+		# most connections to not_nonekeys()
+		# return the one with the max
+		n = dict()
+		for x in pmatch.nonekeys():
+			n[x] = len([z for z in pmatch.not_nonekeys() if x in z.next_nq])
+		m = max(n.values())
+		if m==0:
+			return None
+		return max(n,key=n.get)
+
+	def select_next_nq_matches(self,pmatch,next_nq):
+		candidates = pmatch.next_feasible_set_of_matches(next_nq)
+		candidates2 = list(filter(lambda x: x in next_nq.matches,candidates))
+		return candidates2
+
+
 
 
 def main():
-	class A(BaseClass):
-		b = core.OneToOneAttribute('B',related_name='a')
-	class B(BaseClass):pass
-
-	# query graph
-	a1 = A(id='a1')
-	b1 = B(id='b1')
-	a1.b = b1
-	gq = GraphQuery(id='gq')
-	gq.add_nodequery( NodeQuery(query=a1,id='nq_a1') )
-	gq.add_nodequery( NodeQuery(query=b1,id='nq_b1') )
-	gq.compile_nodequery_relations()
-
-	# instance graph
-	a2 = A(id='a2')
-	b2 = B(id='b2')
-	a2.b = b2
-	for nq in gq.nodequeries:
-		for m in [a2,b2]:
-			nq.update_match(m)
-
-	nq_instance_tuplist = list(zip(gq.nodequeries,[a2,b2]))
-	gq.update_for_new_nodequery_matches(nq_instance_tuplist)
-
+	pass
 
 
 if __name__=='__main__':
