@@ -125,7 +125,8 @@ class GraphMatch(DictClass):
 			if next_nq in current_nq.next_nq:
 				for func in current_nq.next_nq[next_nq]:
 					target = self[current_nq]
-					sets.append(set(func(target)))
+					targetset = set(func(target)) - set(self.values())
+					sets.append(targetset)
 		return list(set.intersection(*sets))
 
 class GraphQuery(BaseClass):
