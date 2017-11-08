@@ -104,7 +104,7 @@ class TestQuery(unittest.TestCase):
         for i,x in enumerate(abcd):
         	name = 'nq'+str(i)
         	gq.add_nodequery( NodeQuery(query=x,id=name) )
-        gq.compile_nodequery_relations()
+        gq.compile_traversal_functions()
 
         str1_arr = []
         for nq in gq.nodequeries:
@@ -124,7 +124,7 @@ class TestQuery(unittest.TestCase):
         gq = GraphQuery(id='gq')
         gq.add_nodequery( NodeQuery(query=a1,id='nq_a1') )
         gq.add_nodequery( NodeQuery(query=b1,id='nq_b1') )
-        gq.compile_nodequery_relations()
+        gq.compile_traversal_functions()
 
         # instance graph
         a2 = A2(id='a2')
