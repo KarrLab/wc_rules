@@ -88,7 +88,7 @@ class TestQuery(unittest.TestCase):
             self.assertTrue(instances[3] not in nq)
         return
 
-    def test_graphquery_compile_nodequeries(self):
+    def test_graphquery_compile_traversal_functions(self):
         a_vec = [A1(),A1()]
         b_vec = [B1()]
         c_vec = [C1(),C1()]
@@ -135,6 +135,7 @@ class TestQuery(unittest.TestCase):
                 nq.update_match(m)
 
         nq_instance_tuplist = list(zip(gq.nodequeries,[a2,b2]))
-        gq.update_for_new_nodequery_matches(nq_instance_tuplist)
+        gq.seed_graphmatches(nq_instance_tuplist)
+        gq.process_partial_matches()
         self.assertEqual(len(gq.matches),1)
         return

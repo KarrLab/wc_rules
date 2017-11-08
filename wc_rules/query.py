@@ -198,7 +198,7 @@ class GraphQuery(BaseClass):
 			self._partial_match_signatures.remove(signature)
 		return self
 
-	def update_for_new_nodequery_matches(self,nq_instance_tuplist=[]):
+	def seed_graphmatches(self,nq_instance_tuplist=[]):
 		# accepts a list of tuples of form (nq,node)
 		# creates new partial graphmatches seeded with these tuples
 		# calls process_partial_matches()
@@ -206,7 +206,7 @@ class GraphQuery(BaseClass):
 		for nq,node in nq_instance_tuplist:
 			pmatch = self.make_default_graphmatch(update_dict={nq:node})
 			self.add_match(pmatch)
-		self.process_partial_matches()
+		#self.process_partial_matches()
 		return self
 
 	def pop_partial_match(self):
