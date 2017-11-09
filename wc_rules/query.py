@@ -220,7 +220,7 @@ class GraphQuery(BaseClass):
 			current_pmatch = self.pop_partial_match()
 			#print('processing ',current_pmatch.to_string())
 			pmatches = self.expand_partial_match(current_pmatch)
-			for pmatch in pmatches:
+			for pmatch in pmatches.reverse():
 				self.add_match(pmatch)
 		return self
 
