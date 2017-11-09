@@ -88,7 +88,7 @@ class TestQuery(unittest.TestCase):
             self.assertTrue(instances[3] not in nq)
         return
 
-    def test_graphquery_compile_nodequeries(self):
+    def test_graphquery_compile_traversal_functions(self):
         a_vec = [A1(),A1()]
         b_vec = [B1()]
         c_vec = [C1(),C1()]
@@ -104,7 +104,7 @@ class TestQuery(unittest.TestCase):
         for i,x in enumerate(abcd):
         	name = 'nq'+str(i)
         	gq.add_nodequery( NodeQuery(query=x,id=name) )
-        gq.compile_nodequery_relations()
+        gq.compile_traversal_functions()
 
         str1_arr = []
         for nq in gq.nodequeries:
@@ -124,7 +124,7 @@ class TestQuery(unittest.TestCase):
         gq = GraphQuery(id='gq')
         gq.add_nodequery( NodeQuery(query=a1,id='nq_a1') )
         gq.add_nodequery( NodeQuery(query=b1,id='nq_b1') )
-        gq.compile_nodequery_relations()
+        gq.compile_traversal_functions()
 
         # instance graph
         a2 = A2(id='a2')
@@ -135,6 +135,7 @@ class TestQuery(unittest.TestCase):
                 nq.update_match(m)
 
         nq_instance_tuplist = list(zip(gq.nodequeries,[a2,b2]))
-        gq.update_for_new_nodequery_matches(nq_instance_tuplist)
+        gq.seed_graphmatches(nq_instance_tuplist)
+        gq.process_partial_matches()
         self.assertEqual(len(gq.matches),1)
         return

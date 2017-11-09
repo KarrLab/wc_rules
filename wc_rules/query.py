@@ -64,14 +64,13 @@ class NodeQuery(BaseClass):
 				self.remove_match(node)
 		return self
 
-	# identifying relationships with another NodeQuery
-	# will be used by GraphQuery
-	def identify_relationships(self,nq):
+	# traversal functions define
+	# how to use a current NQ1:N match and
+	# a NQ1:NQ2 relation to get to the next
+	# set of NQ2:N matches
+	def get_traversal_functions(self,nq):
 		node1 = self.query
 		node2 = nq.query
-		# list of funcs
-		# each func enables comparing two nodequery matches to see
-		# if they have the same relationship as two nodequeries
 		funcs =[]
 		for attr in node1.attributes_that_contain(node2):
 			apnd = node1.attribute_properties[attr]['append']
@@ -121,11 +120,12 @@ class GraphMatch(DictClass):
 
 	def next_feasible_set_of_matches(self,next_nq):
 		sets = []
+		excludes = set(self.values())
 		for current_nq in self.not_nonekeys():
 			if next_nq in current_nq.next_nq:
 				for func in current_nq.next_nq[next_nq]:
 					target = self[current_nq]
-					targetset = set(func(target)) - set(self.values())
+					targetset = set(func(target)) - excludes
 					sets.append(targetset)
 		return list(set.intersection(*sets))
 
@@ -143,9 +143,9 @@ class GraphQuery(BaseClass):
 		self.nodequeries.append(nq)
 		return self
 
-	def compile_nodequery_relations(self):
+	def compile_traversal_functions(self):
 		for x,y in permutations(self.nodequeries,2):
-			d = x.identify_relationships(y)
+			d = x.get_traversal_functions(y)
 			# d is either None or a list of funcs
 			if d is not None:
 				x.next_nq[y] = d
@@ -198,7 +198,7 @@ class GraphQuery(BaseClass):
 			self._partial_match_signatures.remove(signature)
 		return self
 
-	def update_for_new_nodequery_matches(self,nq_instance_tuplist=[]):
+	def seed_graphmatches(self,nq_instance_tuplist=[]):
 		# accepts a list of tuples of form (nq,node)
 		# creates new partial graphmatches seeded with these tuples
 		# calls process_partial_matches()
@@ -206,7 +206,7 @@ class GraphQuery(BaseClass):
 		for nq,node in nq_instance_tuplist:
 			pmatch = self.make_default_graphmatch(update_dict={nq:node})
 			self.add_match(pmatch)
-		self.process_partial_matches()
+		#self.process_partial_matches()
 		return self
 
 	def pop_partial_match(self):
@@ -220,7 +220,7 @@ class GraphQuery(BaseClass):
 			current_pmatch = self.pop_partial_match()
 			#print('processing ',current_pmatch.to_string())
 			pmatches = self.expand_partial_match(current_pmatch)
-			for pmatch in pmatches:
+			for pmatch in reversed(pmatches):
 				self.add_match(pmatch)
 		return self
 
