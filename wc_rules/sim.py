@@ -38,6 +38,50 @@ class SimulationState(core.Model):
 
     def process_message(self,update_message):
         # processes and returns a list of messages
+        # print('processing message ',update_message.__str__())
+        update_attr = update_message['update_attr']
+        update_type = update_message['update_type']
+        msgs = []
+        if update_attr == 'instance':
+            instance = update_message['instance']
+            for nq in self.nodetypequery[instance.__class__]:
+                msgs.extend(self.generate_nodequery_message(nq,instance))
+        if update_attr == 'nodequery':
+            instance = update_message['instance']
+            nq = update_message['nodequery']
+            if update_type == 'add':
+                nq.add_match(instance)
+                msgs.extend(self.generate_graphquery_message(nq,instance,'add'))
+            if update_type == 'remove':
+                nq.remove_match(instance)
+                msgs.extend(self.generate_graphquery_message(nq,instance,'remove'))
+        if update_attr == 'graphquery':
+            instance = update_message['instance']
+            nq = update_message['nodequery']
+            gq = update_message['graphquery']
+            if update_type == 'add':
+                gq.seed_graphmatches([(nq,instance)])
+                gq.process_partial_matches()
+            if update_type == 'remove':
+                gq.remove_graphmatches([(nq,instance)])
+        return msgs
+
+    def generate_nodequery_message(self,nq,instance):
+        # returns a message
+        match_verified = nq.verify_match(instance)
+        if match_verified and instance not in nq.matches:
+            return [UpdateMessage(update_attr='nodequery',update_type='add',nodequery=nq,instance=instance)]
+        if not match_verified and instance in nq.matches:
+            return [UpdateMessage(update_attr='nodequery',update_type='add',nodequery=nq,instance=instance)]
+        return []
+
+    def generate_graphquery_message(self,nq,instance,update_type):
+        if nq.graphquery is not None:
+            gq = nq.graphquery
+            if update_type=='add':
+                return [UpdateMessage(update_attr='graphquery',update_type='add',nodequery=nq,instance=instance,graphquery=gq)]
+            if update_type=='remove':
+                return [UpdateMessage(update_attr='graphquery',update_type='remove',nodequery=nq,instance=instance,graphquery=gq)]
         return []
 
     def process_message_queue(self):
