@@ -25,6 +25,7 @@ class SimulationState(core.Model):
         super().__init__(**kwargs)
         self.nodetypequery= NodeTypeQuery()
         self.update_message_queue = deque()
+        self.verbose = False
 
     def add_message(self,update_message):
         # appends to the right of deque
@@ -38,7 +39,8 @@ class SimulationState(core.Model):
 
     def process_message(self,update_message):
         # processes and returns a list of messages
-        # print('processing message ',update_message.__str__())
+        if self.verbose:
+            print('processing message ',update_message.__str__())
         update_attr = update_message['update_attr']
         update_type = update_message['update_type']
         msgs = []

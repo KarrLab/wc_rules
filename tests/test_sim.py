@@ -27,6 +27,8 @@ class TestSim(unittest.TestCase):
         queries = [A(id='query1',b=True),A(id='query2',b=True)]
         queries[0].x.append(queries[1])
         sim = SimulationState()
+        # This prints out each message when received
+        sim.verbose = False
         sim.add_as_graphquery(queries)
 
         # Test 1
