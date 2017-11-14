@@ -33,11 +33,11 @@ class SimulationState(core.Model):
 
     def pop_message(self):
         # removes from left of deque
-        msg = self.update_message_queue.popleft(update_message)
+        msg = self.update_message_queue.popleft()
         return msg
 
     def process_message(self,update_message):
-        # processes and returns a list of messages or None
+        # processes and returns a list of messages
         return []
 
     def process_message_queue(self):
