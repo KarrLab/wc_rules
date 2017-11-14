@@ -209,6 +209,17 @@ class GraphQuery(BaseClass):
 		#self.process_partial_matches()
 		return self
 
+	def remove_graphmatches(self,nq_instance_tuplist=[]):
+		# accepts a list of tuples of form (nq,node)
+		# removes partial and full matches that have nq:node
+		matches_to_remove = []
+		for nq,node in nq_instance_tuplist:
+			matches_to_remove = [x for x in self.matches if x[nq]==node]
+			for x in matches_to_remove:
+				self.remove_match(x)
+		return self
+
+
 	def pop_partial_match(self):
 		x = self.partial_matches[-1]
 		self.remove_match(x)
