@@ -14,6 +14,7 @@ class UpdateMessage(dict):
                 kwargs[kwarg] = None
         super().__init__(*args,**kwargs)
 
+
 class SimulationState(core.Model):
     agents = core.OneToManyAttribute(BaseClass,related_name='ss_agent')
     nodequeries = core.OneToManyAttribute(NodeQuery,related_name='ss_nq')
@@ -24,6 +25,28 @@ class SimulationState(core.Model):
         super().__init__(**kwargs)
         self.nodetypequery= NodeTypeQuery()
         self.update_message_queue = deque()
+
+    def add_message(self,update_message):
+        # appends to the right of deque
+        self.update_message_queue.append(update_message)
+        return self
+
+    def pop_message(self):
+        # removes from left of deque
+        msg = self.update_message_queue.popleft(update_message)
+        return msg
+
+    def process_message(self,update_message):
+        # processes and returns a list of messages or None
+        return []
+
+    def process_message_queue(self):
+        while len(self.update_message_queue)>0:
+            current_message = self.pop_message()
+            messages = self.process_message(current_message)
+            for msg in messages:
+                self.add_message(msg)
+        return self
 
     def add_nodequery(self,nq):
         self.nodequeries.append(nq)
