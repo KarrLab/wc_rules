@@ -5,7 +5,7 @@ from collections import deque
 
 class UpdateMessage(dict):
     def __init__(self,*args,**kwargs):
-        validkeys = 'update_attr instance nodequery graphquery'.split()
+        validkeys = 'update_attr update_type instance nodequery graphquery'.split()
         for kwarg in kwargs:
             if kwarg not in validkeys:
                 raise KeyError(kwarg+' not a valid key.')
