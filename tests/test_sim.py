@@ -46,3 +46,16 @@ class TestSim(unittest.TestCase):
             self.assertEqual(len(x.matches),3)
         for x in sim.graphqueries:
             self.assertEqual(len(x.matches),6)
+
+        # Test 2
+        # make a change to an instance, check if matches update properly
+        instances[2].b = False
+        msg = UpdateMessage(update_attr='instance',instance=instances[2])
+        sim.add_message(msg)
+        sim.process_message_queue()
+        # Now, each nodequery should have only two matches
+        # The graphquery should have only two matches
+        for x in sim.nodequeries:
+            self.assertEqual(len(x.matches),2)
+        for x in sim.graphqueries:
+            self.assertEqual(len(x.matches),2)

@@ -74,7 +74,7 @@ class SimulationState(core.Model):
         if match_verified and instance not in nq.matches:
             return [UpdateMessage(update_attr='nodequery',update_type='add',nodequery=nq,instance=instance)]
         if not match_verified and instance in nq.matches:
-            return [UpdateMessage(update_attr='nodequery',update_type='add',nodequery=nq,instance=instance)]
+            return [UpdateMessage(update_attr='nodequery',update_type='remove',nodequery=nq,instance=instance)]
         return []
 
     def generate_graphquery_message(self,nq,instance,update_type):
