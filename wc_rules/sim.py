@@ -1,6 +1,18 @@
 from obj_model import core
 from wc_rules.base import BaseClass
 from wc_rules.query import NodeTypeQuery, NodeQuery, GraphQuery
+from collections import deque
+
+class UpdateMessage(dict):
+    def __init__(self,*args,**kwargs):
+        validkeys = 'update_attr instance nodequery graphquery'.split()
+        for kwarg in kwargs:
+            if kwarg not in validkeys:
+                raise KeyError(kwarg+' not a valid key.')
+        remaining_keys = set(validkeys) - set(kwargs.keys())
+        for kwarg in remaining_keys:
+                kwargs[kwarg] = None
+        super().__init__(*args,**kwargs)
 
 class SimulationState(core.Model):
     agents = core.OneToManyAttribute(BaseClass,related_name='ss_agent')
@@ -11,6 +23,7 @@ class SimulationState(core.Model):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
         self.nodetypequery= NodeTypeQuery()
+        self.update_message_queue = deque()
 
     def add_nodequery(self,nq):
         self.nodequeries.append(nq)
