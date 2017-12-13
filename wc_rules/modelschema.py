@@ -6,4 +6,4 @@
 """
 
 from obj_model import core
-from wc_rules import bioschema
+from wc_rules import bio
