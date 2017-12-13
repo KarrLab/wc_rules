@@ -5,23 +5,33 @@
 :Copyright: 2017, Karr Lab
 :License: MIT
 """
+
 import wc_rules.chem as chem
 import wc_rules.variables as var
 
 ###### Structure Improvements ######
-class Protein(chem.Molecule): pass
-class ProteinSite(chem.Site): pass
+class Protein(chem.Molecule):
+    pass
+
+
+class ProteinSite(chem.Site):
+    pass
 
 ###### Variable Improvements ######
-class PhosphorylationState(var.BooleanVariable): pass
+class PhosphorylationState(var.BooleanVariable):
+    pass
 
 ###### Operation Improvements ######
-class Phosphorylate(chem.SetTrue): pass
-class Dephosphorylate(chem.SetFalse): pass
+class Phosphorylate(chem.SetTrue):
+    pass
+
+
+class Dephosphorylate(chem.SetFalse):
+    pass
 
 
 def main():
-	pass
+    pass
 
 if __name__ == '__main__':
-	main()
+    main()
