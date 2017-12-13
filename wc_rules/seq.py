@@ -5,24 +5,23 @@
 :License: MIT
 """
 
-from wc_rules.chem import Molecule, Site
-from obj_model.extra_attributes import *
-from Bio.Seq import Seq
-from Bio import SeqFeature
-from numpy import full
+from wc_rules import chem
+from obj_model import extra_attributes
+import Bio.Seq
 import itertools
+import numpy
 
 
-class SequencePropertyAttribute(NumpyArrayAttribute):
+class SequencePropertyAttribute(extra_attributes.NumpyArrayAttribute):
     pass
 
 
-class SequenceMolecule(Molecule):
-    seq = BioSeqAttribute()
+class SequenceMolecule(chem.Molecule):
+    seq = extra_attributes.BioSeqAttribute()
 
     def add_sequence(self, seq):
         alphabet = self.Meta.attributes['seq'].alphabet
-        self.seq = Seq(seq, alphabet)
+        self.seq = Bio.Seq.Seq(seq, alphabet)
         return self
 
     def initialize_SequencePropertyAttribute(self, attrname):
@@ -30,7 +29,7 @@ class SequenceMolecule(Molecule):
         attr = self.Meta.attributes[attrname]
         default_fill = attr.default_fill
         dtype = attr.dtype
-        init_vals = full(dim, default_fill, dtype)
+        init_vals = numpy.full(dim, default_fill, dtype)
         setattr(self, attrname, init_vals)
         return self
 
@@ -53,16 +52,9 @@ class SequenceMolecule(Molecule):
 
 
 class DSDNA(SequenceMolecule):
-    seq = BioDnaSeqAttribute()
+    seq = extra_attributes.BioDnaSeqAttribute()
     binding_footprint = SequencePropertyAttribute(dtype=bool, default_fill=False)
 
 
-class SequenceSite(Site):
-    location = FeatureLocationAttribute()
-
-
-def main():
-    pass
-
-if __name__ == '__main__':
-    main()
+class SequenceSite(chem.Site):
+    location = extra_attributes.FeatureLocationAttribute()

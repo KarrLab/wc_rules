@@ -6,9 +6,9 @@
 """
 
 from obj_model import core
-from wc_rules.base import BaseClass
-from wc_rules.query import NodeTypeQuery, NodeQuery, GraphQuery
-from collections import deque
+from wc_rules import base
+from wc_rules import query
+import collections
 
 
 class UpdateMessage(dict):
@@ -25,24 +25,24 @@ class UpdateMessage(dict):
 
 
 class SimulationState(core.Model):
-    agents = core.OneToManyAttribute(BaseClass, related_name='ss_agent')
-    nodequeries = core.OneToManyAttribute(NodeQuery, related_name='ss_nq')
-    nodetypequery = core.OneToOneAttribute(NodeTypeQuery, related_name='ss_ntq')
-    graphqueries = core.OneToManyAttribute(GraphQuery, related_name='ss_gq')
+    agents = core.OneToManyAttribute(base.BaseClass, related_name='ss_agent')
+    nodequeries = core.OneToManyAttribute(query.NodeQuery, related_name='ss_nq')
+    nodetypequery = core.OneToOneAttribute(query.NodeTypeQuery, related_name='ss_ntq')
+    graphqueries = core.OneToManyAttribute(query.GraphQuery, related_name='ss_gq')
 
     def __init__(self, **kwargs):
         super(SimulationState, self).__init__(**kwargs)
-        self.nodetypequery = NodeTypeQuery()
-        self.update_message_queue = deque()
+        self.nodetypequery = query.NodeTypeQuery()
+        self.update_message_queue = collections.deque()
         self.verbose = False
 
     def add_message(self, update_message):
-        # appends to the right of deque
+        # appends to the right of collections.deque
         self.update_message_queue.append(update_message)
         return self
 
     def pop_message(self):
-        # removes from left of deque
+        # removes from left of collections.deque
         msg = self.update_message_queue.popleft()
         return msg
 
@@ -109,11 +109,11 @@ class SimulationState(core.Model):
         return self
 
     def add_node_as_nodequery(self, node):
-        self.add_nodequery(NodeQuery(query=node))
+        self.add_nodequery(query.NodeQuery(query=node))
         return self
 
     def add_graphquery(self, nqs):
-        gq = GraphQuery()
+        gq = query.GraphQuery()
         for nq in nqs:
             self.add_nodequery(nq)
             gq.add_nodequery(nq)
@@ -122,12 +122,5 @@ class SimulationState(core.Model):
         return self
 
     def add_as_graphquery(self, nodes):
-        self.add_graphquery([NodeQuery(query=x) for x in nodes])
+        self.add_graphquery(map(lambda x: query.NodeQuery(query=x), nodes))
         return self
-
-
-def main():
-    pass
-
-if __name__ == '__main__':
-    main()

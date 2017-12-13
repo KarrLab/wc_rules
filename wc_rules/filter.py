@@ -44,11 +44,3 @@ class Ge(NumericFilter):
 
     def get_comparison_function(self):
         return lambda x: x >= self.value
-
-
-def main():
-    pass
-
-
-if __name__ == '__main__':
-    main()

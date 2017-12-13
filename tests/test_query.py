@@ -7,8 +7,8 @@
 
 from obj_model import core
 from wc_rules import base
-from wc_rules.query import NodeTypeQuery, NodeQuery, GraphQuery
-import wc_rules.graph_utils as g
+from wc_rules import graph_utils
+from wc_rules import query
 import unittest
 from itertools import product
 
@@ -19,7 +19,7 @@ class NewObject(base.BaseClass):
     prop1 = core.BooleanAttribute(default=None)
     prop2 = core.BooleanAttribute(default=None)
 
-    class GraphMeta(g.GraphMeta):
+    class GraphMeta(graph_utils.GraphMeta):
         semantic = ('prop1', 'prop2')
 
 
@@ -78,9 +78,9 @@ class B2(base.BaseClass):
 class TestQuery(unittest.TestCase):
 
     def test_nodetypequery(self):
-        ntq = NodeTypeQuery()
+        ntq = query.NodeTypeQuery()
         for x in [A(id='nqA'), B(id='nqB'), D(id='nqD'), C(id='nqC')]:
-            nq = NodeQuery(query=x)
+            nq = query.NodeQuery(query=x)
             ntq.register_new_nq(nq)
 
         instances = [A(id='instA'), B(id='instB'), C(id='instC'), D(id='instD')]
@@ -93,8 +93,8 @@ class TestQuery(unittest.TestCase):
     def test_nodequery(self):
         # We test two queries 1x and x1 against
         # instances 00, 01, 10, 11
-        nq1 = NodeQuery(query=NewObject(prop1=True, id='nq1'))
-        nq2 = NodeQuery(query=NewObject(prop2=True, id='nq2'))
+        nq1 = query.NodeQuery(query=NewObject(prop1=True, id='nq1'))
+        nq2 = query.NodeQuery(query=NewObject(prop2=True, id='nq2'))
         queries = [nq1, nq2]
 
         instances = []
@@ -137,11 +137,11 @@ class TestQuery(unittest.TestCase):
         a_vec[0].d.extend(d_vec)
         a_vec[1].d.extend(d_vec)
         abcd = a_vec+b_vec+c_vec+d_vec
-        gq = GraphQuery()
+        gq = query.GraphQuery()
 
         for i, x in enumerate(abcd):
             name = 'nq'+str(i)
-            gq.add_nodequery(NodeQuery(query=x, id=name))
+            gq.add_nodequery(query.NodeQuery(query=x, id=name))
         gq.compile_traversal_functions()
 
         str1_arr = []
@@ -165,9 +165,9 @@ class TestQuery(unittest.TestCase):
         a1 = A2(id='a1')
         b1 = B2(id='b1')
         a1.b = b1
-        gq = GraphQuery(id='gq')
-        gq.add_nodequery(NodeQuery(query=a1, id='nq_a1'))
-        gq.add_nodequery(NodeQuery(query=b1, id='nq_b1'))
+        gq = query.GraphQuery(id='gq')
+        gq.add_nodequery(query.NodeQuery(query=a1, id='nq_a1'))
+        gq.add_nodequery(query.NodeQuery(query=b1, id='nq_b1'))
         gq.compile_traversal_functions()
 
         # instance graph

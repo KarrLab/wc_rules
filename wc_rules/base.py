@@ -7,8 +7,8 @@
 """
 
 from obj_model import core
-import wc_rules.graph_utils as g
-import wc_rules.utils as utils
+from wc_rules import graph_utils
+from wc_rules import utils
 import uuid
 import random
 
@@ -19,10 +19,8 @@ idgen = random.Random()
 idgen.seed(0)
 
 ###### Structures ######
-
-
 class BaseClass(core.Model):
-    """	Base class for bioschema objects.
+    """ Base class for bioschema objects.
 
     Attributes:
         id (:obj:`str`): unique id that can be used to pick object from a list
@@ -33,7 +31,7 @@ class BaseClass(core.Model):
     id = core.StringAttribute(primary=True, unique=True)
     attribute_properties = dict()
 
-    class GraphMeta(g.GraphMeta):
+    class GraphMeta(graph_utils.GraphMeta):
         outward_edges = tuple()
         semantic = tuple()
 
@@ -123,20 +121,36 @@ class BaseClass(core.Model):
 
     def add_by_attrname(self, obj, attrname):
         attr = self.find_attr_by_name(attrname)
-        try:
-            attr.append(obj)
-        except:
-            raise utils.AddError('Could not add object to attribute \'{}\'.'.format(attrname))
+
+        if isinstance(obj, core.Model):
+            objs = [obj]
+        else:
+            objs = obj
+
+        for obj in objs:
+            try:
+                attr.append(obj)
+            except:
+                raise utils.AddError('Could not add object to attribute \'{}\'.'.format(attrname))
+
         return self
 
     def remove_by_attrname(self, obj, attrname, force=True):
         attr = self.find_attr_by_name(attrname)
-        if obj not in attr:
-            raise utils.RemoveError('Object not found in attribute \'{}\'.'.format(attrname))
-        try:
-            attr.remove(obj)
-        except:
-            raise utils.RemoveError('Could not remove object from attribute \'{}\'.'.format(attrname))
+
+        if isinstance(obj, core.Model):
+            objs = [obj]
+        else:
+            objs = obj
+
+        for obj in objs:
+            if obj not in attr:
+                raise utils.RemoveError('Object not found in attribute \'{}\'.'.format(attrname))
+            try:
+                attr.remove(obj)
+            except:
+                raise utils.RemoveError('Could not remove object from attribute \'{}\'.'.format(attrname))
+
         return self
 
     def set_by_attrname(self, obj, attrname, force=False):
@@ -195,7 +209,7 @@ class BaseClass(core.Model):
         return attrnames
 
     def iadd(self, obj, attrname=None, force=False):
-        if type(obj) is list:
+        if isinstance(obj, list):
             for x in obj:
                 self.iadd(x, attrname)
             return self
@@ -213,7 +227,7 @@ class BaseClass(core.Model):
         return self
 
     def iremove(self, obj, attrname=None):
-        if type(obj) is list:
+        if isinstance(obj, list):
             for x in obj:
                 self.iremove(x, attrname)
             return self
@@ -255,7 +269,7 @@ class BaseClass(core.Model):
 
     ##### Graph Methods #####
     def get_graph(self, recurse=True, memo=None):
-        return g.get_graph(self, recurse=recurse, memo=memo)
+        return graph_utils.get_graph(self, recurse=recurse, memo=memo)
 
     @property
     def graph(self):
@@ -264,10 +278,3 @@ class BaseClass(core.Model):
 
 class DictClass(core.Model, dict):
     pass
-
-
-def main():
-    pass
-
-if __name__ == '__main__':
-    main()

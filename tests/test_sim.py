@@ -7,9 +7,7 @@
 
 from obj_model import core
 from wc_rules.base import BaseClass
-from wc_rules.query import NodeTypeQuery, NodeQuery, GraphQuery
 from wc_rules.sim import SimulationState, UpdateMessage
-import wc_rules.graph_utils as g
 import unittest
 
 

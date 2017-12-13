@@ -21,16 +21,12 @@ class Factory(object):
         return vec
 
 ###### Methods ######
-
-
 def listify(value):
-    if type(value) is not list:
+    if not isinstance(value, list):
         return [value]
     return value
 
 ###### Error ######
-
-
 class GenericError(Exception):
 
     def __init__(self, msg=None):
@@ -70,7 +66,7 @@ class AddObjectError(Exception):
     @staticmethod
     def to_str(obj):
         msg = str(type(obj))
-        msg = ''.join([ch for ch in msg if ch not in "<>"])
+        msg = ''.join(filter(lambda ch: ch not in "<>", msg))
         return msg
 
 
@@ -92,5 +88,5 @@ class RemoveObjectError(Exception):
     @staticmethod
     def to_str(obj):
         msg = str(type(obj))
-        msg = ''.join([ch for ch in msg if ch not in "<>"])
+        msg = ''.join(filter(lambda ch: ch not in "<>", msg))
         return msg

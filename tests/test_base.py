@@ -5,8 +5,10 @@
 :License: MIT
 """
 
-from wc_rules import base, chem, utils
-import wc_rules.graph_utils as g
+from wc_rules import base
+from wc_rules import chem
+from wc_rules import graph_utils
+from wc_rules import utils
 from obj_model import core
 import unittest
 
@@ -16,7 +18,7 @@ class Person(base.BaseClass):
     parents = core.ManyToManyAttribute('Person', max_related_rev=2, related_name='children')
     pets = core.OneToManyAttribute('Pet', related_name='owner')
 
-    class GraphMeta(g.GraphMeta):
+    class GraphMeta(graph_utils.GraphMeta):
         outward_edges = ('children', 'pets')
         semantic = ('name',)
 
@@ -104,7 +106,7 @@ class TestBase(unittest.TestCase):
 
         # this should raise an error in obj_model
         # with self.assertRaises(utils.AddError):
-        #	self.Kid001.add_by_attrname(self.Sherlock,'parents')
+        #     self.Kid001.add_by_attrname(self.Sherlock,'parents')
 
         for y in Kids:
             for x in Parents:

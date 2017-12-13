@@ -6,7 +6,7 @@
 """
 
 from obj_model import core
-import networkx as nx
+import networkx
 
 
 class GraphMeta(object):
@@ -16,7 +16,7 @@ class GraphMeta(object):
         outward_edges (:obj:`str`): attributes to be examined recursively for get_graph().
             Only RelatedManager attributes allowed.
         semantic (:obj:`str`): attributes/properties should be examined for node_match().
-            Only attributes/properties that return values comparable by '==' allowed.	
+            Only attributes/properties that return values comparable by '==' allowed.
     """
     outward_edges = tuple()
     semantic = tuple()
@@ -33,7 +33,7 @@ def edge_match(dict1, dict2):
     return dict1 == dict2
 
 
-class GraphMatcher(nx.algorithms.isomorphism.DiGraphMatcher):
+class GraphMatcher(networkx.algorithms.isomorphism.DiGraphMatcher):
 
     def __init__(self, g1, g2):
         super(GraphMatcher, self).__init__(g1, g2, node_match=node_match, edge_match=edge_match)
@@ -76,7 +76,7 @@ def get_graph(current_obj, recurse=True, memo=None):
 
     # Initializing if a memo is not provided
     if memo is None:
-        memo = nx.DiGraph()
+        memo = networkx.DiGraph()
     # Adding node if not already in memo, else updating it
     update_graph(memo, current_obj)
 
@@ -87,8 +87,8 @@ def get_graph(current_obj, recurse=True, memo=None):
     outward_edges = []
     outward_edges.extend(current_obj.__class__.GraphMeta.outward_edges)
 
-    for attrname, props in self.attribute_properties:
-        if props['variable']:
+    for attrname, props in current_obj.attribute_properties.items():
+        if 'variable' in props and props['variable']:
             outward_edges.append(attrname)
 
     for attrname in current_obj.__class__.GraphMeta.outward_edges:

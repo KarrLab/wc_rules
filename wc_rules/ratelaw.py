@@ -17,10 +17,3 @@ class RateExpression(core.Model):
     id = core.StringAttribute(primary=True)
     expr = core.StringAttribute()
     parameters = core.ManyToManyAttribute(Parameter, related_name='expressions')
-
-
-def main():
-    return
-
-if __name__ == '__main__':
-    main()

@@ -5,7 +5,8 @@
 :License: MIT
 """
 
-from wc_rules import base, variables
+from wc_rules import base
+from wc_rules import variables
 
 
 class Entity(base.BaseClass):

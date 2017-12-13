@@ -6,8 +6,8 @@
 :License: MIT
 """
 
-import wc_rules.chem as chem
-import wc_rules.variables as var
+from wc_rules import chem
+from wc_rules import variables
 
 ###### Structure Improvements ######
 class Protein(chem.Molecule):
@@ -18,7 +18,7 @@ class ProteinSite(chem.Site):
     pass
 
 ###### Variable Improvements ######
-class PhosphorylationState(var.BooleanVariable):
+class PhosphorylationState(variables.BooleanVariable):
     pass
 
 ###### Operation Improvements ######
@@ -28,10 +28,3 @@ class Phosphorylate(chem.SetTrue):
 
 class Dephosphorylate(chem.SetFalse):
     pass
-
-
-def main():
-    pass
-
-if __name__ == '__main__':
-    main()

@@ -7,12 +7,12 @@
 
 from obj_model import core
 from wc_rules import base
-import wc_rules.filter as fil
+from wc_rules import filter
 
 
 class StateVariable(base.BaseClass):
     value = core.LiteralAttribute()
-    filters = core.OneToManyAttribute(fil.Filter, related_name='var')
+    filters = core.OneToManyAttribute(filter.Filter, related_name='var')
 
     def __init__(self, value=None):
         super(StateVariable, self).__init__(value=value)
@@ -33,6 +33,14 @@ class StateVariable(base.BaseClass):
 class BooleanVariable(StateVariable):
     value = core.BooleanAttribute()
 
+    def set_true(self):
+        """ Set value to :obj:`True` """
+        self.value = True
+
+    def set_false(self):
+        """ Set value to :obj:`False` """
+        self.value = False
+
 
 class NumericVariable(StateVariable):
     value = core.NumericAttribute()
@@ -44,10 +52,3 @@ class IntegerVariable(NumericVariable):
 
 class FloatVariable(NumericVariable):
     value = core.FloatAttribute()
-
-
-def main():
-    pass
-
-if __name__ == '__main__':
-    main()

@@ -6,13 +6,12 @@
 """
 
 from obj_model import core
-from wc_rules.base import BaseClass, DictClass
-from wc_rules.entity import Entity
-import wc_rules.graph_utils as g
-from itertools import permutations, combinations
+from wc_rules import graph_utils
+from wc_rules import base
+import itertools
 
 
-class NodeTypeQuery(DictClass):
+class NodeTypeQuery(base.DictClass):
     # Keys: Classes
     # Values: NodeQuery objects
     # Purpose is to look up a class, then find the NodeQuery objects to update
@@ -49,9 +48,9 @@ class NodeTypeQuery(DictClass):
         return super(NodeTypeQuery, self).__getitem__(key)
 
 
-class NodeQuery(BaseClass):
-    query = core.OneToOneAttribute(BaseClass, related_name='nq_query')
-    matches = core.ManyToManyAttribute(BaseClass, related_name='nq_matches')
+class NodeQuery(base.BaseClass):
+    query = core.OneToOneAttribute(base.BaseClass, related_name='nq_query')
+    matches = core.ManyToManyAttribute(base.BaseClass, related_name='nq_matches')
 
     def __init__(self, **kwargs):
         super(NodeQuery, self).__init__(**kwargs)
@@ -59,7 +58,7 @@ class NodeQuery(BaseClass):
         self.next_nq = dict()
 
     def verify_match(self, node):
-        return g.node_compare(self.query, node)
+        return graph_utils.node_compare(self.query, node)
 
     # Methods for dealing with a single match
     def add_match(self, node):
@@ -100,7 +99,7 @@ class NodeQuery(BaseClass):
         return
 
 
-class GraphMatch(DictClass):
+class GraphMatch(base.DictClass):
 
     def __init__(self, **kwargs):
         super(GraphMatch, self).__init__(**kwargs)
@@ -110,16 +109,16 @@ class GraphMatch(DictClass):
         return
 
     def orderedkeys(self):
-        return list(sorted(self.keys(), key=lambda t: self.keyorder[t]))
+        return sorted(self.keys(), key=lambda t: self.keyorder[t])
 
     def nonekeys(self):
-        return [x for x in self.orderedkeys() if self[x] is None]
+        return filter(lambda x: self[x] is None, self.orderedkeys())
 
     def not_nonekeys(self):
-        return [x for x in self.orderedkeys() if self[x] is not None]
+        return filter(lambda x: self[x] is not None, self.orderedkeys())
 
     def is_complete(self):
-        return len(self.nonekeys()) == 0
+        return len(list(self.nonekeys())) == 0
 
     def signature(self, update=True):
         if self._signature is None or update is True:
@@ -151,7 +150,7 @@ class GraphMatch(DictClass):
         return list(set.intersection(*sets))
 
 
-class GraphQuery(BaseClass):
+class GraphQuery(base.BaseClass):
     nodequeries = core.OneToManyAttribute(NodeQuery, related_name='graphquery')
     matches = core.OneToManyAttribute(GraphMatch, related_name='gq_matches')
     partial_matches = core.OneToManyAttribute(GraphMatch, related_name='gq_partial_matches')
@@ -166,7 +165,7 @@ class GraphQuery(BaseClass):
         return self
 
     def compile_traversal_functions(self):
-        for x, y in permutations(self.nodequeries, 2):
+        for x, y in itertools.permutations(self.nodequeries, 2):
             d = x.get_traversal_functions(y)
             # d is either None or a list of funcs
             if d is not None:
@@ -234,11 +233,10 @@ class GraphQuery(BaseClass):
     def remove_graphmatches(self, nq_instance_tuplist=[]):
         # accepts a list of tuples of form (nq,node)
         # removes partial and full matches that have nq:node
-        matches_to_remove = []
         for nq, node in nq_instance_tuplist:
-            matches_to_remove = [x for x in self.matches if x[nq] == node]
-            for x in matches_to_remove:
-                self.remove_match(x)
+            for x in self.matches:
+                if x[nq] == node:
+                    self.remove_match(x)
         return self
 
     def pop_partial_match(self):
@@ -289,7 +287,7 @@ class GraphQuery(BaseClass):
         # return the one with the max
         n = dict()
         for x in pmatch.nonekeys():
-            n[x] = len([z for z in pmatch.not_nonekeys() if x in z.next_nq])
+            n[x] = len(list(filter(lambda z: x in z.next_nq, pmatch.not_nonekeys())))
         m = max(n.values())
         if m == 0:
             return
@@ -299,11 +297,3 @@ class GraphQuery(BaseClass):
         candidates = pmatch.next_feasible_set_of_matches(next_nq)
         candidates2 = list(filter(lambda x: x in next_nq.matches, candidates))
         return candidates2
-
-
-def main():
-    pass
-
-
-if __name__ == '__main__':
-    main()

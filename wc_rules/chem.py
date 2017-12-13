@@ -7,18 +7,16 @@
 """
 
 from obj_model import core
-import wc_rules.ratelaw as rl
-import wc_rules.graph_utils as g
-from wc_rules.base import BaseClass
-from wc_rules.entity import Entity
-import wc_rules.utils as utils
-import wc_rules.variables as var
-import wc_rules.filter as fil
+from wc_rules import base
+from wc_rules import entity
+from wc_rules import ratelaw
+from wc_rules import utils
+from wc_rules import variables
 
 
-class Complex(Entity):
+class Complex(entity.Entity):
 
-    class GraphMeta(BaseClass.GraphMeta):
+    class GraphMeta(base.BaseClass.GraphMeta):
         outward_edges = tuple(['molecules'])
         semantic = tuple()
 
@@ -29,10 +27,10 @@ class Complex(Entity):
             return self.molecules.get(**kwargs)
 
 
-class Molecule(Entity):
+class Molecule(entity.Entity):
     complex = core.ManyToOneAttribute(Complex, related_name='molecules')
 
-    class GraphMeta(BaseClass.GraphMeta):
+    class GraphMeta(base.BaseClass.GraphMeta):
         outward_edges = tuple(['sites'])
         semantic = tuple()
 
@@ -46,13 +44,13 @@ class Molecule(Entity):
         return self
 
 
-class Site(Entity):
+class Site(entity.Entity):
     molecule = core.ManyToOneAttribute(Molecule, related_name='sites')
     bond = core.OneToOneAttribute('Site', related_name='bond')
     overlaps = core.ManyToManyAttribute('Site', related_name='overlaps')
-    boolvars = core.OneToManyAttribute(var.BooleanVariable, related_name='site')
+    boolvars = core.OneToManyAttribute(variables.BooleanVariable, related_name='site')
 
-    class GraphMeta(BaseClass.GraphMeta):
+    class GraphMeta(base.BaseClass.GraphMeta):
         outward_edges = tuple(['bond', 'overlaps', 'boolvars'])
         semantic = tuple()
 
@@ -82,15 +80,16 @@ class Site(Entity):
         return self.remove_by_attrname(other_sites, 'overlaps')
 
     def undef_overlaps(self):
-        self.overlaps = None
+        # :todo:(Sekar) Review this. Previously, overlaps was being set to None. However, None is not compatible with obj_model.
+        self.overlaps = []
         return self
 
     def get_overlaps(self):
         return self.overlaps
 
-    @property
     def has_overlaps(self):
-        return self.overlaps is not None
+        # :todo:(Sekar) Review this. Previously, this was checking if overlaps was None. However, None is not compatible with obj_model.
+        return len(self.overlaps) > 0
 
     #### Binding State ####
     def undef_binding_state(self):
@@ -130,11 +129,9 @@ class Site(Entity):
         return self.bond
 
 ###### Operations ######
+class Operation(base.BaseClass):
 
-
-class Operation(BaseClass):
-
-    class GraphMeta(BaseClass.GraphMeta):
+    class GraphMeta(base.BaseClass.GraphMeta):
         outward_edges = tuple(['target'])
         semantic = tuple()
 
@@ -155,15 +152,17 @@ class BondOperation(Operation):
     sites = core.OneToManyAttribute(Site, related_name='bond_op')
 
     @property
-    def target(self): return self.sites
+    def target(self):
+        return self.sites
 
     @target.setter
     def target(self, arr):
         self.sites = arr
 
     def set_target(self, v):
-        if type(v) is list:
-            [self.set_target(w) for w in v]
+        if isinstance(v, list):
+            for vv in v:
+                self.set_target(vv)
         elif isinstance(v, Site):
             self.sites.append(v)
         else:
@@ -180,17 +179,18 @@ class DeleteBond(BondOperation):
 
 
 class BooleanStateOperation(Operation):
-    boolvar = core.OneToOneAttribute(var.BooleanVariable, related_name='boolean_op')
+    boolvar = core.OneToOneAttribute(variables.BooleanVariable, related_name='boolean_op')
 
     @property
-    def target(self): return self.boolvar
+    def target(self):
+        return self.boolvar
 
     @target.setter
     def target(self, boolvar):
         self.boolvar = boolvar
 
     def set_target(self, v):
-        if isinstance(v, BooleanStateVariable):
+        if isinstance(v, variables.BooleanVariable):
             self.boolvar = v
         else:
             raise utils.AddObjectError(self, v, ['BooleanStateVariable'], 'set_target()')
@@ -205,22 +205,13 @@ class SetFalse(BooleanStateOperation):
     pass
 
 ##### Rule #####
-
-
-class Rule(BaseClass):
+class Rule(base.BaseClass):
     reactants = core.OneToManyAttribute(Complex, related_name='rule')
     reversible = core.BooleanAttribute(default=False)
     operations = core.OneToManyAttribute(Operation, related_name='rule')
-    forward = core.OneToOneAttribute(rl.RateExpression, related_name='rule_forward')
-    reverse = core.OneToOneAttribute(rl.RateExpression, related_name='rule_reverse')
+    forward = core.OneToOneAttribute(ratelaw.RateExpression, related_name='rule_forward')
+    reverse = core.OneToOneAttribute(ratelaw.RateExpression, related_name='rule_reverse')
 
-    class GraphMeta(BaseClass.GraphMeta):
+    class GraphMeta(base.BaseClass.GraphMeta):
         outward_edges = tuple(['reactants', 'operations'])
         semantic = tuple()
-
-
-def main():
-    pass
-
-if __name__ == '__main__':
-    main()
