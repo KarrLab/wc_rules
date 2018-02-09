@@ -113,11 +113,11 @@ class BaseClass(core.Model):
     # not-so-clever methods
     def filter_by_attrname(self, attrname, **kwargs):
         attr = self.find_attr_by_name(attrname)
-        return attr.filter(**kwargs)
+        return attr.get(**kwargs)
 
     def get_by_attrname(self, attrname, **kwargs):
         attr = self.find_attr_by_name(attrname)
-        return attr.get(**kwargs)
+        return attr.get_one(**kwargs)
 
     def add_by_attrname(self, obj, attrname):
         attr = self.find_attr_by_name(attrname)
@@ -182,7 +182,7 @@ class BaseClass(core.Model):
             attr = self.find_attr_by_name(attrname)
             if attr is not None:
                 if self.attribute_properties[attrname]['related']:
-                    ret.extend(attr.filter(**kwargs))
+                    ret.extend(attr.get(**kwargs))
         ret2 = []
         for x in ret:
             if x not in ret2:

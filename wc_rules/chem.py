@@ -22,9 +22,9 @@ class Complex(entity.Entity):
 
     def get_molecule(self, label, **kwargs):
         if label is not None:
-            return self.molecules.get(label=label, **kwargs)
+            return self.molecules.get_one(label=label, **kwargs)
         else:
-            return self.molecules.get(**kwargs)
+            return self.molecules.get_one(**kwargs)
 
 
 class Molecule(entity.Entity):
@@ -36,9 +36,9 @@ class Molecule(entity.Entity):
 
     def get_site(self, label, **kwargs):
         if label is not None:
-            return self.sites.get(label=label, **kwargs)
+            return self.sites.get_one(label=label, **kwargs)
         else:
-            return self.sites.get(**kwargs)
+            return self.sites.get_one(**kwargs)
 
     def compute_overlaps(self):
         return self
@@ -68,9 +68,9 @@ class Site(entity.Entity):
     #### Boolean Variables ####
     def get_boolvar(self, label, **kwargs):
         if label is not None:
-            return self.boolvars.get(label=label, **kwargs)
+            return self.boolvars.get_one(label=label, **kwargs)
         else:
-            return self.boolvars.get(**kwargs)
+            return self.boolvars.get_one(**kwargs)
 
     #### Pairwise Overlaps ####
     def add_overlaps(self, other_sites, mutual=True):

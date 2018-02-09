@@ -144,7 +144,7 @@ class TestBioschema(unittest.TestCase):
         a.set_id('1')
         self.assertEqual(a.id, '1')
 
-        b = a.sites.get(label='B')
+        b = a.sites.get_one(label='B')
         self.assertEqual(b.label, 'B')
 
     def test_complex(self):
@@ -162,7 +162,7 @@ class TestBioschema(unittest.TestCase):
         cplx.set_id('1')
         self.assertEqual(cplx.id, '1')
 
-        a = cplx.molecules.get(label='A', id='1')
+        a = cplx.molecules.get_one(label='A', id='1')
         self.assertEqual([a.label, a.id], ['A', '1'])
 
     def test_bond_op(self):
@@ -225,7 +225,7 @@ class TestBioschema(unittest.TestCase):
     def test_rate_expression(self):
         k1 = ratelaw.Parameter(symbol='k1', value=1000.0)
         expr1 = ratelaw.RateExpression(expr='k1*k2', parameters=[k1])
-        self.assertEqual([expr1.expr, expr1.parameters.get().symbol, expr1.parameters.get().value], ['k1*k2', 'k1', 1000.0])
+        self.assertEqual([expr1.expr, expr1.parameters.get_one().symbol, expr1.parameters.get_one().value], ['k1*k2', 'k1', 1000.0])
 
     def test_rule(self):
         class A(chem.Molecule):
@@ -253,7 +253,7 @@ class TestBioschema(unittest.TestCase):
         reac2.molecules.append(B1)
 
         op1 = chem.AddBond().set_target([a1, b1])
-        op2 = bio.Phosphorylate().set_target(b1.boolvars.get())
+        op2 = bio.Phosphorylate().set_target(b1.boolvars.get_one())
         kf = ratelaw.RateExpression(expr='kf')
         kr = ratelaw.RateExpression(expr='kr')
 
