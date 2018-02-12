@@ -1,7 +1,7 @@
 configparser
 robpol86_sphinxcontrib_googleanalytics
 six
-sphinx >= 1.6
+sphinx >= 1.7
 sphinx_rtd_theme
 sphinxcontrib_bibtex
 sphinxcontrib_spelling
