@@ -6,7 +6,7 @@ dependencies:
   - numpy
   - pip
   - pygit2
-  - python
+  - python>=3.6.4
   - sphinx
   - pip:
     - configparser
