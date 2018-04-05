@@ -50,6 +50,8 @@ class SetError(GenericError):
 class FindError(GenericError):
     pass
 
+class SeqError(GenericError):
+    pass
 
 class AddObjectError(Exception):
 
