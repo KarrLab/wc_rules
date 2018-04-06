@@ -5,7 +5,8 @@
 :License: MIT
 """
 
-from wc_rules import bio,utils
+from wc_rules import bio,seq,utils
+from Bio.SeqFeature import FeatureLocation
 import unittest
 
 
@@ -38,3 +39,10 @@ class TestSeq(unittest.TestCase):
         self.assertEqual(X.sequence,'ACDEF')
         with self.assertRaises(utils.SeqError):
             X = bio.ProteinSequenceMolecule().init_sequence('1234')
+
+    def test_sequence_feature(self):
+        inputstr = 'TGTCAGGACGTCCTAGATGCTCGATTTGCTGACGCTCAGCTATATCACTTATCCTCGCGGGATCTCGTGCCGAGCTGTAGAGATGTGTGCAGGCCTAACA'
+        A = bio.DNASequenceMolecule().init_sequence(inputstr,ambiguous=False)
+        x = seq.SequenceFeature(location=FeatureLocation(0,9))
+        A.sites.append(x)
+        self.assertTrue(x.get_sequence() == 'TGTCAGGAC')

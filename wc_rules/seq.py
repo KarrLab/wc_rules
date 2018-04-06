@@ -46,7 +46,12 @@ class SequenceMolecule(chem.Molecule):
             self.sequence = Bio.Seq.Seq(inputstr, alphabet)
         return self
 
+    class SequenceFeature(chem.Site):
+        """ Generic SequenceFeature (template for DNA, RNA, protein sequence features) """
+        location = extra_attributes.FeatureLocationAttribute()
 
+        def get_sequence(self):
+            return self.location.extract(self.molecule.sequence)
     #class SequencePropertyAttribute(extra_attributes.NumpyArrayAttribute):
     #    pass
 
