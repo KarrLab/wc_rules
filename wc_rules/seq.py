@@ -5,10 +5,10 @@
 :License: MIT
 """
 
-from wc_rules import chem
-from wc_rules import utils
-from obj_model import extra_attributes
+from wc_rules import base,chem,utils
+from obj_model import core,extra_attributes
 import Bio.Seq
+import Bio.SeqFeature
 import Bio.Alphabet
 import itertools
 import numpy
@@ -44,4 +44,60 @@ class SequenceMolecule(chem.Molecule):
         alphabet = self._get_alphabet(ambiguous)
         if self._verify_string(inputstr, alphabet, ambiguous):
             self.sequence = Bio.Seq.Seq(inputstr, alphabet)
+        return self
+
+    def add_feature(self,*args):
+        for arg in args:
+            self.features.append(arg)
+        return self
+
+    def sequence_length(self): return len(self.sequence)
+    def extract_sequence(self,featurelocation=None,position=0,length=1):
+        '''Extracts a sequence given a feature location OR a start and an end.'''
+        if featurelocation is not None:
+            return featurelocation.extract(self.sequence)
+        else:
+            return self.sequence[position:position+length]
+        return self.sequence
+
+class GenericSequenceFeature(base.BaseClass):
+    ''' Generic Sequence Feature, template for DNA, RNA, protein sequence features.'''
+    molecule = core.ManyToOneAttribute(SequenceMolecule,related_name='features')
+
+    def set_molecule(self,molecule):
+        molecule.add_feature(self)
+        return self
+
+    def _get_feature_location_object(self):
+        '''Returns a SeqFeature.FeatureLocation or CompoundLocation object.
+        All subclasses of GenericSequenceFeature must implement this method.'''
+        pass
+
+    def get_sequence(self):
+        f1 = self._get_feature_location_object()
+        return f1.extract(self.molecule.sequence)
+
+class SimpleSequenceFeature(GenericSequenceFeature):
+    ''' Has a start position and a length. '''
+    position = core.IntegerAttribute(default=0)
+    length = core.PositiveIntegerAttribute(default=1)
+
+    # todo: negative positions are painful & cause slicing errors.
+    # Disallow negative positions?
+    # Automatically shift by molecule.sequence_length() when adding to a molecule?
+    def _get_feature_location_object(self):
+        return Bio.SeqFeature.FeatureLocation(self.position, self.position + self.length)
+
+class CompositeSequenceFeature(GenericSequenceFeature):
+    ''' Is a set of features on the same molecule.'''
+    features = core.OneToManyAttribute(SimpleSequenceFeature)
+
+    def _get_feature_location_object(self):
+        return sum([Bio.SeqFeature.FeatureLocation(x.position, x.position + x.length) for x in self.features])
+
+    def add_feature(self,*args):
+        for arg in args:
+            if arg.molecule is not self.molecule:
+                raise utils.SeqError('Composite sequence feature must have the same `molecule` attribtue as its individual sequence features.')
+            self.features.append(arg)
         return self
