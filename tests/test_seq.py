@@ -40,9 +40,4 @@ class TestSeq(unittest.TestCase):
         with self.assertRaises(utils.SeqError):
             X = bio.ProteinSequenceMolecule().init_sequence('1234')
 
-    def test_sequence_feature(self):
-        inputstr = 'TGTCAGGACGTCCTAGATGCTCGATTTGCTGACGCTCAGCTATATCACTTATCCTCGCGGGATCTCGTGCCGAGCTGTAGAGATGTGTGCAGGCCTAACA'
-        A = bio.DNASequenceMolecule().init_sequence(inputstr,ambiguous=False)
-        x = seq.SequenceFeature(location=FeatureLocation(0,9))
-        A.sites.append(x)
-        self.assertTrue(x.get_sequence() == 'TGTCAGGAC')
+    
