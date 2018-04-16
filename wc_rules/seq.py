@@ -73,20 +73,47 @@ class GenericSequenceFeature(base.BaseClass):
         All subclasses of GenericSequenceFeature must implement this method.'''
         pass
 
+    def _verify_feature(self):
+        '''Returns True if feature is well-definedself.
+        All subclasses of GenericSequenceFeature must implement this method.'''
+        pass
+
     def get_sequence(self):
+        '''Extracts sequence from parent molecule.'''
         f1 = self._get_feature_location_object()
         return f1.extract(self.molecule.sequence)
 
 class SimpleSequenceFeature(GenericSequenceFeature):
-    ''' Has a start position and a length. '''
-    position = core.IntegerAttribute(default=0)
-    length = core.PositiveIntegerAttribute(default=1)
+    ''' Simple sequence feature with position index and length.
+    Example:
+        If parent molecule is .A.T.C.G.A.T.,
+        feature with position=0,length=0 has sequence ''
+        feature with position=0,length=1 has sequence 'A'
+        feature with position=0,length=6 has sequence 'ATCGAT'
+        feature with position=5,length=1 has sequence 'T'
+        feature with position=6,length=0 has sequence ''
+    '''
 
-    # todo: negative positions are painful & cause slicing errors.
-    # Disallow negative positions?
-    # Automatically shift by molecule.sequence_length() when adding to a molecule?
+    position = core.IntegerAttribute(default=0,min=0)
+    length = core.IntegerAttribute(default=0,min=0)
+
     def _get_feature_location_object(self):
         return Bio.SeqFeature.FeatureLocation(self.position, self.position + self.length)
+
+    def _verify_feature(self):
+        if self.position < 0 or self.length < 0:
+            raise utils.SeqError('Feature position and length cannot be negative.')
+        if self.position > self.molecule.sequence_length():
+            raise utils.SeqError('Feature position not in range of parent molecule.')
+        if self.length > self.molecule.sequence_length() - self.position:
+            raise utils.SeqError('Feature length not in range of parent molecule.')
+        return True
+
+    def set_position_and_length(self,position=0,length=0):
+        self.position = position
+        self.length = length
+        self._verify_feature()
+        return self
 
 class CompositeSequenceFeature(GenericSequenceFeature):
     ''' Is a set of features on the same molecule.'''
