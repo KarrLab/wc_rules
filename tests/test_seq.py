@@ -40,4 +40,29 @@ class TestSeq(unittest.TestCase):
         with self.assertRaises(utils.SeqError):
             X = bio.ProteinSequenceMolecule().init_sequence('1234')
 
-    
+    def test_simple_sequence_feature(self):
+        inputstr = 'ATCGAT'
+        X = bio.DNASequenceMolecule().init_sequence(inputstr,ambiguous=False)
+        f = seq.SimpleSequenceFeature().set_molecule(X)
+
+        self.assertEqual([f.position,f.length,f.get_sequence()],[0,0,''])
+
+        f.set_position_and_length(0,1)
+        self.assertEqual(f.get_sequence(),'A')
+
+        f.set_position_and_length(5,1)
+        self.assertEqual(f.get_sequence(),'T')
+
+        f.set_position_and_length(0,6)
+        self.assertEqual(f.get_sequence(),inputstr)
+
+        f.set_position_and_length(6,0)
+        self.assertEqual(f.get_sequence(),'')
+
+        with self.assertRaises(utils.SeqError):
+            f.set_position_and_length(-1,0)
+        with self.assertRaises(utils.SeqError):
+            f.set_position_and_length(0,-1)
+        with self.assertRaises(utils.SeqError):
+            f.set_position_and_length(6,1)
+
