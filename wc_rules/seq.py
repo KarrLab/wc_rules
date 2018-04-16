@@ -122,9 +122,17 @@ class CompositeSequenceFeature(GenericSequenceFeature):
     def _get_feature_location_object(self):
         return sum([Bio.SeqFeature.FeatureLocation(x.position, x.position + x.length) for x in self.features])
 
+    def _verify_feature(self):
+        for feature in self.features:
+            if feature.molecule is not self.molecule:
+                raise utils.SeqError('Composite feature must be on same molecule as its component features.')
+            feature._verify_feature()
+        return True
+
     def add_feature(self,*args):
         for arg in args:
             if arg.molecule is not self.molecule:
-                raise utils.SeqError('Composite sequence feature must have the same `molecule` attribtue as its individual sequence features.')
+                raise utils.SeqError('Composite sequence feature must have the same `molecule` attribute as its individual sequence features.')
+            arg._verify_feature()
             self.features.append(arg)
         return self

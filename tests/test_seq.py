@@ -66,3 +66,12 @@ class TestSeq(unittest.TestCase):
         with self.assertRaises(utils.SeqError):
             f.set_position_and_length(6,1)
 
+    def test_composite_sequence_feature(self):
+        inputstr = 'ATCGTTATCG'
+        X = bio.DNASequenceMolecule().init_sequence(inputstr,ambiguous=False)
+        f1 = seq.SimpleSequenceFeature().set_molecule(X).set_position_and_length(0,4)
+        f2 = seq.SimpleSequenceFeature().set_molecule(X).set_position_and_length(6,4)
+        with self.assertRaises(utils.SeqError):
+            f = seq.CompositeSequenceFeature().add_feature(f1,f2)
+        f = seq.CompositeSequenceFeature().set_molecule(X).add_feature(f1,f2)
+        self.assertEqual(f.get_sequence(),'ATCGATCG')
