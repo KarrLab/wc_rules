@@ -5,7 +5,7 @@
 :License: MIT
 """
 
-from wc_rules import base,chem,utils
+from wc_rules import base,chem2,utils
 from obj_model import core,extra_attributes
 import Bio.Seq
 import Bio.SeqFeature
@@ -13,7 +13,7 @@ import Bio.Alphabet
 import itertools
 import numpy
 
-class SequenceMolecule(chem.Molecule):
+class SequenceMolecule(chem2.Molecule):
     """ Generic SequenceMolecule (template for DNA, RNA, protein sequence objects) """
 
     sequence = extra_attributes.BioSeqAttribute()
@@ -48,7 +48,7 @@ class SequenceMolecule(chem.Molecule):
 
     def add_feature(self,*args):
         for arg in args:
-            self.features.append(arg)
+            self.sites.append(arg)
         return self
 
     def sequence_length(self): return len(self.sequence)
@@ -60,9 +60,8 @@ class SequenceMolecule(chem.Molecule):
             return self.sequence[position:position+length]
         return self.sequence
 
-class GenericSequenceFeature(base.BaseClass):
+class GenericSequenceFeature(chem2.Site):
     ''' Generic Sequence Feature, template for DNA, RNA, protein sequence features.'''
-    molecule = core.ManyToOneAttribute(SequenceMolecule,related_name='features')
 
     def set_molecule(self,molecule):
         molecule.add_feature(self)
@@ -136,3 +135,9 @@ class CompositeSequenceFeature(GenericSequenceFeature):
             arg._verify_feature()
             self.features.append(arg)
         return self
+
+class LeftOverlap(chem2.DirectedSiteRelation):
+    n_max_sources = 1
+
+class RightOverlap(chem2.DirectedSiteRelation):
+    n_max_sources = 1
