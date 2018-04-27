@@ -26,6 +26,14 @@ def listify(value):
         return [value]
     return value
 
+def filter_by_type(init_list,type_list):
+    final_list = []
+    for x in init_list:
+        for t in type_list:
+            if isinstance(x,t):
+                final_list.append(x)
+    return final_list
+
 ###### Error ######
 class GenericError(Exception):
 

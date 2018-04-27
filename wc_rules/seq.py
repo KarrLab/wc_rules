@@ -135,9 +135,3 @@ class CompositeSequenceFeature(GenericSequenceFeature):
             arg._verify_feature()
             self.features.append(arg)
         return self
-
-class LeftOverlap(chem2.DirectedSiteRelation):
-    n_max_sources = 1
-
-class RightOverlap(chem2.DirectedSiteRelation):
-    n_max_sources = 1

@@ -8,44 +8,74 @@ from obj_model import core
 from wc_rules import base,entity,utils
 
 
-class Molecule(entity.Entity):pass
+class Molecule(entity.Entity):
+    def add_sites(self,*args):
+        for arg in args:
+            if arg._verify_site_molecule_compatibility(molecule=self):
+                self.sites.append(arg)
+            else:
+                raise utils.AddError('Site incompatible with molecule')
+        return self
 
 class Site(entity.Entity):
     molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
 
+    def _verify_site_molecule_compatibility(self,molecule=None):
+        return True
+
+    def _get_number_of_relations(self, source_or_target ='target', relation_type=None):
+        if source_or_target == 'target':
+            if self.site_relations_targets is not None:
+                existing = utils.filter_by_type(list(self.site_relations_targets),[relation_type])
+                return len(existing)
+        if source_or_target == 'source':
+            if self.site_relations_sources is not None:
+                existing = utils.filter_by_type(list(self.site_relations_sources),[relation_type])
+                return len(existing)
+        return 0
+
 class SiteRelation(entity.Entity):
-    sources = core.OneToManyAttribute(Site,related_name='site_relations')
-    targets = core.OneToManyAttribute(Site,related_name='site_relations_targets')
+    sources = core.ManyToManyAttribute(Site,related_name='site_relations_sources')
+    targets = core.ManyToManyAttribute(Site,related_name='site_relations_targets')
     n_max_sources = None
     n_max_targets = None
+    n_max_relations_for_a_source = None
+    n_max_relations_for_a_target = None
 
-    def add_sources(self,*args):
+    def verify_add_sources(self,*args):
         if self.n_max_sources is not None:
             if len(self.sources)+len(args) > self.n_max_sources:
-                raise utils.AddError('Number of source sites allowed for this relation will be exceeded.')
-        for arg in args:
-            self.sources.append(arg)
+                raise utils.AddError('Number of source sites allowed for '+str(type(self))+ ' relation must not exceed ' + str(self.n_max_sources)+'.')
+        if self.n_max_relations_for_a_source is not None:
+            for arg in args:
+                n_existing = arg._get_number_of_relations(source_or_target = 'source',relation_type=type(self))
+                if n_existing + 1 > self.n_max_relations_for_a_source:
+                    raise utils.AddError('Source site already has the allowed maximum of '+str(type(self))+ ' relations: ' + str(self.n_max_relations_for_a_source)+'.')
+        return True
+
+    def verify_add_targets(self,*args):
+        if self.n_max_targets is not None:
+            if len(self.targets)+len(args) > self.n_max_targets:
+                raise utils.AddError('Number of target sites allowed for '+str(type(self))+ ' relation must not exceed ' + str(self.n_max_targets)+'.')
+        if self.n_max_relations_for_a_target is not None:
+            for arg in args:
+                n_existing = arg._get_number_of_relations(source_or_target = 'target',relation_type=type(self))
+                if n_existing + 1 > self.n_max_relations_for_a_target:
+                    raise utils.AddError('Target site already has the allowed maximum of '+str(type(self))+ ' relations: ' + str(self.n_max_relations_for_a_target)+'.')
+        return True
+
+    def add_sources(self,*args):
+        if self.verify_add_sources(*args):
+            self.sources.extend(args)
         return self
 
     def add_targets(self,*args):
-        if self.n_max_targets is not None:
-            if len(self.targets)+len(args) > self.n_max_targets:
-                raise utils.AddError('Number of target sites allowed for this relation will be exceeded.')
-        for arg in args:
-            self.targets.append(arg)
+        if self.verify_add_targets(*args):
+            self.targets.extend(args)
         return self
 
-
-class UndirectedSiteRelation(SiteRelation):
-    n_max_targets = 0
-    def add_sites(self,*args):
-        self.add_sources(*args)
-        return self
-
-class Bond(UndirectedSiteRelation):
-    n_max_sources = 2
-
-class Overlap(UndirectedSiteRelation):
-    n_max_sources = 2
-
-class DirectedSiteRelation(SiteRelation):pass
+class Bond(SiteRelation):
+    n_max_sources = 0
+    n_max_targets = 2
+    n_max_relations_for_a_source = 0
+    n_max_relations_for_a_target = 1
