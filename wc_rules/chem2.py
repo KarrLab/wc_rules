@@ -23,15 +23,13 @@ class Site(entity.Entity):
     def _verify_site_molecule_compatibility(self,molecule=None):
         return True
 
-    def _get_number_of_relations(self, source_or_target ='target', relation_type=None):
-        if source_or_target == 'target':
-            if self.site_relations_targets is not None:
-                existing = utils.filter_by_type(list(self.site_relations_targets),[relation_type])
-                return len(existing)
-        if source_or_target == 'source':
-            if self.site_relations_sources is not None:
-                existing = utils.filter_by_type(list(self.site_relations_sources),[relation_type])
-                return len(existing)
+    def _get_number_of_source_relations(self, relation_type=None):
+        if self.site_relations_sources is not None:
+            return len(self.site_relations_sources.get(_type=relation_type))
+        return 0
+    def _get_number_of_target_relations(self, relation_type=None):
+        if self.site_relations_targets is not None:
+            return len(self.site_relations_targets.get(_type=relation_type))
         return 0
 
 class SiteRelation(entity.Entity):
@@ -48,7 +46,7 @@ class SiteRelation(entity.Entity):
                 raise utils.AddError('Number of source sites allowed for '+str(type(self))+ ' relation must not exceed ' + str(self.n_max_sources)+'.')
         if self.n_max_relations_for_a_source is not None:
             for arg in args:
-                n_existing = arg._get_number_of_relations(source_or_target = 'source',relation_type=type(self))
+                n_existing = arg._get_number_of_source_relations(type(self))
                 if n_existing + 1 > self.n_max_relations_for_a_source:
                     raise utils.AddError('Source site already has the allowed maximum of '+str(type(self))+ ' relations: ' + str(self.n_max_relations_for_a_source)+'.')
         return True
@@ -59,7 +57,7 @@ class SiteRelation(entity.Entity):
                 raise utils.AddError('Number of target sites allowed for '+str(type(self))+ ' relation must not exceed ' + str(self.n_max_targets)+'.')
         if self.n_max_relations_for_a_target is not None:
             for arg in args:
-                n_existing = arg._get_number_of_relations(source_or_target = 'target',relation_type=type(self))
+                n_existing = arg._get_number_of_target_relations(type(self))
                 if n_existing + 1 > self.n_max_relations_for_a_target:
                     raise utils.AddError('Target site already has the allowed maximum of '+str(type(self))+ ' relations: ' + str(self.n_max_relations_for_a_target)+'.')
         return True
