@@ -25,11 +25,11 @@ class Site(entity.Entity):
 
     def _get_number_of_source_relations(self, relation_type=None):
         if self.site_relations_sources is not None:
-            return len(self.site_relations_sources.get(_type=relation_type))
+            return len(self.site_relations_sources.get(__type=relation_type))
         return 0
     def _get_number_of_target_relations(self, relation_type=None):
         if self.site_relations_targets is not None:
-            return len(self.site_relations_targets.get(_type=relation_type))
+            return len(self.site_relations_targets.get(__type=relation_type))
         return 0
 
 class SiteRelation(entity.Entity):
