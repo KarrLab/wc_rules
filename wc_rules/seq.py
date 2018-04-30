@@ -26,16 +26,10 @@ class SequenceMolecule(chem2.Molecule):
         return a
 
     def _verify_string(self, inputstr, alphabet, ambiguous=True):
-        invalid_chars = [char for char in inputstr if char not in alphabet.letters]
-        invalid_chars_uniq = ''
-        for char in invalid_chars:
-            if char not in invalid_chars_uniq:
-                invalid_chars_uniq += char
-        n_invalids = len(invalid_chars)
-        if n_invalids > 0:
-            n = str(n_invalids)
-            err_str = n + ' instances of invalid characters (' + invalid_chars_uniq + ') found. Valid ' + str(alphabet) + ' characters are ' + alphabet.letters
-            raise utils.SeqError(err_str)
+        invalid_chars = set(inputstr) - set(alphabet.letters)
+        if len(invalid_chars) > 0:
+            str1 = ''.join(sorted(list(invalid_chars)))
+            raise utils.SeqError('Invalid characters found: ' + str1)
         return True
 
     def init_sequence(self, inputstr = '', ambiguous = True):
