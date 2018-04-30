@@ -10,8 +10,7 @@ from obj_model import core,extra_attributes
 import Bio.Seq
 import Bio.SeqFeature
 import Bio.Alphabet
-import itertools
-import numpy
+
 
 class SequenceMolecule(chem2.Molecule):
     """ Generic SequenceMolecule (template for DNA, RNA, protein sequence objects) """
