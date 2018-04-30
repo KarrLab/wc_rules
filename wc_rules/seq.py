@@ -46,12 +46,7 @@ class SequenceMolecule(chem2.Molecule):
             self.sequence = Bio.Seq.Seq(inputstr, alphabet)
         return self
 
-    def add_feature(self,*args):
-        for arg in args:
-            self.sites.append(arg)
-        return self
-
-    def sequence_length(self): return len(self.sequence)
+    def get_sequence_length(self): return len(self.sequence)
     def extract_sequence(self,featurelocation=None,position=0,length=1):
         '''Extracts a sequence given a feature location OR a start and an end.'''
         if featurelocation is not None:
@@ -60,29 +55,7 @@ class SequenceMolecule(chem2.Molecule):
             return self.sequence[position:position+length]
         return self.sequence
 
-class GenericSequenceFeature(chem2.Site):
-    ''' Generic Sequence Feature, template for DNA, RNA, protein sequence features.'''
-
-    def set_molecule(self,molecule):
-        molecule.add_feature(self)
-        return self
-
-    def _get_feature_location_object(self):
-        '''Returns a SeqFeature.FeatureLocation or CompoundLocation object.
-        All subclasses of GenericSequenceFeature must implement this method.'''
-        pass
-
-    def _verify_feature(self):
-        '''Returns True if feature is well-definedself.
-        All subclasses of GenericSequenceFeature must implement this method.'''
-        pass
-
-    def get_sequence(self):
-        '''Extracts sequence from parent molecule.'''
-        f1 = self._get_feature_location_object()
-        return f1.extract(self.molecule.sequence)
-
-class SimpleSequenceFeature(GenericSequenceFeature):
+class SequenceFeature(chem2.Site):
     ''' Simple sequence feature with position index and length.
     Example:
         If parent molecule is .A.T.C.G.A.T.,
@@ -99,39 +72,58 @@ class SimpleSequenceFeature(GenericSequenceFeature):
     def _get_feature_location_object(self):
         return Bio.SeqFeature.FeatureLocation(self.position, self.position + self.length)
 
-    def _verify_feature(self):
-        if self.position < 0 or self.length < 0:
-            raise utils.SeqError('Feature position and length cannot be negative.')
-        if self.position > self.molecule.sequence_length():
-            raise utils.SeqError('Feature position not in range of parent molecule.')
-        if self.length > self.molecule.sequence_length() - self.position:
-            raise utils.SeqError('Feature length not in range of parent molecule.')
+    def _verify_site_molecule_compatibility(self,molecule):
+        check = super()._verify_site_molecule_compatibility(molecule)
+        if check and self._verify_feature(molecule,self.position,self.length):
+            return True
+        return False
+
+    def _verify_feature(self,molecule,position=None,length=None):
+        if position is not None and position < 0:
+            raise utils.SeqError('Position cannot be negative.')
+        if length is not None and length < 0:
+            raise utils.SeqError('Length cannot be negative.')
+        check_length = molecule.get_sequence_length()
+        check = True
+        if position is None:
+            if length is not None:
+                check = length <= check_length
+        else:
+            if length is None:
+                check = position <= check_length
+            else:
+                check = position + length <= check_length
+        if not check:
+            raise utils.SeqError('Feature position/length incompatible with parent sequence.')
         return True
 
-    def set_position_and_length(self,position=0,length=0):
+    def set_position(self,position,force=False):
+        if not force:
+            if self.molecule is not None:
+                if self.length is not None:
+                    self._verify_feature(self.molecule,position,self.length)
+                else:
+                    self._verify_feature(self.molecule,position)
         self.position = position
+        return self
+
+    def set_length(self,length,force=False):
+        if not force:
+            if self.molecule is not None:
+                if self.position is not None:
+                    self._verify_feature(self.molecule,self.position,length)
+                else:
+                    self._verify_feature(self.molecule,None,length)
         self.length = length
-        self._verify_feature()
         return self
 
-class CompositeSequenceFeature(GenericSequenceFeature):
-    ''' Is a set of features on the same molecule.'''
-    features = core.OneToManyAttribute(SimpleSequenceFeature)
-
-    def _get_feature_location_object(self):
-        return sum([Bio.SeqFeature.FeatureLocation(x.position, x.position + x.length) for x in self.features])
-
-    def _verify_feature(self):
-        for feature in self.features:
-            if feature.molecule is not self.molecule:
-                raise utils.SeqError('Composite feature must be on same molecule as its component features.')
-            feature._verify_feature()
-        return True
-
-    def add_feature(self,*args):
-        for arg in args:
-            if arg.molecule is not self.molecule:
-                raise utils.SeqError('Composite sequence feature must have the same `molecule` attribute as its individual sequence features.')
-            arg._verify_feature()
-            self.features.append(arg)
+    def set_position_and_length(self,position,length):
+        if self.molecule is not None:
+            self._verify_feature(self.molecule,position,length)
+        self.set_position(position,force=True)
+        self.set_length(length,force=True)
         return self
+
+    def get_sequence(self):
+        feature_location = self._get_feature_location_object()
+        return feature_location.extract(self.molecule.sequence)

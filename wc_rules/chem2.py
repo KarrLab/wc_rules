@@ -14,13 +14,13 @@ class Molecule(entity.Entity):
             if arg._verify_site_molecule_compatibility(molecule=self):
                 self.sites.append(arg)
             else:
-                raise utils.AddError('Site incompatible with molecule')
+                raise utils.AddError('Site incompatible with molecule.')
         return self
 
 class Site(entity.Entity):
     molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
 
-    def _verify_site_molecule_compatibility(self,molecule=None):
+    def _verify_site_molecule_compatibility(self,molecule):
         return True
 
     def _get_number_of_source_relations(self, relation_type=None):
@@ -31,6 +31,10 @@ class Site(entity.Entity):
         if self.site_relations_targets is not None:
             return len(self.site_relations_targets.get(__type=relation_type))
         return 0
+
+    def set_molecule(self,molecule):
+        molecule.add_sites(self)
+        return self
 
 class SiteRelation(entity.Entity):
     sources = core.ManyToManyAttribute(Site,related_name='site_relations_sources')
