@@ -19,11 +19,8 @@ class SequenceMolecule(chem2.Molecule):
     alphabet_dict = { 'unambiguous': None, 'ambiguous': None }
 
     def _get_alphabet(self, ambiguous=True):
-        if ambiguous:
-            a= self.alphabet_dict['ambiguous']
-        else:
-            a= self.alphabet_dict['unambiguous']
-        return a
+        key = 'ambiguous' if ambiguous else 'unambiguous'
+        return self.alphabet_dict[key]
 
     def _verify_string(self, inputstr, alphabet, ambiguous=True):
         invalid_chars = set(inputstr) - set(alphabet.letters)
