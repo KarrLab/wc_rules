@@ -73,36 +73,28 @@ class SequenceFeature(chem2.Site):
             raise utils.SeqError('Position cannot be negative.')
         if length is not None and length < 0:
             raise utils.SeqError('Length cannot be negative.')
-        check_length = molecule.get_sequence_length()
-        position = 0 if position is None else position
-        length = 0 if length is None else length
-        if position + length > check_length:
-            raise utils.SeqError('Feature position/length incompatible with parent sequence.')
+        if molecule is not None:
+            check_length = molecule.get_sequence_length()
+            position = 0 if position is None else position
+            length = 0 if length is None else length
+            if position + length > check_length:
+                raise utils.SeqError('Feature position/length incompatible with parent sequence.')
         return True
 
     def set_position(self,position,force=False):
         if not force:
-            if self.molecule is not None:
-                if self.length is not None:
-                    self._verify_feature(self.molecule,position,self.length)
-                else:
-                    self._verify_feature(self.molecule,position)
+            self._verify_feature(self.molecule,position,self.length)
         self.position = position
         return self
 
     def set_length(self,length,force=False):
         if not force:
-            if self.molecule is not None:
-                if self.position is not None:
-                    self._verify_feature(self.molecule,self.position,length)
-                else:
-                    self._verify_feature(self.molecule,None,length)
+            self._verify_feature(self.molecule,self.position,length)
         self.length = length
         return self
 
     def set_position_and_length(self,position,length):
-        if self.molecule is not None:
-            self._verify_feature(self.molecule,position,length)
+        self._verify_feature(self.molecule,position,length)
         self.set_position(position,force=True)
         self.set_length(length,force=True)
         return self

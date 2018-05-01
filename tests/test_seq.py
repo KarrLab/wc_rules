@@ -65,3 +65,12 @@ class TestSeq(unittest.TestCase):
             f.set_position_and_length(0,-1)
         with self.assertRaises(utils.SeqError):
             f.set_position_and_length(6,1)
+
+        # checking in absence of molecule
+        f1 = seq.SequenceFeature().set_position_and_length(0,1)
+        self.assertEqual(f1.molecule,None)
+        f1.set_position_and_length(6,1)
+        with self.assertRaises(utils.SeqError):
+            f1.set_position_and_length(-1,0)
+        with self.assertRaises(utils.SeqError):
+            f1.set_position_and_length(0,-1)
