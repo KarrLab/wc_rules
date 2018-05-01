@@ -22,7 +22,7 @@ class SequenceMolecule(chem2.Molecule):
         key = 'ambiguous' if ambiguous else 'unambiguous'
         return self.alphabet_dict[key]
 
-    def _verify_string(self, inputstr, alphabet, ambiguous=True):
+    def _verify_string(self, inputstr, alphabet):
         invalid_chars = set(inputstr) - set(alphabet.letters)
         if len(invalid_chars) > 0:
             str1 = ''.join(sorted(list(invalid_chars)))
@@ -32,7 +32,7 @@ class SequenceMolecule(chem2.Molecule):
     def init_sequence(self, inputstr = '', ambiguous = True):
         """ Initialize sequence of an empty SequenceMolecule object """
         alphabet = self._get_alphabet(ambiguous)
-        if self._verify_string(inputstr, alphabet, ambiguous):
+        if self._verify_string(inputstr, alphabet):
             self.sequence = Bio.Seq.Seq(inputstr, alphabet)
         return self
 
