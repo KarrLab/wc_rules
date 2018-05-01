@@ -77,16 +77,9 @@ class SequenceFeature(chem2.Site):
         if length is not None and length < 0:
             raise utils.SeqError('Length cannot be negative.')
         check_length = molecule.get_sequence_length()
-        check = True
-        if position is None:
-            if length is not None:
-                check = length <= check_length
-        else:
-            if length is None:
-                check = position <= check_length
-            else:
-                check = position + length <= check_length
-        if not check:
+        position = 0 if position is None else position
+        length = 0 if length is None else length
+        if position + length > check_length:
             raise utils.SeqError('Feature position/length incompatible with parent sequence.')
         return True
 
