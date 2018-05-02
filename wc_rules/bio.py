@@ -8,18 +8,6 @@
 
 from wc_rules import chem
 from wc_rules import variables
-from wc_rules import seq
-from Bio.Alphabet.IUPAC import IUPACAmbiguousDNA,IUPACUnambiguousDNA,IUPACAmbiguousRNA,IUPACUnambiguousRNA,IUPACProtein,ExtendedIUPACProtein
-
-###### Sequence Objects ######
-class DNASequenceMolecule(seq.SequenceMolecule):
-    alphabet_dict = {'unambiguous':IUPACUnambiguousDNA(),'ambiguous':IUPACAmbiguousDNA()}
-
-class RNASequenceMolecule(seq.SequenceMolecule):
-    alphabet_dict = {'unambiguous':IUPACUnambiguousRNA(),'ambiguous':IUPACAmbiguousRNA()}
-
-class ProteinSequenceMolecule(seq.SequenceMolecule):
-    alphabet_dict = {'unambiguous':IUPACProtein(),'ambiguous':ExtendedIUPACProtein()}
 
 ###### Structure Improvements ######
 class Protein(chem.Molecule):

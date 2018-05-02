@@ -5,45 +5,44 @@
 :License: MIT
 """
 
-from wc_rules import bio,seq,utils
-from Bio.SeqFeature import FeatureLocation
+from wc_rules import bioseq,utils
 import unittest
 
 
 class TestSeq(unittest.TestCase):
 
     def test_sequence_init(self):
-        X = bio.DNASequenceMolecule().init_sequence('ATCGR')
+        X = bioseq.DNA().init_sequence('ATCGR')
         self.assertEqual(X.sequence,'ATCGR')
         with self.assertRaises(utils.SeqError):
-            X = bio.DNASequenceMolecule().init_sequence('ATCGR',ambiguous=False)
-        X = bio.DNASequenceMolecule().init_sequence('ATCG',ambiguous=False)
+            X = bioseq.DNA().init_sequence('ATCGR',ambiguous=False)
+        X = bioseq.DNA().init_sequence('ATCG',ambiguous=False)
         self.assertEqual(X.sequence,'ATCG')
         with self.assertRaises(utils.SeqError):
-            X = bio.DNASequenceMolecule().init_sequence('ZZZZ')
+            X = bioseq.DNA().init_sequence('ZZZZ')
 
-        X = bio.RNASequenceMolecule().init_sequence('AUCGR')
+        X = bioseq.RNA().init_sequence('AUCGR')
         self.assertEqual(X.sequence,'AUCGR')
         with self.assertRaises(utils.SeqError):
-            X = bio.RNASequenceMolecule().init_sequence('AUCGR',ambiguous=False)
-        X = bio.RNASequenceMolecule().init_sequence('AUCG',ambiguous=False)
+            X = bioseq.RNA().init_sequence('AUCGR',ambiguous=False)
+        X = bioseq.RNA().init_sequence('AUCG',ambiguous=False)
         self.assertEqual(X.sequence,'AUCG')
         with self.assertRaises(utils.SeqError):
-            X = bio.RNASequenceMolecule().init_sequence('ZZZZ')
+            X = bioseq.RNA().init_sequence('ZZZZ')
 
-        X = bio.ProteinSequenceMolecule().init_sequence('ACDEFBXZ')
+        X = bioseq.Protein().init_sequence('ACDEFBXZ')
         self.assertEqual(X.sequence,'ACDEFBXZ')
         with self.assertRaises(utils.SeqError):
-            X = bio.ProteinSequenceMolecule().init_sequence('ACDEFBXZ',ambiguous=False)
-        X = bio.ProteinSequenceMolecule().init_sequence('ACDEF',ambiguous=False)
+            X = bioseq.Protein().init_sequence('ACDEFBXZ',ambiguous=False)
+        X = bioseq.Protein().init_sequence('ACDEF',ambiguous=False)
         self.assertEqual(X.sequence,'ACDEF')
         with self.assertRaises(utils.SeqError):
-            X = bio.ProteinSequenceMolecule().init_sequence('1234')
+            X = bioseq.Protein().init_sequence('1234')
 
     def test_sequence_feature(self):
         inputstr = 'ATCGAT'
-        X = bio.DNASequenceMolecule().init_sequence(inputstr,ambiguous=False)
-        f = seq.SequenceFeature().set_molecule(X)
+        X = bioseq.DNA().init_sequence(inputstr,ambiguous=False)
+        f = bioseq.PolynucleotideFeature().set_molecule(X)
 
         self.assertEqual([f.position,f.length,f.get_sequence()],[0,0,''])
 
@@ -67,7 +66,7 @@ class TestSeq(unittest.TestCase):
             f.set_position_and_length(6,1)
 
         # checking in absence of molecule
-        f1 = seq.SequenceFeature().set_position_and_length(0,1)
+        f1 = bioseq.PolynucleotideFeature().set_position_and_length(0,1)
         self.assertEqual(f1.molecule,None)
         f1.set_position_and_length(6,1)
         with self.assertRaises(utils.SeqError):
