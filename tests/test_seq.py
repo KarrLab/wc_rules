@@ -74,6 +74,7 @@ class TestSeq(unittest.TestCase):
             f.set_position_and_length(0,-1)
         with self.assertRaises(utils.SeqError):
             f.set_position_and_length(6,1)
+            f._verify_feature(f.molecule,f.position,f.length)
 
         # checking in absence of molecule
         f1 = bioseq.PolynucleotideFeature().set_position_and_length(0,1)

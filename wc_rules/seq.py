@@ -64,10 +64,10 @@ class SequenceFeature(chem2.Site):
 
     def _verify_site_molecule_compatibility(self,molecule):
         super(SequenceFeature, self)._verify_site_molecule_compatibility(molecule)
-        self._verify_feature(molecule,self.position,self.length)
         return True
 
     def _verify_feature(self,molecule,position=None,length=None):
+        '''A "hard" verification. Needed only on fully instantiated molecules.'''
         if position is not None and position < 0:
             raise utils.SeqError('Position cannot be negative.')
         if length is not None and length < 0:
@@ -80,22 +80,21 @@ class SequenceFeature(chem2.Site):
                 raise utils.SeqError('Feature position/length incompatible with parent sequence.')
         return True
 
-    def set_position(self,position,force=False):
-        if not force:
-            self._verify_feature(self.molecule,position,self.length)
+    def set_position(self,position):
+        if position < 0:
+            raise utils.SeqError('Position cannot be negative.')
         self.position = position
         return self
 
-    def set_length(self,length,force=False):
-        if not force:
-            self._verify_feature(self.molecule,self.position,length)
+    def set_length(self,length):
+        if length < 0:
+            raise utils.SeqError('Length cannot be negative.')
         self.length = length
         return self
 
     def set_position_and_length(self,position,length):
-        self._verify_feature(self.molecule,position,length)
-        self.set_position(position,force=True)
-        self.set_length(length,force=True)
+        self.set_position(position)
+        self.set_length(length)
         return self
 
     def get_sequence(self):
