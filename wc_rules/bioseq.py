@@ -6,13 +6,39 @@
 :License: MIT
 """
 
-from wc_rules import seq
+from wc_rules import seq,utils
 from Bio.Alphabet.IUPAC import IUPACAmbiguousDNA,IUPACUnambiguousDNA,IUPACAmbiguousRNA,IUPACUnambiguousRNA,IUPACProtein,ExtendedIUPACProtein
 
 ###### Sequence Objects ######
 class Polynucleotide(seq.SequenceMolecule):pass
+
 class PolynucleotideFeature(seq.SequenceFeature):
     allowed_molecule_types = (Polynucleotide,)
+
+    def get_complement(self,sequence=None):
+        if sequence is None:
+            sequence = self.get_sequence()
+        return sequence.complement()
+
+    def get_reverse(self,sequence=None):
+        if sequence is None:
+            sequence = self.get_sequence()
+        return sequence[::-1]
+
+    def get_reverse_complement(self,sequence=None):
+        if sequence is None:
+            sequence = self.get_sequence()
+        return self.get_reverse(sequence=self.get_complement())
+
+    def convert_to(self,nucleotide_type,sequence=None):
+        if sequence is None:
+            sequence=self.get_sequence()
+        if nucleotide_type == 'rna':
+            return sequence.transcribe()
+        if nucleotide_type == 'dna':
+            return sequence.back_transcribe()
+        raise utils.SeqError('Improper use of convert_to')
+        return
 
 class DNA(Polynucleotide):
     alphabet_dict = {'unambiguous':IUPACUnambiguousDNA(),'ambiguous':IUPACAmbiguousDNA()}

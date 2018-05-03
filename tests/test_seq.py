@@ -49,7 +49,7 @@ class TestSeq(unittest.TestCase):
         with self.assertRaises(utils.AddError):
             f = bioseq.PolypeptideFeature().set_molecule(X)
 
-    def test_sequence_feature(self):
+    def test_sequence_feature_setting(self):
         inputstr = 'ATCGAT'
         X = bioseq.DNA().init_sequence(inputstr,ambiguous=False)
         f = bioseq.PolynucleotideFeature().set_molecule(X)
@@ -84,3 +84,18 @@ class TestSeq(unittest.TestCase):
             f1.set_position_and_length(-1,0)
         with self.assertRaises(utils.SeqError):
             f1.set_position_and_length(0,-1)
+
+    def test_sequence_feature_convert(self):
+        inputstr = 'ATCGAT'
+        X = bioseq.DNA().init_sequence(inputstr,ambiguous=False)
+        f = bioseq.PolynucleotideFeature(position=0,length=6).set_molecule(X)
+
+        s1 = f.get_sequence()
+        s2 = f.get_complement()
+        s3 = f.get_reverse()
+        s4 = f.get_reverse_complement()
+
+        self.assertEqual(s1,'ATCGAT')
+        self.assertEqual(s2,'TAGCTA')
+        self.assertEqual(s3,'TAGCTA')
+        self.assertEqual(s4,'ATCGAT')
