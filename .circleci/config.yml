@@ -16,18 +16,18 @@ jobs:
             - cache-v6-
 
       # Python 2 installation tasks
-      - run:
-          name: Install pkg_utils (Python 2)
-          command: pip2 install -U --process-dependency-links git+https://github.com/KarrLab/pkg_utils.git#egg=pkg_utils
-      - run:
-          name: Install karr_lab_build_utils (Python 2)
-          command: pip2 install -U --process-dependency-links git+https://github.com/KarrLab/karr_lab_build_utils.git#egg=karr_lab_build_utils
-      - run:
-          name: Install package (Python 2)
-          command: pip2 install -U --process-dependency-links -e .[all]
-      - run:
-          name: Upgrade requirements (Python 2)
-          command: karr_lab_build_utils2 upgrade-requirements
+      #- run:
+      #    name: Install pkg_utils (Python 2)
+      #    command: pip2 install -U --process-dependency-links git+https://github.com/KarrLab/pkg_utils.git#egg=pkg_utils
+      #- run:
+      #    name: Install karr_lab_build_utils (Python 2)
+      #    command: pip2 install -U --process-dependency-links git+https://github.com/KarrLab/karr_lab_build_utils.git#egg=karr_lab_build_utils
+      #- run:
+      #    name: Install package (Python 2)
+      #    command: pip2 install -U --process-dependency-links -e .[all]
+      #- run:
+      #    name: Upgrade requirements (Python 2)
+      #    command: karr_lab_build_utils2 upgrade-requirements
 
       # Python 3 installation tasks
       - run:
@@ -56,7 +56,7 @@ jobs:
           command: |
             set +e
 
-            karr_lab_build_utils2 run-tests --with-xunit --with-coverage
+            #karr_lab_build_utils2 run-tests --with-xunit --with-coverage
             TEST_EXIT_CODE_PY2=$?
 
             karr_lab_build_utils3 run-tests --with-xunit --with-coverage
@@ -88,9 +88,9 @@ jobs:
 
       - store_test_results:
           path: /root/project/tests/reports
-      - store_artifacts:
-          path: /root/project/.coverage.2.7.14
-          destination: .coverage.2.7.14
+      #- store_artifacts:
+      #    path: /root/project/.coverage.2.7.14
+      #    destination: .coverage.2.7.14
       - store_artifacts:
           path: /root/project/.coverage.3.6.4
           destination: .coverage.3.6.4
