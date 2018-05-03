@@ -9,18 +9,25 @@ from wc_rules import base,entity,utils
 
 
 class Molecule(entity.Entity):
-    def add_sites(self,*args):
-        for arg in args:
-            if arg._verify_site_molecule_compatibility(molecule=self):
-                self.sites.append(arg)
-            else:
-                raise utils.AddError('Site incompatible with molecule.')
+    def add_sites(self,*args,force=False):
+        if not force:
+            for arg in args:
+                arg._verify_site_molecule_compatibility(molecule=self)
+        self.sites.extend(args)
         return self
 
 class Site(entity.Entity):
     molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
+    allowed_molecule_types = None
 
     def _verify_site_molecule_compatibility(self,molecule):
+        if self.allowed_molecule_types is not None:
+            if type(self.allowed_molecule_types) is tuple:
+                classes = self.allowed_molecule_types
+            else:
+                classes = tuple(utils.listify(self.allowed_molecule_types))
+            if not isinstance(molecule,classes):
+                raise utils.AddError('Incompatible molecule and site.')
         return True
 
     def _get_number_of_source_relations(self, relation_type=None):

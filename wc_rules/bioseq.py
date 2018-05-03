@@ -11,7 +11,8 @@ from Bio.Alphabet.IUPAC import IUPACAmbiguousDNA,IUPACUnambiguousDNA,IUPACAmbigu
 
 ###### Sequence Objects ######
 class Polynucleotide(seq.SequenceMolecule):pass
-class PolynucleotideFeature(seq.SequenceFeature):pass
+class PolynucleotideFeature(seq.SequenceFeature):
+    allowed_molecule_types = (Polynucleotide,)
 
 class DNA(Polynucleotide):
     alphabet_dict = {'unambiguous':IUPACUnambiguousDNA(),'ambiguous':IUPACAmbiguousDNA()}
@@ -21,6 +22,7 @@ class RNA(Polynucleotide):
 
 class Polypeptide(seq.SequenceMolecule):
     alphabet_dict = {'unambiguous':IUPACProtein(),'ambiguous':ExtendedIUPACProtein()}
-class PolypeptideFeature(seq.SequenceFeature):pass
+class PolypeptideFeature(seq.SequenceFeature):
+    allowed_molecule_types = (Polypeptide,)
 
 class Protein(Polypeptide):pass

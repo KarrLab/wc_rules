@@ -63,10 +63,9 @@ class SequenceFeature(chem2.Site):
         return Bio.SeqFeature.FeatureLocation(self.position, self.position + self.length)
 
     def _verify_site_molecule_compatibility(self,molecule):
-        check = super(SequenceFeature, self)._verify_site_molecule_compatibility(molecule)
-        if check and self._verify_feature(molecule,self.position,self.length):
-            return True
-        return False
+        super(SequenceFeature, self)._verify_site_molecule_compatibility(molecule)
+        self._verify_feature(molecule,self.position,self.length)
+        return True
 
     def _verify_feature(self,molecule,position=None,length=None):
         if position is not None and position < 0:

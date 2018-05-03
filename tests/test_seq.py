@@ -39,6 +39,16 @@ class TestSeq(unittest.TestCase):
         with self.assertRaises(utils.SeqError):
             X = bioseq.Protein().init_sequence('1234')
 
+    def test_compatibility_between_sites_and_molecules(self):
+        X = bioseq.DNA().init_sequence('ATCGAT')
+        f = bioseq.PolynucleotideFeature().set_molecule(X)
+        self.assertEqual(f.molecule,X)
+        X = bioseq.RNA().init_sequence('AUCGAU')
+        f.set_molecule(X)
+        self.assertEqual(f.molecule,X)
+        with self.assertRaises(utils.AddError):
+            f = bioseq.PolypeptideFeature().set_molecule(X)
+
     def test_sequence_feature(self):
         inputstr = 'ATCGAT'
         X = bioseq.DNA().init_sequence(inputstr,ambiguous=False)
