@@ -46,8 +46,9 @@ class TestSeq(unittest.TestCase):
         X = bioseq.RNA().init_sequence('AUCGAU')
         f.set_molecule(X)
         self.assertEqual(f.molecule,X)
-        with self.assertRaises(utils.AddError):
+        with self.assertRaises(utils.ValidateError):
             f = bioseq.PolypeptideFeature().set_molecule(X)
+            f.verify_molecule_type()
 
     def test_sequence_feature_setting(self):
         inputstr = 'ATCGAT'
