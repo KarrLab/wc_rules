@@ -40,7 +40,8 @@ class Site(entity.Entity):
         return 0
 
     def set_molecule(self,molecule):
-        molecule.add_sites(self)
+        self._verify_site_molecule_compatibility(molecule)
+        self.molecule = molecule
         return self
 
 class SiteRelation(entity.Entity):
