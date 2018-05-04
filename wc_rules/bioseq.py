@@ -33,11 +33,13 @@ class PolynucleotideFeature(seq.SequenceFeature):
     def convert_to(self,nucleotide_type,sequence=None):
         if sequence is None:
             sequence=self.get_sequence()
-        if nucleotide_type == 'rna':
-            return sequence.transcribe()
-        if nucleotide_type == 'dna':
-            return sequence.back_transcribe()
-        raise utils.SeqError('Improper use of convert_to')
+        try:
+            if nucleotide_type == 'rna':
+                return sequence.transcribe()
+            if nucleotide_type == 'dna':
+                return sequence.back_transcribe()
+        except:
+            raise utils.SeqError('You can only convert DNA to RNA and RNA to DNA.')
         return
 
 class DNA(Polynucleotide):

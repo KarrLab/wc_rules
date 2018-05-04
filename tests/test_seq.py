@@ -94,8 +94,14 @@ class TestSeq(unittest.TestCase):
         s2 = f.get_complement()
         s3 = f.get_reverse()
         s4 = f.get_reverse_complement()
+        with self.assertRaises(utils.SeqError):
+            s5 = f.convert_to(nucleotide_type='dna')
+        s5 = f.convert_to(nucleotide_type='rna')
+        s6 = f.convert_to(nucleotide_type='dna',sequence=s5)
 
         self.assertEqual(s1,'ATCGAT')
         self.assertEqual(s2,'TAGCTA')
         self.assertEqual(s3,'TAGCTA')
         self.assertEqual(s4,'ATCGAT')
+        self.assertEqual(s5,'AUCGAU')
+        self.assertEqual(s6,'ATCGAT')
