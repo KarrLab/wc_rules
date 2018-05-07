@@ -46,10 +46,11 @@ class TestSeq(unittest.TestCase):
         X = bioseq.RNA().init_sequence('AUCGAU')
         f.set_molecule(X)
         self.assertEqual(f.molecule,X)
-        with self.assertRaises(utils.AddError):
+        with self.assertRaises(utils.ValidateError):
             f = bioseq.PolypeptideFeature().set_molecule(X)
+            f.verify_molecule_type()
 
-    def test_sequence_feature(self):
+    def test_sequence_feature_setting(self):
         inputstr = 'ATCGAT'
         X = bioseq.DNA().init_sequence(inputstr,ambiguous=False)
         f = bioseq.PolynucleotideFeature().set_molecule(X)
@@ -74,6 +75,7 @@ class TestSeq(unittest.TestCase):
             f.set_position_and_length(0,-1)
         with self.assertRaises(utils.SeqError):
             f.set_position_and_length(6,1)
+            f._verify_feature(f.molecule,f.position,f.length)
 
         # checking in absence of molecule
         f1 = bioseq.PolynucleotideFeature().set_position_and_length(0,1)
@@ -83,3 +85,24 @@ class TestSeq(unittest.TestCase):
             f1.set_position_and_length(-1,0)
         with self.assertRaises(utils.SeqError):
             f1.set_position_and_length(0,-1)
+
+    def test_sequence_feature_convert(self):
+        inputstr = 'ATCGAT'
+        X = bioseq.DNA().init_sequence(inputstr,ambiguous=False)
+        f = bioseq.PolynucleotideFeature(position=0,length=6).set_molecule(X)
+
+        s1 = f.get_sequence()
+        s2 = f.get_complement()
+        s3 = f.get_reverse()
+        s4 = f.get_reverse_complement()
+        with self.assertRaises(utils.SeqError):
+            s5 = f.convert_to(nucleotide_type='dna')
+        s5 = f.convert_to(nucleotide_type='rna')
+        s6 = f.convert_to(nucleotide_type='dna',sequence=s5)
+
+        self.assertEqual(s1,'ATCGAT')
+        self.assertEqual(s2,'TAGCTA')
+        self.assertEqual(s3,'TAGCTA')
+        self.assertEqual(s4,'ATCGAT')
+        self.assertEqual(s5,'AUCGAU')
+        self.assertEqual(s6,'ATCGAT')
