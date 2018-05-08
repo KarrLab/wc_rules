@@ -8,7 +8,6 @@
 from wc_rules import base,chem2,utils
 from obj_model import core,extra_attributes
 import Bio.Seq
-import Bio.SeqFeature
 import Bio.Alphabet
 
 
@@ -17,86 +16,105 @@ class SequenceMolecule(chem2.Molecule):
 
     sequence = extra_attributes.BioSeqAttribute()
     alphabet_dict = { 'unambiguous': None, 'ambiguous': None }
+    ambiguous = True
+    alphabet = None
 
-    def _get_alphabet(self, ambiguous=True):
-        key = 'ambiguous' if ambiguous else 'unambiguous'
-        return self.alphabet_dict[key]
+    # Static methods
+    @staticmethod
+    def resolve_start_end_length(start=None,end=None,length=None):
+        if all([end is None,start is None,length is not None]):
+            end = length
+        if all([end is None,start is not None,length is not None]):
+            end = start + length
+        return (start,end)
 
-    def _verify_string(self, inputstr, alphabet):
-        invalid_chars = set(inputstr) - set(alphabet.letters)
-        if len(invalid_chars) > 0:
-            str1 = ''.join(sorted(list(invalid_chars)))
-            raise utils.SeqError('Invalid characters found: ' + str1)
-        return True
+    # Setters
+    def __init__(self,*args,**kwargs):
+        self.ambiguous = True if kwargs.pop('ambiguous',True) else False
+        super(SequenceMolecule,self).__init__(*args,**kwargs)
+        self.load_alphabet(self.ambiguous)
+        return
 
-    def init_sequence(self, inputstr = '', ambiguous = True):
-        """ Initialize sequence of an empty SequenceMolecule object """
-        alphabet = self._get_alphabet(ambiguous)
-        if self._verify_string(inputstr, alphabet):
-            self.sequence = Bio.Seq.Seq(inputstr, alphabet)
+    def load_alphabet(self,ambiguous=True):
+        self.alphabet = self.alphabet_dict['ambiguous'] if self.ambiguous else self.alphabet_dict['unambiguous']
         return self
 
-    def get_sequence_length(self): return len(self.sequence)
-    def extract_sequence(self,featurelocation=None,position=0,length=1):
-        '''Extracts a sequence given a feature location OR a start and an end.'''
-        if featurelocation is not None:
-            return featurelocation.extract(self.sequence)
-        else:
-            return self.sequence[position:position+length]
-        return self.sequence
+    def set_sequence(self, init_str = ''):
+        self.sequence = Bio.Seq.Seq(init_str.upper(),self.alphabet)
+        return self
+
+    def delete_sequence(self,start=None,end=None,length=None):
+        (start,end) = self.resolve_start_end_length(start,end,length)
+        self.sequence = self.sequence[:start] + self.sequence[end:]
+        return self
+
+    def insert_sequence(self,insert_str='',start=None):
+        insert_seq = Bio.Seq.Seq(insert_str.upper(), self.alphabet)
+        new_seq = self.sequence[:start] + insert_seq + self.sequence[start:]
+        self.sequence = new_seq
+        return self
+
+    # Getters
+    def get_alphabet(self,as_string=False):
+        if as_string:
+            return self.alphabet.letters
+        return self.alphabet
+
+    def get_sequence(self,start=None,end=None,length=None,as_string=False):
+        (start,end) = self.resolve_start_end_length(start,end,length)
+        if as_string:
+            return str(self.sequence[start:end])
+        return self.sequence[start:end]
+
+    def get_sequence_length(self,start=None,end=None):
+        return len(self.sequence[start:end])
+
+    # Validators
+    def verify_sequence(self,start=None,end=None,length=None):
+        sequence = self.get_sequence(start=start,end=end,length=length)
+        invalid_chars = ''.join(sorted(list(set(sequence) - set(self.alphabet.letters))))
+        if len(invalid_chars) > 0:
+            raise utils.SeqError('Invalid characters found: ' + invalid_chars)
+        return
+
+    def verify_location(self,start=None,end=None):
+        L = self.get_sequence_length()
+        if not 0 <= start <= end <= L:
+            raise utils.SeqError('Start/end must be in range [0,L], where L is sequence length.')
+        return
+
 
 class SequenceFeature(chem2.Site):
     ''' Simple sequence feature with position index and length.
     Example:
         If parent molecule is .A.T.C.G.A.T.,
-        feature with position=0,length=0 has sequence ''
-        feature with position=0,length=1 has sequence 'A'
-        feature with position=0,length=6 has sequence 'ATCGAT'
-        feature with position=5,length=1 has sequence 'T'
-        feature with position=6,length=0 has sequence ''
+        feature with start=0,end=0 has sequence ''
+        feature with start=0,end=1 has sequence 'A'
+        feature with start=0,end=6 has sequence 'ATCGAT'
+        feature with start=5,end=6 has sequence 'T'
+        feature with start=6,end=0 has sequence ''
     '''
 
-    position = core.IntegerAttribute(default=0,min=0)
-    length = core.IntegerAttribute(default=0,min=0)
+    start = core.IntegerAttribute(default=None,min=0)
+    end = core.IntegerAttribute(default=None,min=0)
 
-    def _get_feature_location_object(self):
-        return Bio.SeqFeature.FeatureLocation(self.position, self.position + self.length)
-
-    def _verify_site_molecule_compatibility(self,molecule):
-        super(SequenceFeature, self)._verify_site_molecule_compatibility(molecule)
-        return True
-
-    def _verify_feature(self,molecule,position=None,length=None):
-        '''A "hard" verification. Needed only on fully instantiated molecules.'''
-        if position is not None and position < 0:
-            raise utils.SeqError('Position cannot be negative.')
-        if length is not None and length < 0:
-            raise utils.SeqError('Length cannot be negative.')
-        if molecule is not None:
-            check_length = molecule.get_sequence_length()
-            position = 0 if position is None else position
-            length = 0 if length is None else length
-            if position + length > check_length:
-                raise utils.SeqError('Feature position/length incompatible with parent sequence.')
-        return True
-
-    def set_position(self,position):
-        if position < 0:
-            raise utils.SeqError('Position cannot be negative.')
-        self.position = position
+    # Setters
+    def set_location(self,start=None,end=None,length=None):
+        if end is None:
+            end = start + length
+        self.start = start
+        self.end = end
         return self
 
-    def set_length(self,length):
-        if length < 0:
-            raise utils.SeqError('Length cannot be negative.')
-        self.length = length
-        return self
+    # Getters
+    def get_start(self):
+        return self.start
 
-    def set_position_and_length(self,position,length):
-        self.set_position(position)
-        self.set_length(length)
-        return self
+    def get_end(self):
+        return self.end
 
-    def get_sequence(self):
-        feature_location = self._get_feature_location_object()
-        return feature_location.extract(self.molecule.sequence)
+    def get_length(self):
+        return self.end - self.start
+
+    def get_location(self):
+        return dict(start=self.start,end=self.end)

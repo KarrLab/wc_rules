@@ -12,38 +12,62 @@ import unittest
 class TestSeq(unittest.TestCase):
 
     def test_sequence_init(self):
-        X = bioseq.DNA().init_sequence('ATCGR')
+        X = bioseq.DNA().set_sequence('ATCGR')
         self.assertEqual(X.sequence,'ATCGR')
         with self.assertRaises(utils.SeqError):
-            X = bioseq.DNA().init_sequence('ATCGR',ambiguous=False)
-        X = bioseq.DNA().init_sequence('ATCG',ambiguous=False)
+            X = bioseq.DNA(ambiguous=False).set_sequence('ATCGR')
+            X.verify_sequence()
+        X = bioseq.DNA(ambiguous=False).set_sequence('ATCG')
         self.assertEqual(X.sequence,'ATCG')
         with self.assertRaises(utils.SeqError):
-            X = bioseq.DNA().init_sequence('ZZZZ')
+            X = bioseq.DNA().set_sequence('ZZZZ')
+            X.verify_sequence()
 
-        X = bioseq.RNA().init_sequence('AUCGR')
+        X = bioseq.RNA().set_sequence('AUCGR')
         self.assertEqual(X.sequence,'AUCGR')
         with self.assertRaises(utils.SeqError):
-            X = bioseq.RNA().init_sequence('AUCGR',ambiguous=False)
-        X = bioseq.RNA().init_sequence('AUCG',ambiguous=False)
+            X = bioseq.RNA(ambiguous=False).set_sequence('AUCGR')
+            X.verify_sequence()
+        X = bioseq.RNA(ambiguous=False).set_sequence('AUCG')
         self.assertEqual(X.sequence,'AUCG')
         with self.assertRaises(utils.SeqError):
-            X = bioseq.RNA().init_sequence('ZZZZ')
+            X = bioseq.RNA().set_sequence('ZZZZ')
+            X.verify_sequence()
 
-        X = bioseq.Protein().init_sequence('ACDEFBXZ')
+        X = bioseq.Protein().set_sequence('ACDEFBXZ')
         self.assertEqual(X.sequence,'ACDEFBXZ')
         with self.assertRaises(utils.SeqError):
-            X = bioseq.Protein().init_sequence('ACDEFBXZ',ambiguous=False)
-        X = bioseq.Protein().init_sequence('ACDEF',ambiguous=False)
+            X = bioseq.Protein(ambiguous=False).set_sequence('ACDEFBXZ')
+            X.verify_sequence()
+        X = bioseq.Protein(ambiguous=False).set_sequence('ACDEF')
         self.assertEqual(X.sequence,'ACDEF')
         with self.assertRaises(utils.SeqError):
-            X = bioseq.Protein().init_sequence('1234')
+            X = bioseq.Protein().set_sequence('1234')
+            X.verify_sequence()
+
+    def test_basic_subsequence_operations(self):
+        X = bioseq.DNA().set_sequence('ATCGAT')
+        L = X.get_sequence_length()
+        self.assertEqual(L,6)
+        L = X.get_sequence_length(2,4)
+        self.assertEqual(L,2)
+        seq = X.get_sequence()
+        self.assertEqual(seq,'ATCGAT')
+        seq = X.get_sequence(2,4)
+        self.assertEqual(seq,'CG')
+
+        X.delete_sequence(start=1,end=3)
+        self.assertEqual(X.sequence,'AGAT')
+        X.insert_sequence('TC',start=1)
+        self.assertEqual(X.sequence,'ATCGAT')
+        X.delete_sequence(start=1,length=2)
+        self.assertEqual(X.sequence,'AGAT')
 
     def test_compatibility_between_sites_and_molecules(self):
-        X = bioseq.DNA().init_sequence('ATCGAT')
+        X = bioseq.DNA().set_sequence('ATCGAT')
         f = bioseq.PolynucleotideFeature().set_molecule(X)
         self.assertEqual(f.molecule,X)
-        X = bioseq.RNA().init_sequence('AUCGAU')
+        X = bioseq.RNA().set_sequence('AUCGAU')
         f.set_molecule(X)
         self.assertEqual(f.molecule,X)
         with self.assertRaises(utils.ValidateError):
@@ -52,57 +76,78 @@ class TestSeq(unittest.TestCase):
 
     def test_sequence_feature_setting(self):
         inputstr = 'ATCGAT'
-        X = bioseq.DNA().init_sequence(inputstr,ambiguous=False)
+        X = bioseq.DNA(ambiguous=False).set_sequence(inputstr)
         f = bioseq.PolynucleotideFeature().set_molecule(X)
+        f.set_location(start=1,end=3)
 
-        self.assertEqual([f.position,f.length,f.get_sequence()],[0,0,''])
+        # examples to show how to use PolynucleotideFeature.get_sequence()
 
-        f.set_position_and_length(0,1)
-        self.assertEqual(f.get_sequence(),'A')
+        s = [
+            X.get_sequence(start=1,end=3),
+            X.get_sequence(start=1,length=2),
+            X.get_sequence(1,3),
+            X.get_sequence(1,None,2),
+            ]
+        self.assertEqual(s,['TC']*4)
 
-        f.set_position_and_length(5,1)
-        self.assertEqual(f.get_sequence(),'T')
+        # setting feature
+        f.set_location(start=1,end=3)
+        s = [
+            X.get_sequence(start=f.get_start(),end=f.get_end()),
+            X.get_sequence(start=f.get_start(),length=f.get_length()),
+            X.get_sequence(f.get_start(),f.get_end()),
+            X.get_sequence(f.get_start(),None,f.get_length()),
+            X.get_sequence(**f.get_location())
+            ]
+        self.assertEqual(s,['TC']*5)
 
-        f.set_position_and_length(0,6)
-        self.assertEqual(f.get_sequence(),inputstr)
+        f.set_location(start=1,length=2)
+        s = [
+            X.get_sequence(start=f.get_start(),end=f.get_end()),
+            X.get_sequence(start=f.get_start(),length=f.get_length()),
+            X.get_sequence(f.get_start(),f.get_end()),
+            X.get_sequence(f.get_start(),None,f.get_length()),
+            X.get_sequence(**f.get_location())
+            ]
+        self.assertEqual(s,['TC']*5)
 
-        f.set_position_and_length(6,0)
-        self.assertEqual(f.get_sequence(),'')
+        f.set_location(1,3)
+        s = [
+            X.get_sequence(start=f.get_start(),end=f.get_end()),
+            X.get_sequence(start=f.get_start(),length=f.get_length()),
+            X.get_sequence(f.get_start(),f.get_end()),
+            X.get_sequence(f.get_start(),None,f.get_length()),
+            X.get_sequence(**f.get_location())
+            ]
+        self.assertEqual(s,['TC']*5)
+
+        f.set_location(1,None,2)
+        s = [
+            X.get_sequence(start=f.get_start(),end=f.get_end()),
+            X.get_sequence(start=f.get_start(),length=f.get_length()),
+            X.get_sequence(f.get_start(),f.get_end()),
+            X.get_sequence(f.get_start(),None,f.get_length()),
+            X.get_sequence(**f.get_location())
+            ]
+        self.assertEqual(s,['TC']*5)
+
+        f.set_location(0,None,6)
+        s = X.get_sequence(**f.get_location())
+        self.assertEqual(s,inputstr)
+
+        f.set_location(6,None,0)
+        s = X.get_sequence(**f.get_location())
+        self.assertEqual(s,'')
 
         with self.assertRaises(utils.SeqError):
-            f.set_position_and_length(-1,0)
+            f.set_location(-1,0)
+            X.verify_location(**f.get_location())
         with self.assertRaises(utils.SeqError):
-            f.set_position_and_length(0,-1)
+            f.set_location(0,-1)
+            X.verify_location(**f.get_location())
         with self.assertRaises(utils.SeqError):
-            f.set_position_and_length(6,1)
-            f._verify_feature(f.molecule,f.position,f.length)
-
-        # checking in absence of molecule
-        f1 = bioseq.PolynucleotideFeature().set_position_and_length(0,1)
-        self.assertEqual(f1.molecule,None)
-        f1.set_position_and_length(6,1)
+            f.set_location(6,1)
+            X.verify_location(**f.get_location())
         with self.assertRaises(utils.SeqError):
-            f1.set_position_and_length(-1,0)
-        with self.assertRaises(utils.SeqError):
-            f1.set_position_and_length(0,-1)
-
-    def test_sequence_feature_convert(self):
-        inputstr = 'ATCGAT'
-        X = bioseq.DNA().init_sequence(inputstr,ambiguous=False)
-        f = bioseq.PolynucleotideFeature(position=0,length=6).set_molecule(X)
-
-        s1 = f.get_sequence()
-        s2 = f.get_complement()
-        s3 = f.get_reverse()
-        s4 = f.get_reverse_complement()
-        with self.assertRaises(utils.SeqError):
-            s5 = f.convert_to(nucleotide_type='dna')
-        s5 = f.convert_to(nucleotide_type='rna')
-        s6 = f.convert_to(nucleotide_type='dna',sequence=s5)
-
-        self.assertEqual(s1,'ATCGAT')
-        self.assertEqual(s2,'TAGCTA')
-        self.assertEqual(s3,'TAGCTA')
-        self.assertEqual(s4,'ATCGAT')
-        self.assertEqual(s5,'AUCGAU')
-        self.assertEqual(s6,'ATCGAT')
+            f.set_location(6,None,1)
+            X.verify_location(**f.get_location())
