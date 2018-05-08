@@ -151,3 +151,58 @@ class TestSeq(unittest.TestCase):
         with self.assertRaises(utils.SeqError):
             f.set_location(6,None,1)
             X.verify_location(**f.get_location())
+
+    def test_nucleotide_sequence_conversion(self):
+        inputstr = 'TTGTTATCGTTACCGGGAGTGAGGCGTCCGCGTCCCTTTCAGGTCAAGCGACTGAAAAACCTTGCAGTTGATTTTAAAGCGTATAGAAGACAATACAGA'
+        X = bioseq.DNA(ambiguous=False).set_sequence(inputstr)
+        seq_list = [
+        X.get_dna(0,33,option='coding'),
+        X.get_dna(0,33,option='complementary'),
+        X.get_dna(0,33,option='reverse_complementary'),
+        X.get_rna(0,33,option='coding'),
+        X.get_rna(0,33,option='complementary'),
+        X.get_rna(0,33,option='reverse_complementary'),
+        X.get_protein(0,33,option='coding'),
+        X.get_protein(0,33,option='complementary'),
+        X.get_protein(0,33,option='reverse_complementary'),
+        ]
+        s_list = [
+        'TTGTTATCGTTACCGGGAGTGAGGCGTCCGCGT',
+        'AACAATAGCAATGGCCCTCACTCCGCAGGCGCA',
+        'ACGCGGACGCCTCACTCCCGGTAACGATAACAA',
+        'UUGUUAUCGUUACCGGGAGUGAGGCGUCCGCGU',
+        'AACAAUAGCAAUGGCCCUCACUCCGCAGGCGCA',
+        'ACGCGGACGCCUCACUCCCGGUAACGAUAACAA',
+        'LLSLPGVRRPR',
+        'NNSNGPHSAGA',
+        'TRTPHSR*R*Q',
+        ]
+        for (seq,s) in zip(seq_list,s_list):
+            self.assertEqual(seq,s)
+
+        inputstr = 'CGUUAAAAGCUCGGCAAUUGUUCCGAUGACGAGGCAAUGAAUAAUUACUGACUGUAACGAAUUAGGUAGCGCAGGGCCAUGCGACCCAUCAACUGCCCC'
+        X = bioseq.RNA(ambiguous=False).set_sequence(inputstr)
+        seq_list = [
+        X.get_dna(0,33,option='coding'),
+        X.get_dna(0,33,option='complementary'),
+        X.get_dna(0,33,option='reverse_complementary'),
+        X.get_rna(0,33,option='coding'),
+        X.get_rna(0,33,option='complementary'),
+        X.get_rna(0,33,option='reverse_complementary'),
+        X.get_protein(0,33,option='coding'),
+        X.get_protein(0,33,option='complementary'),
+        X.get_protein(0,33,option='reverse_complementary'),
+        ]
+        s_list = [
+        'CGTTAAAAGCTCGGCAATTGTTCCGATGACGAG',
+        'GCAATTTTCGAGCCGTTAACAAGGCTACTGCTC',
+        'CTCGTCATCGGAACAATTGCCGAGCTTTTAACG',
+        'CGUUAAAAGCUCGGCAAUUGUUCCGAUGACGAG',
+        'GCAAUUUUCGAGCCGUUAACAAGGCUACUGCUC',
+        'CUCGUCAUCGGAACAAUUGCCGAGCUUUUAACG',
+        'R*KLGNCSDDE',
+        'AIFEPLTRLLL',
+        'LVIGTIAELLT',
+        ]
+        for (seq,s) in zip(seq_list,s_list):
+            self.assertEqual(seq,s)
