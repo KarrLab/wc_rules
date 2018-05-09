@@ -42,6 +42,9 @@ class Site(entity.Entity):
         return self
 
     # Getters
+    def get_molecule(self):
+        return self.molecule
+        
     def get_source_relations(self,relation_type=None):
         return self.site_relations_sources.get(__type=relation_type)
 

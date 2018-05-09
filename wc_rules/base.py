@@ -271,6 +271,8 @@ class BaseClass(core.Model):
     def get_graph(self, recurse=True, memo=None):
         return graph_utils.get_graph(self, recurse=recurse, memo=memo)
 
+    def get_id(self): return self.id
+    
     @property
     def graph(self):
         return self.get_graph(recurse=True)
