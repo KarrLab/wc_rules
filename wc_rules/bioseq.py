@@ -12,7 +12,7 @@ from Bio.Alphabet.IUPAC import IUPACAmbiguousDNA,IUPACUnambiguousDNA,IUPACAmbigu
 ###### Sequence Objects ######
 class Polynucleotide(seq.SequenceMolecule):
 
-    def convert_sequence(self,start=None,end=None,length=None,as_string=False,option='coding'):
+    def convert_sequence(self,start=None,end=None,length=None,option='coding'):
         seq = self.get_sequence(start=start,end=end,length=length)
         if option=='coding':
             x = seq
@@ -22,28 +22,36 @@ class Polynucleotide(seq.SequenceMolecule):
             x = seq.complement()[::-1]
         else:
             raise utils.SeqError('''convert_sequence() must use kwarg option='coding'|'complementary'|'reverse_complementary'. ''')
-        if as_string:
-            return str(x)
         return x
 
-    def translate(self,start=None,end=None,length=None,as_string=False,option='coding',table=1,to_stop=False):
+    def translate(self,start=None,end=None,length=None,option='coding',table=1,to_stop=False):
         seq = self.convert_sequence(start=start,end=end,length=length,option=option)
         x = seq.translate(table=table,to_stop=to_stop)
-        if as_string:
-            return str(x)
         return x
 
 class DNA(Polynucleotide):
     alphabet_dict = {'unambiguous':IUPACUnambiguousDNA(),'ambiguous':IUPACAmbiguousDNA()}
 
     def get_dna(self,*args,**kwargs):
-        return self.convert_sequence(*args,**kwargs)
+        as_string = kwargs.pop('as_string',False)
+        x = self.convert_sequence(*args,**kwargs)
+        if as_string:
+            return str(x)
+        return x
 
     def get_rna(self,*args,**kwargs):
-        return self.convert_sequence(*args,**kwargs).transcribe()
+        as_string = kwargs.pop('as_string',False)
+        x = self.convert_sequence(*args,**kwargs).transcribe()
+        if as_string:
+            return str(x)
+        return x
 
     def get_protein(self,*args,**kwargs):
-        return self.translate(*args,**kwargs)
+        as_string = kwargs.pop('as_string',False)
+        x = self.translate(*args,**kwargs)
+        if as_string:
+            return str(x)
+        return x
 
 class RNA(Polynucleotide):
     alphabet_dict = {'unambiguous':IUPACUnambiguousRNA(),'ambiguous':IUPACAmbiguousRNA()}
