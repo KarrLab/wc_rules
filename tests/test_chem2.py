@@ -69,6 +69,8 @@ class TestBase(unittest.TestCase):
 
         bnd1 = chem2.Bond().add_targets(X1,Y1)
         self.assertEqual(bnd1.get_targets(),[X1,Y1])
+        self.assertEqual(X1.get_bond(),bnd1)
+        self.assertEqual(Y1.get_bond(),bnd1)
         bnd1.verify_maximum_targets()
 
         with self.assertRaises(utils.ValidateError):
