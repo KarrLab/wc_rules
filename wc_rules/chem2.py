@@ -15,8 +15,9 @@ class Molecule(entity.Entity):
         return self
 
     # Getters
-    def get_sites(self,site_type=None):
-        return self.sites.get(__type=site_type)
+    def get_sites(self,**kwargs):
+        site_type = kwargs.pop('site_type',None)
+        return self.sites.get(__type=site_type,**kwargs)
 
     # Unsetters
     def remove_sites(self,*args):
@@ -44,7 +45,7 @@ class Site(entity.Entity):
     # Getters
     def get_molecule(self):
         return self.molecule
-        
+
     def get_source_relations(self,relation_type=None):
         return self.site_relations_sources.get(__type=relation_type)
 
