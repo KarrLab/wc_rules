@@ -28,7 +28,7 @@ class Molecule(entity.Entity):
 class Site(entity.Entity):
     molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
     allowed_molecule_types = None
-    available_to_bind = True
+    allowed_to_bind = True
 
     # Setters
     def set_molecule(self,molecule):
@@ -84,8 +84,10 @@ class Site(entity.Entity):
                     raise utils.ValidateError('Maximum number of relations of the same type allowed for this target site exceeded.')
         return
 
-    def verify_available_to_bind(self):
-        return self.available_to_bind
+    def verify_allowed_to_bind(self):
+        if not self.allowed_to_bind:
+            raise utils.ValidateError('This site is not allowed to have a bond.')
+        return
 
 class SiteRelation(entity.Entity):
     sources = core.ManyToManyAttribute(Site,related_name='site_relations_sources')
