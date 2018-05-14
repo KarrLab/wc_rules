@@ -10,8 +10,8 @@ from wc_rules import base,entity,utils
 
 class Molecule(entity.Entity):
     # Setters
-    def add_sites(self,*args):
-        self.sites.extend(args)
+    def add_sites(self,*sites):
+        self.sites.extend(sites)
         return self
 
     # Getters
@@ -20,9 +20,9 @@ class Molecule(entity.Entity):
         return self.sites.get(__type=site_type,**kwargs)
 
     # Unsetters
-    def remove_sites(self,*args):
-        for arg in args:
-            self.sites.discard(arg)
+    def remove_sites(self,*sites):
+        for site in sites:
+            self.sites.discard(site)
         return self
 
 class Site(entity.Entity):
@@ -35,53 +35,42 @@ class Site(entity.Entity):
         self.molecule = molecule
         return self
 
-    def add_interactions_as_source(self,*interactions):
-        self.site_interactions_sources.extend(interactions)
+    def set_bond(self,bond):
+        self.bond = bond
         return self
 
-    def add_interactions_as_target(self,*interactions):
-        self.site_interactions_targets.extend(interactions)
-        return self
+    def add_overlaps(self,*overlaps):
+        self.overlaps.extend(overlaps)
+        return
 
     # Getters
     def get_molecule(self):
         return self.molecule
 
-    def get_source_interactions(self,interaction_type=None):
-        return self.interactions_as_sources.get(__type=interaction_type)
-
-    def get_target_interactions(self,interaction_type=None):
-        return self.interactions_as_targets.get(__type=interaction_type)
-
     def get_bond(self):
-        bonds = self.interactions_as_targets.get(__type=Bond)
-        if len(bonds)==0: return None
-        if len(bonds)==1: return bonds[0]
-        return
+        return self.bond
+
+    def get_overlaps(self,**kwargs):
+        return self.overlaps.get(**kwargs)
 
     # Unsetters
     def unset_molecule(self):
         self.molecule = None
         return self
 
+    def unset_bond(self):
+        self.bond = None
+        return self
+
+    def remove_overlaps(self,*overlaps):
+        for overlap in overlaps:
+            self.overlaps.discard(overlap)
+        return self
+
     # Validators
-    def verify_molecule_type(self):
+    def verify_allowed_molecule_type(self):
         if not isinstance(self.molecule,self.allowed_molecule_types):
             raise utils.ValidateError('Molecule and site incompatible.')
-        return
-
-    def verify_maximum_allowed_interactions_as_a_source(self):
-        for interaction in self.get_source_interactions():
-            if interaction.n_max_interactions_for_a_source is not None:
-                if len(self.get_source_interactions(interaction_type=type(interaction))) > interaction.n_max_interactions_for_a_source:
-                    raise utils.ValidateError('Maximum number of interactions of the same type allowed for this source site exceeded.')
-        return
-
-    def verify_maximum_allowed_interactions_as_a_target(self):
-        for interaction in self.get_target_interactions():
-            if interaction.n_max_interactions_for_a_target is not None:
-                if len(self.get_target_interactions(interaction_type=type(interaction))) > interaction.n_max_interactions_for_a_target:
-                    raise utils.ValidateError('Maximum number of interactions of the same type allowed for this target site exceeded.')
         return
 
     def verify_allowed_to_bind(self):
@@ -89,70 +78,57 @@ class Site(entity.Entity):
             raise utils.ValidateError('This site is not allowed to have a bond.')
         return
 
-class Interaction(entity.Entity):
-    sources = core.ManyToManyAttribute(Site,related_name='interactions_as_sources')
-    targets = core.ManyToManyAttribute(Site,related_name='interactions_as_targets')
-    n_max_sources = None
-    n_max_targets = None
-    n_max_interactions_for_a_source = None
-    n_max_interactions_for_a_target = None
-    allowed_source_types = None
-    allowed_target_types = None
+class Bond(entity.Entity):
+    sites = core.OneToManyAttribute(Site,related_name='bond')
+    allowed_site_types = None
+    n_max_sites = 2
 
     # Setters
-    def add_sources(self,*args):
-        self.sources.extend(args)
+    def add_sites(self,*sites):
+        self.sites.extend(sites)
         return self
 
-    def add_targets(self,*args):
-        self.targets.extend(args)
+    # Unsetters
+    def remove_sites(self,*sites):
+        for site in sites:
+            self.sites.discard(site)
         return self
 
     # Getters
-    def get_sources(self):
-        return self.sources
+    def get_sites(self,**kwargs):
+        return self.sites.get(**kwargs)
 
-    def get_targets(self):
-        return self.targets
-
-    # Unsetters
-    def remove_sources(self,*args):
-        for arg in args:
-            self.sources.discard(arg)
-        return self
-
-    def remove_targets(self,*args):
-        for arg in args:
-            self.targets.discard(arg)
-        return self
+    def get_number_of_sites(self):
+        return len(self.sites)
 
     # Validators
-    def verify_source_types(self):
-        if self.allowed_source_types is not None:
-            for site in self.sources:
-                if not isinstance(site,self.allowed_source_types):
-                    raise utils.ValidateError('This site type is invalid as source for this interaction object.')
+    def verify_allowed_site_types(self):
+        for site in self.sites:
+            if self.allowed_site_types is not None:
+                if not isinstance(site,self.allowed_site_types):
+                    raise utils.ValidateError('Bond and site incompatible.')
         return
 
-    def verify_target_types(self):
-        if self.allowed_target_types is not None:
-            for site in self.targets:
-                if not isinstance(site,self.allowed_target_types):
-                    raise utils.ValidateError('This site type is invalid as target for this interaction object.')
+    def verify_maximum_number_of_sites(self):
+        if self.n_max_sites is not None:
+            if len(self.sites) > self.n_max_sites:
+                raise utils.ValidateError('Maximum number of allowed sites exceeds n_max_sites.')
         return
 
-    def verify_maximum_sources(self):
-        if self.n_max_sources is not None and len(self.sources) > self.n_max_sources:
-            raise utils.ValidateError('Maximum number of sources exceeded for this interaction object.')
-        return
+class Overlap(entity.Entity):
+    sites = core.ManyToManyAttribute(Site,related_name='overlaps')
 
-    def verify_maximum_targets(self):
-        if self.n_max_targets is not None and len(self.targets) > self.n_max_targets:
-            raise utils.ValidateError('Maximum number of targets exceeded for this interaction object.')
-        return
+    # Setters
+    def add_sites(self,*sites):
+        self.sites.extend(sites)
+        return self
 
-class Bond(Interaction):
-    n_max_sources = 0
-    n_max_targets = 2
-    n_max_interactions_for_a_source = 0
-    n_max_interactions_for_a_target = 1
+    # Unsetters
+    def remove_sites(self,*sites):
+        for site in sites:
+            self.sites.discard(site)
+        return self
+
+    # Getters
+    def get_sites(self,**kwargs):
+        return self.sites.get(**kwargs)
