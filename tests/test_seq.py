@@ -15,9 +15,9 @@ class TestSeq(unittest.TestCase):
         X = bioseq.DNA().set_sequence('ATCGR')
         self.assertEqual(X.sequence,'ATCGR')
         with self.assertRaises(utils.SeqError):
-            X = bioseq.DNA(ambiguous=False).set_sequence('ATCGR')
+            X = bioseq.DNA(use_permissive_alphabet=False).set_sequence('ATCGR')
             X.verify_sequence()
-        X = bioseq.DNA(ambiguous=False).set_sequence('ATCG')
+        X = bioseq.DNA(use_permissive_alphabet=False).set_sequence('ATCG')
         self.assertEqual(X.sequence,'ATCG')
         with self.assertRaises(utils.SeqError):
             X = bioseq.DNA().set_sequence('ZZZZ')
@@ -26,9 +26,9 @@ class TestSeq(unittest.TestCase):
         X = bioseq.RNA().set_sequence('AUCGR')
         self.assertEqual(X.sequence,'AUCGR')
         with self.assertRaises(utils.SeqError):
-            X = bioseq.RNA(ambiguous=False).set_sequence('AUCGR')
+            X = bioseq.RNA(use_permissive_alphabet=False).set_sequence('AUCGR')
             X.verify_sequence()
-        X = bioseq.RNA(ambiguous=False).set_sequence('AUCG')
+        X = bioseq.RNA(use_permissive_alphabet=False).set_sequence('AUCG')
         self.assertEqual(X.sequence,'AUCG')
         with self.assertRaises(utils.SeqError):
             X = bioseq.RNA().set_sequence('ZZZZ')
@@ -37,9 +37,9 @@ class TestSeq(unittest.TestCase):
         X = bioseq.Protein().set_sequence('ACDEFBXZ')
         self.assertEqual(X.sequence,'ACDEFBXZ')
         with self.assertRaises(utils.SeqError):
-            X = bioseq.Protein(ambiguous=False).set_sequence('ACDEFBXZ')
+            X = bioseq.Protein(use_permissive_alphabet=False).set_sequence('ACDEFBXZ')
             X.verify_sequence()
-        X = bioseq.Protein(ambiguous=False).set_sequence('ACDEF')
+        X = bioseq.Protein(use_permissive_alphabet=False).set_sequence('ACDEF')
         self.assertEqual(X.sequence,'ACDEF')
         with self.assertRaises(utils.SeqError):
             X = bioseq.Protein().set_sequence('1234')
@@ -76,7 +76,7 @@ class TestSeq(unittest.TestCase):
 
     def test_sequence_feature_setting(self):
         inputstr = 'ATCGAT'
-        X = bioseq.DNA(ambiguous=False).set_sequence(inputstr)
+        X = bioseq.DNA(use_permissive_alphabet=False).set_sequence(inputstr)
         f = bioseq.PolynucleotideFeature().set_molecule(X)
         f.set_location(start=1,end=3)
 
@@ -154,7 +154,7 @@ class TestSeq(unittest.TestCase):
 
     def test_nucleotide_sequence_conversion(self):
         inputstr = 'TTGTTATCGTTACCGGGAGTGAGGCGTCCGCGTCCCTTTCAGGTCAAGCGACTGAAAAACCTTGCAGTTGATTTTAAAGCGTATAGAAGACAATACAGA'
-        X = bioseq.DNA(ambiguous=False).set_sequence(inputstr)
+        X = bioseq.DNA(use_permissive_alphabet=False).set_sequence(inputstr)
         seq_list = [
         X.get_dna(0,33,option='coding'),
         X.get_dna(0,33,option='complementary'),
@@ -181,7 +181,7 @@ class TestSeq(unittest.TestCase):
             self.assertEqual(seq,s)
 
         inputstr = 'CGUUAAAAGCUCGGCAAUUGUUCCGAUGACGAGGCAAUGAAUAAUUACUGACUGUAACGAAUUAGGUAGCGCAGGGCCAUGCGACCCAUCAACUGCCCC'
-        X = bioseq.RNA(ambiguous=False).set_sequence(inputstr)
+        X = bioseq.RNA(use_permissive_alphabet=False).set_sequence(inputstr)
         seq_list = [
         X.get_dna(0,33,option='coding'),
         X.get_dna(0,33,option='complementary'),

@@ -15,8 +15,8 @@ class SequenceMolecule(chem2.Molecule):
     """ Generic SequenceMolecule (template for DNA, RNA, protein sequence objects) """
 
     sequence = extra_attributes.BioSeqAttribute()
-    alphabet_dict = { 'unambiguous': None, 'ambiguous': None }
-    ambiguous = True
+    alphabet_dict = { 'strict': None, 'permissive': None }
+    use_permissive_alphabet = True
     alphabet = None
 
     # Static methods
@@ -30,13 +30,13 @@ class SequenceMolecule(chem2.Molecule):
 
     # Setters
     def __init__(self,*args,**kwargs):
-        self.ambiguous = True if kwargs.pop('ambiguous',True) else False
+        self.use_permissive_alphabet = True if kwargs.pop('use_permissive_alphabet',True) else False
         super(SequenceMolecule,self).__init__(*args,**kwargs)
-        self.load_alphabet(self.ambiguous)
+        self.load_alphabet(self.use_permissive_alphabet)
         return
 
-    def load_alphabet(self,ambiguous=True):
-        self.alphabet = self.alphabet_dict['ambiguous'] if self.ambiguous else self.alphabet_dict['unambiguous']
+    def load_alphabet(self,permissive=True):
+        self.alphabet = self.alphabet_dict['permissive'] if permissive else self.alphabet_dict['strict']
         return self
 
     def set_sequence(self, init_str = ''):

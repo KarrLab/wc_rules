@@ -30,7 +30,7 @@ class Polynucleotide(seq.SequenceMolecule):
         return x
 
 class DNA(Polynucleotide):
-    alphabet_dict = {'unambiguous':IUPACUnambiguousDNA(),'ambiguous':IUPACAmbiguousDNA()}
+    alphabet_dict = {'strict':IUPACUnambiguousDNA(),'permissive':IUPACAmbiguousDNA()}
 
     def get_dna(self,*args,**kwargs):
         as_string = kwargs.pop('as_string',False)
@@ -54,7 +54,7 @@ class DNA(Polynucleotide):
         return x
 
 class RNA(Polynucleotide):
-    alphabet_dict = {'unambiguous':IUPACUnambiguousRNA(),'ambiguous':IUPACAmbiguousRNA()}
+    alphabet_dict = {'strict':IUPACUnambiguousRNA(),'permissive':IUPACAmbiguousRNA()}
 
     def get_dna(self,*args,**kwargs):
         return self.convert_sequence(*args,**kwargs).back_transcribe()
@@ -69,7 +69,7 @@ class PolynucleotideFeature(seq.SequenceFeature):
     allowed_molecule_types = (Polynucleotide,)
 
 class Polypeptide(seq.SequenceMolecule):
-    alphabet_dict = {'unambiguous':IUPACProtein(),'ambiguous':ExtendedIUPACProtein()}
+    alphabet_dict = {'strict':IUPACProtein(),'permissive':ExtendedIUPACProtein()}
 class PolypeptideFeature(seq.SequenceFeature):
     allowed_molecule_types = (Polypeptide,)
 
