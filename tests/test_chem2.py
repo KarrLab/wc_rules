@@ -49,7 +49,7 @@ class TestBase(unittest.TestCase):
             Y1.verify_molecule_type()
         return
 
-    def test_site_relation(self):
+    def test_site_interaction(self):
         A1 = A().set_id('A1')
         X1 = X().set_id('X1')
         X2 = X().set_id('X2')
@@ -81,7 +81,7 @@ class TestBase(unittest.TestCase):
 
         with self.assertRaises(utils.ValidateError):
             bnd2 = chem2.Bond().add_targets(X1)
-            X1.verify_maximum_allowed_relations_as_a_target()
+            X1.verify_maximum_allowed_interactions_as_a_target()
         bnd2.remove_targets(X1)
 
         Z1 = Z()

@@ -35,26 +35,26 @@ class Site(entity.Entity):
         self.molecule = molecule
         return self
 
-    def add_relations_as_source(self,*relations):
-        self.site_relations_sources.extend(relations)
+    def add_interactions_as_source(self,*interactions):
+        self.site_interactions_sources.extend(interactions)
         return self
 
-    def add_relations_as_target(self,*relations):
-        self.site_relations_targets.extend(relations)
+    def add_interactions_as_target(self,*interactions):
+        self.site_interactions_targets.extend(interactions)
         return self
 
     # Getters
     def get_molecule(self):
         return self.molecule
 
-    def get_source_relations(self,relation_type=None):
-        return self.site_relations_sources.get(__type=relation_type)
+    def get_source_interactions(self,interaction_type=None):
+        return self.interactions_as_sources.get(__type=interaction_type)
 
-    def get_target_relations(self,relation_type=None):
-        return self.site_relations_targets.get(__type=relation_type)
+    def get_target_interactions(self,interaction_type=None):
+        return self.interactions_as_targets.get(__type=interaction_type)
 
     def get_bond(self):
-        bonds = self.site_relations_targets.get(__type=Bond)
+        bonds = self.interactions_as_targets.get(__type=Bond)
         if len(bonds)==0: return None
         if len(bonds)==1: return bonds[0]
         return
@@ -70,18 +70,18 @@ class Site(entity.Entity):
             raise utils.ValidateError('Molecule and site incompatible.')
         return
 
-    def verify_maximum_allowed_relations_as_a_source(self):
-        for relation in self.get_source_relations():
-            if relation.n_max_relations_for_a_source is not None:
-                if len(self.get_source_relations(relation_type=type(relation))) > relation.n_max_relations_for_a_source:
-                    raise utils.ValidateError('Maximum number of relations of the same type allowed for this source site exceeded.')
+    def verify_maximum_allowed_interactions_as_a_source(self):
+        for interaction in self.get_source_interactions():
+            if interaction.n_max_interactions_for_a_source is not None:
+                if len(self.get_source_interactions(interaction_type=type(interaction))) > interaction.n_max_interactions_for_a_source:
+                    raise utils.ValidateError('Maximum number of interactions of the same type allowed for this source site exceeded.')
         return
 
-    def verify_maximum_allowed_relations_as_a_target(self):
-        for relation in self.get_target_relations():
-            if relation.n_max_relations_for_a_target is not None:
-                if len(self.get_target_relations(relation_type=type(relation))) > relation.n_max_relations_for_a_target:
-                    raise utils.ValidateError('Maximum number of relations of the same type allowed for this target site exceeded.')
+    def verify_maximum_allowed_interactions_as_a_target(self):
+        for interaction in self.get_target_interactions():
+            if interaction.n_max_interactions_for_a_target is not None:
+                if len(self.get_target_interactions(interaction_type=type(interaction))) > interaction.n_max_interactions_for_a_target:
+                    raise utils.ValidateError('Maximum number of interactions of the same type allowed for this target site exceeded.')
         return
 
     def verify_allowed_to_bind(self):
@@ -89,13 +89,13 @@ class Site(entity.Entity):
             raise utils.ValidateError('This site is not allowed to have a bond.')
         return
 
-class SiteRelation(entity.Entity):
-    sources = core.ManyToManyAttribute(Site,related_name='site_relations_sources')
-    targets = core.ManyToManyAttribute(Site,related_name='site_relations_targets')
+class Interaction(entity.Entity):
+    sources = core.ManyToManyAttribute(Site,related_name='interactions_as_sources')
+    targets = core.ManyToManyAttribute(Site,related_name='interactions_as_targets')
     n_max_sources = None
     n_max_targets = None
-    n_max_relations_for_a_source = None
-    n_max_relations_for_a_target = None
+    n_max_interactions_for_a_source = None
+    n_max_interactions_for_a_target = None
     allowed_source_types = None
     allowed_target_types = None
 
@@ -131,28 +131,28 @@ class SiteRelation(entity.Entity):
         if self.allowed_source_types is not None:
             for site in self.sources:
                 if not isinstance(site,self.allowed_source_types):
-                    raise utils.ValidateError('This site type is invalid as source for this relation.')
+                    raise utils.ValidateError('This site type is invalid as source for this interaction object.')
         return
 
     def verify_target_types(self):
         if self.allowed_target_types is not None:
             for site in self.targets:
                 if not isinstance(site,self.allowed_target_types):
-                    raise utils.ValidateError('This site type is invalid as target for this relation.')
+                    raise utils.ValidateError('This site type is invalid as target for this interaction object.')
         return
 
     def verify_maximum_sources(self):
         if self.n_max_sources is not None and len(self.sources) > self.n_max_sources:
-            raise utils.ValidateError('Maximum number of sources exceeded for this relation.')
+            raise utils.ValidateError('Maximum number of sources exceeded for this interaction object.')
         return
 
     def verify_maximum_targets(self):
         if self.n_max_targets is not None and len(self.targets) > self.n_max_targets:
-            raise utils.ValidateError('Maximum number of targets exceeded for this relation.')
+            raise utils.ValidateError('Maximum number of targets exceeded for this interaction object.')
         return
 
-class Bond(SiteRelation):
+class Bond(Interaction):
     n_max_sources = 0
     n_max_targets = 2
-    n_max_relations_for_a_source = 0
-    n_max_relations_for_a_target = 1
+    n_max_interactions_for_a_source = 0
+    n_max_interactions_for_a_target = 1
