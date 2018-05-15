@@ -72,7 +72,7 @@ class TestSeq(unittest.TestCase):
         self.assertEqual(f.molecule,X)
         with self.assertRaises(utils.ValidateError):
             f = bioseq.PolypeptideFeature().set_molecule(X)
-            f.verify_molecule_type()
+            f.verify_allowed_molecule_type()
 
     def test_sequence_feature_setting(self):
         inputstr = 'ATCGAT'

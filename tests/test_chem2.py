@@ -17,7 +17,7 @@ class Y(chem2.Site):
     allowed_molecule_types = (B,)
 class Z(chem2.Site):pass
 class NewBond(chem2.Bond):
-    allowed_target_types = (X,Y,)
+    allowed_site_types = (X,Y,)
 
 class TestBase(unittest.TestCase):
     def test_sites(self):
@@ -46,10 +46,10 @@ class TestBase(unittest.TestCase):
         Y1 = Y().set_id('Y1')
         with self.assertRaises(utils.ValidateError):
             A1.add_sites(Y1)
-            Y1.verify_molecule_type()
+            Y1.verify_allowed_molecule_type()
         return
 
-    def test_site_interaction(self):
+    def test_bond(self):
         A1 = A().set_id('A1')
         X1 = X().set_id('X1')
         X2 = X().set_id('X2')
@@ -60,33 +60,42 @@ class TestBase(unittest.TestCase):
         Y2 = Y().set_id('Y2')
         B1.add_sites(Y1,Y2)
 
-        bnd1 = chem2.Bond()
-        with self.assertRaises(utils.ValidateError):
-            bnd1.add_sources(X1)
-            bnd1.verify_maximum_sources()
-        bnd1.remove_sources(X1)
-        self.assertEqual(bnd1.sources,[])
 
-        bnd1 = chem2.Bond().add_targets(X1,Y1)
-        self.assertEqual(bnd1.get_targets(),[X1,Y1])
+        bnd1 = chem2.Bond().add_sites(X1,Y1)
+        self.assertEqual(bnd1.get_sites(),[X1,Y1])
         self.assertEqual(X1.get_bond(),bnd1)
         self.assertEqual(Y1.get_bond(),bnd1)
-        bnd1.verify_maximum_targets()
+        bnd1.verify_maximum_number_of_sites()
 
         with self.assertRaises(utils.ValidateError):
-            bnd1.add_targets(Y2)
-            bnd1.verify_maximum_targets()
-        bnd1.remove_targets(Y2)
-        self.assertEqual(bnd1.get_targets(),[X1,Y1])
-
-        with self.assertRaises(utils.ValidateError):
-            bnd2 = chem2.Bond().add_targets(X1)
-            X1.verify_maximum_allowed_interactions_as_a_target()
-        bnd2.remove_targets(X1)
+            bnd1.add_sites(Y2)
+            bnd1.verify_maximum_number_of_sites()
+        bnd1.remove_sites(Y2)
+        self.assertEqual(bnd1.get_sites(),[X1,Y1])
 
         Z1 = Z()
         with self.assertRaises(utils.ValidateError):
-            bnd = NewBond().add_targets(Z1)
-            bnd.verify_target_types()
+            bnd = NewBond().add_sites(Z1)
+            bnd.verify_allowed_site_types()
 
+        return
+
+    def test_overlaps(self):
+        A1 = A().set_id('A1')
+        X1 = X().set_id('X1')
+        X2 = X().set_id('X2')
+        A1.add_sites(X1,X2)
+
+        olp1 = chem2.Overlap().add_sites(X1,X2)
+        self.assertEqual(olp1.get_sites(),[X1,X2])
+        self.assertEqual(X1.get_overlaps()[0],olp1)
+        self.assertEqual(X2.get_overlaps()[0],olp1)
+        olp1.remove_sites(X1,X2)
+        self.assertEqual(len(olp1.get_sites()),0)
+        X1.add_overlaps(olp1)
+        X2.add_overlaps(olp1)
+        self.assertEqual(olp1.get_sites(),[X1,X2])
+        X1.remove_overlaps(olp1)
+        X2.remove_overlaps(olp1)
+        self.assertEqual(len(olp1.get_sites()),0)
         return
