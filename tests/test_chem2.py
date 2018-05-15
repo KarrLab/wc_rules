@@ -79,3 +79,23 @@ class TestBase(unittest.TestCase):
             bnd.verify_allowed_site_types()
 
         return
+
+    def test_overlaps(self):
+        A1 = A().set_id('A1')
+        X1 = X().set_id('X1')
+        X2 = X().set_id('X2')
+        A1.add_sites(X1,X2)
+
+        olp1 = chem2.Overlap().add_sites(X1,X2)
+        self.assertEqual(olp1.get_sites(),[X1,X2])
+        self.assertEqual(X1.get_overlaps()[0],olp1)
+        self.assertEqual(X2.get_overlaps()[0],olp1)
+        olp1.remove_sites(X1,X2)
+        self.assertEqual(len(olp1.get_sites()),0)
+        X1.add_overlaps(olp1)
+        X2.add_overlaps(olp1)
+        self.assertEqual(olp1.get_sites(),[X1,X2])
+        X1.remove_overlaps(olp1)
+        X2.remove_overlaps(olp1)
+        self.assertEqual(len(olp1.get_sites()),0)
+        return
