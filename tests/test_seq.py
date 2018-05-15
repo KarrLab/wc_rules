@@ -58,7 +58,7 @@ class TestSeq(unittest.TestCase):
 
         X.delete_sequence(start=1,end=3)
         self.assertEqual(X.sequence,'AGAT')
-        X.insert_sequence('TC',start=1)
+        X.insert_sequence(sequence='TC',start=1)
         self.assertEqual(X.sequence,'ATCGAT')
         X.delete_sequence(start=1,length=2)
         self.assertEqual(X.sequence,'AGAT')

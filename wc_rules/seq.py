@@ -43,15 +43,17 @@ class SequenceMolecule(chem2.Molecule):
         self.sequence = Bio.Seq.Seq(init_str.upper(),self.alphabet)
         return self
 
-    def delete_sequence(self,start=None,end=None,length=None):
+    def replace_sequence(self,start=None,end=None,length=None,sequence=''):
         (start,end) = self.resolve_start_end_length(start,end,length)
-        self.sequence = self.sequence[:start] + self.sequence[end:]
+        self.sequence = self.sequence[:start] + Bio.Seq.Seq(sequence.upper(),self.alphabet) + self.sequence[end:]
         return self
 
-    def insert_sequence(self,insert_str='',start=None):
-        insert_seq = Bio.Seq.Seq(insert_str.upper(), self.alphabet)
-        new_seq = self.sequence[:start] + insert_seq + self.sequence[start:]
-        self.sequence = new_seq
+    def delete_sequence(self,start=None,end=None,length=None):
+        self.replace_sequence(start=start,end=end,length=length,sequence='')
+        return self
+
+    def insert_sequence(self,start=None,sequence=''):
+        self.replace_sequence(start=start,length=0,sequence=sequence)
         return self
 
     # Getters
