@@ -40,6 +40,8 @@ class SequenceMolecule(chem2.Molecule):
         return self
 
     def set_sequence(self, init_str = ''):
+        if isinstance(init_str,Bio.Seq.Seq):
+            init_str = str(init_str)
         self.sequence = Bio.Seq.Seq(init_str.upper(),self.alphabet)
         return self
 
