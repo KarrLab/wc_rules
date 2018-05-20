@@ -6,19 +6,13 @@
 """
 
 from wc_rules import base
-from wc_rules import variables
-
 
 class Entity(base.BaseClass):
 
     def __init__(self, **kwargs):
         super(Entity, self).__init__(**kwargs)
         attrdict = self.attribute_properties
-
-        vardict = self.get_variable_dict()
-        for attrname in vardict:
-            self.attribute_properties[attrname]['variable'] = vardict[attrname]
-
+        
     @classmethod
     def get_classnames(cls):
         classnames = []
