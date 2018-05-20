@@ -5,13 +5,13 @@
 :License: MIT
 """
 
-from wc_rules import base,chem2,utils
+from wc_rules import base,chem,utils
 from obj_model import core,extra_attributes
 import Bio.Seq
 import Bio.Alphabet
 
 
-class SequenceMolecule(chem2.Molecule):
+class SequenceMolecule(chem.Molecule):
     """ Generic SequenceMolecule (template for DNA, RNA, protein sequence objects) """
 
     sequence = extra_attributes.BioSeqAttribute()
@@ -88,7 +88,7 @@ class SequenceMolecule(chem2.Molecule):
         return
 
 
-class SequenceFeature(chem2.Site):
+class SequenceFeature(chem.Site):
     ''' Simple sequence feature with position index and length.
     Example:
         If parent molecule is .A.T.C.G.A.T.,

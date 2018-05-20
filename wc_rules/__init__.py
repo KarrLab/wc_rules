@@ -14,7 +14,7 @@ with open(pkg_resources.resource_filename('wc_rules', 'VERSION'), 'r') as file:
 # API
 from . import base
 from . import entity
-from . import chem2
+from . import chem
 from . import graph_utils
 from . import seq
 from . import bioseq
