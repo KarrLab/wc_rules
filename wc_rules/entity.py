@@ -19,16 +19,6 @@ class Entity(base.BaseClass):
         for attrname in vardict:
             self.attribute_properties[attrname]['variable'] = vardict[attrname]
 
-    def get_variable_dict(self):
-        attrdict = self.attribute_properties
-        vardict = dict()
-        for attrname in attrdict:
-            vardict[attrname] = False
-            if attrdict[attrname]['related']:
-                if issubclass(attrdict[attrname]['related_class'], variables.StateVariable):
-                    vardict[attrname] = True
-        return vardict
-
     @classmethod
     def get_classnames(cls):
         classnames = []
