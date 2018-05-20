@@ -28,3 +28,12 @@ class Entity(base.BaseClass):
                 if issubclass(attrdict[attrname]['related_class'], variables.StateVariable):
                     vardict[attrname] = True
         return vardict
+
+    @classmethod
+    def get_classnames(cls):
+        classnames = []
+        x = cls
+        while x.__name__ is not 'Entity':
+            classnames.append(x.__name__)
+            x = x.__bases__[0]
+        return classnames

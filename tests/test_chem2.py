@@ -20,6 +20,11 @@ class NewBond(chem2.Bond):
     allowed_site_types = (X,Y,)
 
 class TestBase(unittest.TestCase):
+    def test_get_classnames(self):
+        A1 = A()
+        self.assertEqual(A.get_classnames(),['A','Molecule'])
+        self.assertEqual(A1.get_classnames(),['A','Molecule'])
+
     def test_sites(self):
         A1 = A().set_id('A1')
         X1 = X().set_id('X1')
