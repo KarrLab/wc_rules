@@ -1,217 +1,134 @@
-""" Language for describing whole-cell models
-
+"""
 :Author: John Sekar <johnarul.sekar@gmail.com>
-:Date: 2017-04-06
+:Date: 2018-04-20
 :Copyright: 2017, Karr Lab
 :License: MIT
 """
-
 from obj_model import core
-from wc_rules import base
-from wc_rules import entity
-from wc_rules import ratelaw
-from wc_rules import utils
-from wc_rules import variables
-
-
-class Complex(entity.Entity):
-
-    class GraphMeta(base.BaseClass.GraphMeta):
-        outward_edges = tuple(['molecules'])
-        semantic = tuple()
-
-    def get_molecule(self, label, **kwargs):
-        if label is not None:
-            return self.molecules.get_one(label=label, **kwargs)
-        else:
-            return self.molecules.get_one(**kwargs)
+from wc_rules import base,entity,utils
 
 
 class Molecule(entity.Entity):
-    complex = core.ManyToOneAttribute(Complex, related_name='molecules')
-
-    class GraphMeta(base.BaseClass.GraphMeta):
-        outward_edges = tuple(['sites'])
-        semantic = tuple()
-
-    def get_site(self, label, **kwargs):
-        if label is not None:
-            return self.sites.get_one(label=label, **kwargs)
-        else:
-            return self.sites.get_one(**kwargs)
-
-    def compute_overlaps(self):
+    # Setters
+    def add_sites(self,*sites):
+        self.sites.extend(sites)
         return self
 
+    # Getters
+    def get_sites(self,**kwargs):
+        site_type = kwargs.pop('site_type',None)
+        return self.sites.get(__type=site_type,**kwargs)
+
+    # Unsetters
+    def remove_sites(self,*sites):
+        for site in sites:
+            self.sites.discard(site)
+        return self
 
 class Site(entity.Entity):
-    molecule = core.ManyToOneAttribute(Molecule, related_name='sites')
-    bond = core.OneToOneAttribute('Site', related_name='bond')
-    overlaps = core.ManyToManyAttribute('Site', related_name='overlaps')
-    boolvars = core.OneToManyAttribute(variables.BooleanVariable, related_name='site')
+    molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
+    allowed_molecule_types = None
+    allowed_to_bind = True
 
-    class GraphMeta(base.BaseClass.GraphMeta):
-        outward_edges = tuple(['bond', 'overlaps', 'boolvars'])
-        semantic = tuple()
-
-    available_to_bind = core.BooleanAttribute(default=True)
-
-    def sync_binding_state(self):
-        if self.available_to_bind is True:
-            if self.bond is not None or any(x.bond is not None for x in self.overlaps):
-                self.available_to_bind = False
-        if self.available_to_bind is False:
-            if self.bond is None and all(x.bond is None for x in self.overlaps):
-                self.available_to_bind = True
+    # Setters
+    def set_molecule(self,molecule):
+        self.molecule = molecule
         return self
 
-    #### Boolean Variables ####
-    def get_boolvar(self, label, **kwargs):
-        if label is not None:
-            return self.boolvars.get_one(label=label, **kwargs)
-        else:
-            return self.boolvars.get_one(**kwargs)
-
-    #### Pairwise Overlaps ####
-    def add_overlaps(self, other_sites, mutual=True):
-        return self.add_by_attrname(other_sites, 'overlaps')
-
-    def remove_overlaps(self, other_sites):
-        return self.remove_by_attrname(other_sites, 'overlaps')
-
-    def undef_overlaps(self):
-        # :todo:(Sekar) Review this. Previously, overlaps was being set to None. However, None is not compatible with obj_model.
-        self.overlaps = []
+    def set_bond(self,bond):
+        self.bond = bond
         return self
 
-    def get_overlaps(self):
-        return self.overlaps
+    def add_overlaps(self,*overlaps):
+        self.overlaps.extend(overlaps)
+        return
 
-    def has_overlaps(self):
-        # :todo:(Sekar) Review this. Previously, this was checking if overlaps was None. However, None is not compatible with obj_model.
-        return len(self.overlaps) > 0
+    # Getters
+    def get_molecule(self):
+        return self.molecule
 
-    #### Binding State ####
-    def undef_binding_state(self):
+    def get_bond(self):
+        return self.bond
+
+    def get_overlaps(self,**kwargs):
+        return self.overlaps.get(**kwargs)
+
+    # Unsetters
+    def unset_molecule(self):
+        self.molecule = None
+        return self
+
+    def unset_bond(self):
         self.bond = None
         return self
 
-    def add_unbound_state(self):
-        self.bond = self
+    def remove_overlaps(self,*overlaps):
+        for overlap in overlaps:
+            self.overlaps.discard(overlap)
         return self
 
-    def add_bond_to(self, target):
-        for x in [self, target]:
-            x.undef_binding_state()
-        self.bond = target
-        return self
-
-    def remove_bond(self):
-        other = self.bond
-        for x in [self, other]:
-            x.undef_binding_state()
-            x.add_unbound_state()
-        return self
-
-    @property
-    def binding_state_value(self):
-        if self.bond is None:
-            return
-        elif self.bond is self:
-            return 'unbound'
-        else:
-            return 'bound'
-
-    def get_binding_partner(self):
-        if self.bond is not None:
-            if self.bond is self:
-                return
-        return self.bond
-
-###### Operations ######
-class Operation(base.BaseClass):
-
-    class GraphMeta(base.BaseClass.GraphMeta):
-        outward_edges = tuple(['target'])
-        semantic = tuple()
-
-    @property
-    def target(self):
+    # Validators
+    def verify_allowed_molecule_type(self):
+        if not isinstance(self.molecule,self.allowed_molecule_types):
+            raise utils.ValidateError('Molecule and site incompatible.')
         return
 
-    @target.setter
-    def target(self, value):
+    def verify_allowed_to_bind(self):
+        if not self.allowed_to_bind:
+            raise utils.ValidateError('This site is not allowed to have a bond.')
         return
 
-    def set_target(self, value):
-        self.target = value
+class Bond(entity.Entity):
+    sites = core.OneToManyAttribute(Site,related_name='bond')
+    allowed_site_types = None
+    n_max_sites = 2
+
+    # Setters
+    def add_sites(self,*sites):
+        self.sites.extend(sites)
         return self
 
-
-class BondOperation(Operation):
-    sites = core.OneToManyAttribute(Site, related_name='bond_op')
-
-    @property
-    def target(self):
-        return self.sites
-
-    @target.setter
-    def target(self, arr):
-        self.sites = arr
-
-    def set_target(self, v):
-        if isinstance(v, list):
-            for vv in v:
-                self.set_target(vv)
-        elif isinstance(v, Site):
-            self.sites.append(v)
-        else:
-            raise utils.AddObjectError(self, v, ['Site'], 'set_target()')
+    # Unsetters
+    def remove_sites(self,*sites):
+        for site in sites:
+            self.sites.discard(site)
         return self
 
+    # Getters
+    def get_sites(self,**kwargs):
+        return self.sites.get(**kwargs)
 
-class AddBond(BondOperation):
-    pass
+    def get_number_of_sites(self):
+        return len(self.sites)
 
+    # Validators
+    def verify_allowed_site_types(self):
+        for site in self.sites:
+            if self.allowed_site_types is not None:
+                if not isinstance(site,self.allowed_site_types):
+                    raise utils.ValidateError('Bond and site incompatible.')
+        return
 
-class DeleteBond(BondOperation):
-    pass
+    def verify_maximum_number_of_sites(self):
+        if self.n_max_sites is not None:
+            if len(self.sites) > self.n_max_sites:
+                raise utils.ValidateError('Maximum number of allowed sites exceeds n_max_sites.')
+        return
 
+class Overlap(entity.Entity):
+    sites = core.ManyToManyAttribute(Site,related_name='overlaps')
 
-class BooleanStateOperation(Operation):
-    boolvar = core.OneToOneAttribute(variables.BooleanVariable, related_name='boolean_op')
-
-    @property
-    def target(self):
-        return self.boolvar
-
-    @target.setter
-    def target(self, boolvar):
-        self.boolvar = boolvar
-
-    def set_target(self, v):
-        if isinstance(v, variables.BooleanVariable):
-            self.boolvar = v
-        else:
-            raise utils.AddObjectError(self, v, ['BooleanStateVariable'], 'set_target()')
+    # Setters
+    def add_sites(self,*sites):
+        self.sites.extend(sites)
         return self
 
+    # Unsetters
+    def remove_sites(self,*sites):
+        for site in sites:
+            self.sites.discard(site)
+        return self
 
-class SetTrue(BooleanStateOperation):
-    pass
-
-
-class SetFalse(BooleanStateOperation):
-    pass
-
-##### Rule #####
-class Rule(base.BaseClass):
-    reactants = core.OneToManyAttribute(Complex, related_name='rule')
-    reversible = core.BooleanAttribute(default=False)
-    operations = core.OneToManyAttribute(Operation, related_name='rule')
-    forward = core.OneToOneAttribute(ratelaw.RateExpression, related_name='rule_forward')
-    reverse = core.OneToOneAttribute(ratelaw.RateExpression, related_name='rule_reverse')
-
-    class GraphMeta(base.BaseClass.GraphMeta):
-        outward_edges = tuple(['reactants', 'operations'])
-        semantic = tuple()
+    # Getters
+    def get_sites(self,**kwargs):
+        return self.sites.get(**kwargs)

@@ -5,18 +5,18 @@
 :License: MIT
 """
 
-from wc_rules import chem2,utils
+from wc_rules import chem,utils
 import unittest
 
 
-class A(chem2.Molecule):pass
-class X(chem2.Site):
+class A(chem.Molecule):pass
+class X(chem.Site):
     allowed_molecule_types = (A,)
-class B(chem2.Molecule):pass
-class Y(chem2.Site):
+class B(chem.Molecule):pass
+class Y(chem.Site):
     allowed_molecule_types = (B,)
-class Z(chem2.Site):pass
-class NewBond(chem2.Bond):
+class Z(chem.Site):pass
+class NewBond(chem.Bond):
     allowed_site_types = (X,Y,)
 
 class TestBase(unittest.TestCase):
@@ -66,7 +66,7 @@ class TestBase(unittest.TestCase):
         B1.add_sites(Y1,Y2)
 
 
-        bnd1 = chem2.Bond().add_sites(X1,Y1)
+        bnd1 = chem.Bond().add_sites(X1,Y1)
         self.assertEqual(bnd1.get_sites(),[X1,Y1])
         self.assertEqual(X1.get_bond(),bnd1)
         self.assertEqual(Y1.get_bond(),bnd1)
@@ -91,7 +91,7 @@ class TestBase(unittest.TestCase):
         X2 = X().set_id('X2')
         A1.add_sites(X1,X2)
 
-        olp1 = chem2.Overlap().add_sites(X1,X2)
+        olp1 = chem.Overlap().add_sites(X1,X2)
         self.assertEqual(olp1.get_sites(),[X1,X2])
         self.assertEqual(X1.get_overlaps()[0],olp1)
         self.assertEqual(X2.get_overlaps()[0],olp1)

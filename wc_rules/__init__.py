@@ -13,15 +13,9 @@ with open(pkg_resources.resource_filename('wc_rules', 'VERSION'), 'r') as file:
 
 # API
 from . import base
-from . import bio
-from . import chem
 from . import entity
-from . import filter
+from . import chem
 from . import graph_utils
-from . import modelschema
-from . import query
-from . import ratelaw
-#from . import seq
-from . import sim
+from . import seq
+from . import bioseq
 from . import utils
-from . import variables
