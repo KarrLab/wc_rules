@@ -5,7 +5,8 @@
 :License: MIT
 """
 
-from wc_rules.indexer import Indexer, ClassQuery
+from wc_rules.indexer import Indexer, BooleanIndexer
+from wc_rules.query import ClassQuery
 from wc_rules.chem import Molecule
 import itertools
 
@@ -17,7 +18,7 @@ class A2(A):pass
 
 class TestIndexer(unittest.TestCase):
 
-    def test_indexer(self):
+    def test_indexing(self):
         I = Indexer()
         self.assertTrue(len(I)==len(I._values)==0)
 
@@ -62,6 +63,32 @@ class TestIndexer(unittest.TestCase):
         self.assertTrue(I.last_deleted == set(['b']))
         I.flush()
         self.assertTrue(I.last_deleted == set())
+
+    def test_boolean_and(self):
+        x1 = BooleanIndexer().update({'a':True,'b':True,'c':True})
+        x2 = BooleanIndexer().update({'b':True,'c':True,'d':True})
+        x = x1 & x2
+        self.assertTrue(sorted(x.keys())==['b','c'])
+        self.assertTrue(x['b'])
+        self.assertTrue(x['c'])
+
+        x3 = BooleanIndexer().update({'c':True,'d':True,'e':True})
+        x = x1 & x2 & x3
+        self.assertTrue(sorted(x.keys())==['c'])
+        self.assertTrue(x['c'])
+
+    def test_boolean_or(self):
+        x1 = BooleanIndexer().update({'a':True,'b':True,'c':True})
+        x2 = BooleanIndexer().update({'b':True,'c':True,'d':True})
+        x = x1 | x2
+        for key in ['a','b','c','d']:
+            self.assertTrue(x[key])
+
+    def test_boolean_not(self):
+        x1 = BooleanIndexer().update({'a':True,'b':True,'c':False})
+        x = ~x1
+        self.assertTrue(not x['a'] and not x['b'] and x['c'])
+
 
 class TestClassQuery(unittest.TestCase):
     def test_classquery(self):

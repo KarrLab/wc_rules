@@ -34,6 +34,8 @@ class GenericError(Exception):
             msg = ''
         super(GenericError, self).__init__(msg)
 
+class IndexerError(GenericError):pass
+
 class ValidateError(GenericError):pass
 
 class AddError(GenericError):
