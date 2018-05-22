@@ -45,14 +45,14 @@ class Indexer(dict):
         self.last_deleted.add(key)
         return self
 
-    # Methods available externally
+    # Methods available to paired queryobjects
     def update(self,dict_obj):
         for key,val in dict_obj.items():
             self.update_key_value(key,val)
             self.append_key_to_last_updated(key)
         return self
 
-    def remove(self,*keylist):
+    def remove(self,keylist):
         for key in keylist:
             self.delete_key(key)
             self.append_key_to_last_deleted(key)
@@ -61,4 +61,23 @@ class Indexer(dict):
     def flush(self):
         self.last_updated.clear()
         self.last_deleted.clear()
+        return self
+
+class ClassQuery(object):
+    def __init__(self,_class):
+        self._class = _class
+        self.indexer = Indexer()
+        self.func = lambda x:isinstance(x,self._class)
+
+    def verify(self,obj):
+        return self.func(obj)
+
+    def update(self,*id_list):
+        n = len(id_list)
+        tuplist = zip(id_list,[True]*n)
+        self.indexer.update(dict(tuplist))
+        return self
+
+    def remove(self,*id_list):
+        self.indexer.remove(id_list)
         return self
