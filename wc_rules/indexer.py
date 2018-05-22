@@ -9,6 +9,8 @@ class Indexer(dict):
 
     def __init__(self):
         self._values = {}
+        self.last_updated = set()
+        self.last_deleted = set()
 
     def key_exists(self,key):
         return key in self
@@ -35,7 +37,28 @@ class Indexer(dict):
         self.create_new_key_value(key,value)
         return self
 
+    def append_key_to_last_updated(self,key):
+        self.last_updated.add(key)
+        return self
+
+    def append_key_to_last_deleted(self,key):
+        self.last_deleted.add(key)
+        return self
+
+    # Methods available externally
     def update(self,dict_obj):
         for key,val in dict_obj.items():
             self.update_key_value(key,val)
+            self.append_key_to_last_updated(key)
+        return self
+
+    def remove(self,*keylist):
+        for key in keylist:
+            self.delete_key(key)
+            self.append_key_to_last_deleted(key)
+        return self
+
+    def flush(self):
+        self.last_updated.clear()
+        self.last_deleted.clear()
         return self
