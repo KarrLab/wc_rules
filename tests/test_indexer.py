@@ -30,6 +30,8 @@ class TestIndexer(unittest.TestCase):
         self.assertTrue(I['a'])
         self.assertTrue(I['b'])
         self.assertTrue(not I['c'])
+        I.update({'a':False,'b':False})
+        self.assertTrue(len(I)==0)
 
         # A negative slicer
         I = Slicer(default=True)

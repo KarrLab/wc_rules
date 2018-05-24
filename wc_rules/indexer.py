@@ -16,10 +16,6 @@ class Slicer(dict):
             return dict.__getitem__(self,key)
         return self.default
 
-    def key_exists(self,keys): return key in self
-
-    def value_is_default(self,value): return value == self.default
-
     def add_keys(self,keys):
         for key in keys:
             self[key] = not self.default
@@ -34,6 +30,9 @@ class Slicer(dict):
         not_default = not self.default
         keys = (key for key in dict_obj if dict_obj[key] is not_default)
         self.add_keys(keys)
+        keys = (key for key in dict_obj if dict_obj[key] is self.default)
+        keys1 = (key for key in keys if key in self)
+        self.delete_keys(keys1)
         return self
 
     def union(self,other):
