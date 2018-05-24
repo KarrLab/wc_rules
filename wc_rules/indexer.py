@@ -115,65 +115,50 @@ class Slicer(dict):
 class Indexer(dict):
     primitive_type = None
 
-    def __init__(self,default=None):
-        self._values = {}
+    def __init__(self):
+        self.value_cache = {}
         self.last_updated = set()
-        self.default = default
 
     # Internal methods
-    def key_exists(self,key):
-        return key in self
-
-    def value_exists(self,value):
-        return value in self._values
-
     def value_is_compatible(self,value):
         if self.primitive_type is not None:
             if not isinstance(value,self.primitive_type):
                 raise utils.IndexerError('Value is not compatible with indexer type')
         return True
 
-    def value_is_default(self,value):
-        if self.default is not None:
-            return self.default==value
-        return False
-
-    def delete_key(self,key):
-        value = self.pop(key)
-        self._values[value].pop(key)
-        if len(self._values[value])==0:
-            self._values.pop(value)
+    def delete_key_from_value_cache(self,key):
+        value = self[key]
+        self.value_cache[value].pop(key)
+        if len(self.value_cache[value])==0:
+            self.value_cache.pop(value)
         return self
 
-    def create_new_key_value(self,key,value):
-        dict.__setitem__(self,key,value)
-        if not self.value_exists(value):
-            self._values[value] = dict()
-        self._values[value][key] = True
-        return self
-
-    def update_key_value(self,key,value):
-        self.value_is_compatible(value)
-        if self.key_exists(key) and self[key] != value:
-            self.delete_key(key)
-        if not self.value_is_default(value):
-            self.create_new_key_value(key,value)
+    def add_key_to_value_cache(self,key,value):
+        if value not in self.value_cache:
+            self.value_cache[value] = Slicer(default=False)
+        self.value_cache[value].add_keys([key])
         return self
 
     def update_last_updated(self,key):
         self.last_updated.add(key)
         return self
 
-    # Methods available to paired queryobjects
+    # Methods available externally
     def update(self,dict_obj):
-        for key,val in dict_obj.items():
-            self.update_key_value(key,val)
+        for key,value in dict_obj.items():
+            if key in self and self[key]==value: continue
+            self.value_is_compatible(value)
+            if key in self: self.delete_key_from_value_cache(key)
+            self[key] = value
+            self.add_key_to_value_cache(key,value)
             self.update_last_updated(key)
         return self
 
     def remove(self,keylist):
+        keys = (key for key in keylist if key in self)
         for key in keylist:
-            self.delete_key(key)
+            self.delete_key_from_value_cache(key)
+            self.pop(key)
             self.update_last_updated(key)
         return self
 
@@ -182,84 +167,4 @@ class Indexer(dict):
         return self
 
 class BooleanIndexer(Indexer):
-    primitive_type = bool
-
-    def __init__(self,default=False):
-        super(BooleanIndexer,self).__init__()
-        self.default = default
-
-    def add_keys(self,keylist):
-        return self.update(dict(zip(keylist,[not self.default]*len(keylist))))
-
-    def __getitem__(self,key):
-        if key not in self:
-            return self.default
-        return dict.__getitem__(self,key)
-
-    # Methods available to combine indexers
-    def union(self,other):
-        ''' Merges keys of indexers as long as they all have the same default. '''
-        if self.default != other.default:
-            raise utils.IndexerError('Postive and negative indexers cannot be combined.')
-        if len(self) >= len(other):
-            x1 = self
-            x2 = other
-        else:
-            x1 = other
-            x2 = self
-        keys = list(x1.keys()) + [k for k in x2.keys() if k not in x1.keys()]
-        return BooleanIndexer(default=self.default).add_keys(keys)
-
-    def intersection(self,other):
-        ''' Returns common keys of indexers as long as they all have the same default. '''
-        if self.default != other.default:
-            raise utils.IndexerError('Postive and negative indexers cannot be combined.')
-        if len(self) <= len(other):
-            x1 = self
-            x2 = other
-        else:
-            x1 = other
-            x2 = self
-        keys = [key for key in x1 if key in x2]
-        return BooleanIndexer(default=self.default).add_keys(keys)
-
-    def __and__(self,other):
-        ''' New indexer that returns True if both indexers return True. Overloads operator `&`. '''
-        if self.default==other.default==False:
-            # Case 1 both are positive indexers (default:False)
-            return self.intersection(other)
-        if self.default==other.default==True:
-            # Case 2 both are negative indexers (default:True)
-            # By DeMorgan's law A' & B' = (A|B)'
-            return self.union(other)
-        if self.default==False and other.default==True:
-            # Case 3 self is positive indexer, but other is negative
-            # Include keys from self as long as other returns True
-            keys = (key for key in self if other[key])
-            return BooleanIndexer(default=False).add_keys(keys)
-        if self.default==True and other.default==False:
-            # Case 4, same as case 3, but interchanged
-            return other & self
-        return
-
-    def __or__(self,other):
-        ''' New indexer that returns True if at least one indexer returns True. Overloads operator `|`. '''
-        if self.default==other.default==False:
-            # Case 1 both are positive indexers (default:False)
-            return self.union(other)
-        if self.default==other.default==True:
-            # Case 2 both are negative indexers (default:True)
-            # By DeMorgan's law A' | B' = (A&B)'
-            return self.intersection(other)
-        if self.default==True and other.default==False:
-            # Case 3 self is negative indexer, but other is positive
-            # Include keys from self as long as other returns False
-            keys = (key for key in self if not other[key])
-            return BooleanIndexer(default=True).add_keys(keys)
-        if self.default==True and other.default==False:
-            # Case 4, same as case 3, but interchanged
-            return other | self
-
-    def __invert__(self):
-        ''' Inverts truth values of a boolean indexer. Overloads operator `~`. '''
-        return BooleanIndexer(default= not self.default).add_keys(self.keys())
+    primitive_type=bool
