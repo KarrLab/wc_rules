@@ -6,6 +6,28 @@
 """
 from wc_rules import utils
 class Slicer(dict):
+    ''' A hashmap between keys (literals or namedtuples) and Boolean values.
+    Slicers are used for composing logical expressions and subsetting Indexers.
+
+    Slicers have the following dict-like operations:
+        [key]                 returns the value of key
+        update(dict_obj)      updates the hashmap
+
+    A slicer is a positive slicer if,
+        it returns a value of True for any key it contains
+        it returns a default value of False for any other key
+    A slicer is a negative slicer if,
+        it returns a value of False for any key it contains
+        it returns a default value of True for any other key
+    To create a positive slicer, call Slicer(default=False)
+    To create a negative slicer, call Slicer(default=True)
+
+    The operators & | ~ are overloaded to mean key-wise AND, OR, and NOT respectively.
+    With slicers I & J,
+    I & J returns True for any key for which that both I and J will return True.
+    I | J returns True for any key for which either I or J will return True.
+    ~I returns True for any key for which I returns False, and vice versa.
+    '''
     def __init__(self,default=False):
         if not isinstance(default,bool):
             raise utils.SlicerError('`default` argument must be bool.')
