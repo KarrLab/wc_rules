@@ -81,35 +81,78 @@ class BooleanIndexer(Indexer):
         super(BooleanIndexer,self).__init__()
         self.default = default
 
+    def add_keys(self,keylist):
+        return self.update(dict(zip(keylist,[not self.default]*len(keylist))))
+
     def __getitem__(self,key):
-        if isinstance(key,BooleanIndexer):
-            I = key
-            keys = (key for key in self if I[key])
-            return BooleanIndexer(default=self.default).update({key:self[key] for key in keys})
-        if isinstance(key,list):
-            L = key
-            keys = (key for key in self if key in L)
-            return BooleanIndexer(default=self.default).update({key:self[key] for key in keys})
         if key not in self:
             return self.default
         return dict.__getitem__(self,key)
 
     # Methods available to combine indexers
-    def __and__(self,other):
-        ''' Filters common keys of two boolean indexers. Overloads operator `&`. '''
-        if len(self) <= len(other):
-            x1,x2 = self,other
+    def union(self,other):
+        ''' Merges keys of indexers as long as they all have the same default. '''
+        if self.default != other.default:
+            raise utils.IndexerError('Postive and negative indexers cannot be combined.')
+        if len(self) >= len(other):
+            x1 = self
+            x2 = other
         else:
-            x1,x2 = other,self
-        gen = (key for key in x1 if x1[key]==True and key in x2 and x2[key]==True)
-        return BooleanIndexer().update({key:x1[key] for key in gen})
+            x1 = other
+            x2 = self
+        keys = list(x1.keys()) + [k for k in x2.keys() if k not in x1.keys()]
+        return BooleanIndexer(default=self.default).add_keys(keys)
+
+    def intersection(self,other):
+        ''' Returns common keys of indexers as long as they all have the same default. '''
+        if self.default != other.default:
+            raise utils.IndexerError('Postive and negative indexers cannot be combined.')
+        if len(self) <= len(other):
+            x1 = self
+            x2 = other
+        else:
+            x1 = other
+            x2 = self
+        keys = [key for key in x1 if key in x2]
+        return BooleanIndexer(default=self.default).add_keys(keys)
+
+    def __and__(self,other):
+        ''' New indexer that returns True if both indexers return True. Overloads operator `&`. '''
+        if self.default==other.default==False:
+            # Case 1 both are positive indexers (default:False)
+            return self.intersection(other)
+        if self.default==other.default==True:
+            # Case 2 both are negative indexers (default:True)
+            # By DeMorgan's law A' & B' = (A|B)'
+            return self.union(other)
+        if self.default==False and other.default==True:
+            # Case 3 self is positive indexer, but other is negative
+            # Include keys from self as long as other returns True
+            keys = (key for key in self if other[key])
+            return BooleanIndexer(default=False).add_keys(keys)
+        if self.default==True and other.default==False:
+            # Case 4, same as case 3, but interchanged
+            return other & self
+        return
 
     def __or__(self,other):
-        ''' Combines common keys of two boolean indexers. Overloads operator `|`. '''
-        keys = set(list(self) + list(other))
-        valfunc = lambda x: self.get(x,False) or other.get(x,False)
-        return BooleanIndexer().update({key:valfunc(key) for key in keys})
+        ''' New indexer that returns True if at least one indexer returns True. Overloads operator `|`. '''
+        if self.default==other.default==False:
+            # Case 1 both are positive indexers (default:False)
+            return self.union(other)
+        if self.default==other.default==True:
+            # Case 2 both are negative indexers (default:True)
+            # By DeMorgan's law A' | B' = (A&B)'
+            return self.intersection(other)
+        if self.default==True and other.default==False:
+            # Case 3 self is negative indexer, but other is positive
+            # Include keys from self as long as other returns False
+            keys = (key for key in self if not other[key])
+            return BooleanIndexer(default=True).add_keys(keys)
+        if self.default==True and other.default==False:
+            # Case 4, same as case 3, but interchanged
+            return other | self
 
     def __invert__(self):
         ''' Inverts truth values of a boolean indexer. Overloads operator `~`. '''
-        return BooleanIndexer(default= not self.default).update({key:not self[key] for key in self})
+        return BooleanIndexer(default= not self.default).add_keys(self.keys())
