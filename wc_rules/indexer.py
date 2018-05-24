@@ -30,6 +30,21 @@ class Slicer(dict):
     I & J returns True for any key for which that both I and J will return True.
     I | J returns True for any key for which either I or J will return True.
     ~I returns True for any key for which I returns False, and vice versa.
+
+    When & | ~ mixes positive & negative slicers, deMorgan's laws are used to determine the output/
+    Let A , A' denote positive & negative slicers matching corresponding sets of objects on a Venn diagram.
+    Similarly, B, B' ...
+    The following hold:
+        A & B   = a positive slicer corresponding to intersection(A,B)
+        A & B'  = a positive slicer corresponding to A - intersection(A,B)
+        A' & B  = a positive slicer corresponding to B - intersection(A,B)
+        A' & B' = a negative slicer corresponding to complement(union(A,B))
+        A | B   = a positive slicer corresponding to union(A,B)
+        A | B'  = a negative slicer corresponding to complement(B - intersection(A,B))
+        A' | B  = a negative slicer corresponding to complement(A - intersection(A,B))
+        A' | B' = a negative slicer corresponding to complement(intersection(A,B))
+        ~A  = a negative slicer corresponding to complement(A)
+        ~~A = a positive slicer corresponds to A
     '''
     def __init__(self,default=False):
         if not isinstance(default,bool):
