@@ -4,6 +4,74 @@
 :Copyright: 2018, Karr Lab
 :License: MIT
 """
+from wc_rules import utils
+class Slicer(dict):
+    def __init__(self,default=False):
+        if not isinstance(default,bool):
+            raise utils.SlicerError('`default` argument must be bool.')
+        self.default = default
+
+    def __getitem__(self,key):
+        if key in self:
+            return dict.__getitem__(self,key)
+        return self.default
+
+    def key_exists(self,keys): return key in self
+
+    def value_is_default(self,value): return value == self.default
+
+    def add_keys(self,keys):
+        for key in keys:
+            self[key] = not self.default
+        return self
+
+    def delete_keys(self,keys):
+        for key in keys:
+            self.pop(key)
+        return self
+
+    def update(self,dict_obj):
+        not_default = not self.default
+        keys = (key for key in dict_obj if dict_obj[key] is not_default)
+        self.add_keys(keys)
+        return self
+
+    def union(self,other):
+        if self.default != other.default:
+            raise utils.SlicerError('Cannot merge positive and negative slicers.')
+        keys = set(self.keys()) | set(other.keys())
+        return Slicer(default=self.default).add_keys(keys)
+
+    def intersection(self,other):
+        if self.default != other.default:
+            raise utils.SlicerError('Cannot intersect positive and negative slicers.')
+        keys = set(self.keys()) & set(other.keys())
+        return Slicer(default=self.default).add_keys(keys)
+
+    def __and__(self,other):
+        [x1,x2] = sorted([self,other],key=len)
+        if self.default==other.default==False:
+            return x1.intersection(x2)
+        elif self.default==other.default==True:
+            return x2.union(x1)
+        elif self.default==False:
+            keys = (key for key in self if other[key])
+            return Slicer(default=False).add_keys(keys)
+        return other & self
+
+    def __or__(self,other):
+        [x1,x2] = sorted([self,other],key=len)
+        if self.default==other.default==False:
+            return x2.union(x1)
+        elif self.default==other.default==True:
+            return x1.intersection(x2)
+        elif self.default==True:
+            keys = (key for key in self if not other[key])
+            return Slicer(default=True).add_keys(keys)
+        return other | self
+
+    def __invert__(self):
+        return Slicer(default= not self.default).add_keys(self.keys())
 
 class Indexer(dict):
     primitive_type = None

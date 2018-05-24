@@ -35,6 +35,7 @@ class GenericError(Exception):
         super(GenericError, self).__init__(msg)
 
 class IndexerError(GenericError):pass
+class SlicerError(GenericError):pass
 
 class ValidateError(GenericError):pass
 

@@ -5,7 +5,7 @@
 :License: MIT
 """
 
-from wc_rules.indexer import Indexer, BooleanIndexer
+from wc_rules.indexer import Indexer, BooleanIndexer, Slicer
 from wc_rules.query import ClassQuery
 from wc_rules.chem import Molecule
 import itertools
@@ -17,6 +17,32 @@ class A1(A):pass
 class A2(A):pass
 
 class TestIndexer(unittest.TestCase):
+
+    def test_slicer(self):
+        # A positive slicer
+        I = Slicer(default=False)
+        self.assertTrue(len(I)==0)
+
+        I.add_keys(['a','b'])
+        self.assertTrue(len(I)==2)
+        self.assertTrue('a' in I and 'b' in I)
+        self.assertTrue('c' not in I)
+        self.assertTrue(I['a'])
+        self.assertTrue(I['b'])
+        self.assertTrue(not I['c'])
+
+        # A negative slicer
+        I = Slicer(default=True)
+        self.assertTrue(len(I)==0)
+
+        I.add_keys(['a','b'])
+        self.assertTrue(len(I)==2)
+        self.assertTrue('a' in I and 'b' in I)
+        self.assertTrue('c' not in I)
+        self.assertTrue(not I['a'])
+        self.assertTrue(not I['b'])
+        self.assertTrue(I['c'])
+
 
     def test_indexing(self):
         I = Indexer()
