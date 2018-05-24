@@ -54,15 +54,15 @@ class TestIndexer(unittest.TestCase):
         self.assertTrue(1 in I._values and 2 not in I._values and 3 not in I._values)
         self.assertTrue('b' in I._values[1])
         self.assertTrue(len(I)==1 and len(I._values)==1)
-        self.assertTrue(I.last_deleted == set(['a']))
+        self.assertTrue(I.last_updated == set(['a']))
         I.flush()
-        self.assertTrue(I.last_deleted == set())
+        self.assertTrue(I.last_updated == set())
 
         I.remove('b')
         self.assertTrue(len(I)==len(I._values)==0)
-        self.assertTrue(I.last_deleted == set(['b']))
+        self.assertTrue(I.last_updated == set(['b']))
         I.flush()
-        self.assertTrue(I.last_deleted == set())
+        self.assertTrue(I.last_updated == set())
 
     def test_boolean_and(self):
         x1 = BooleanIndexer().update({'a':True,'b':True,'c':True})
@@ -131,11 +131,3 @@ class TestClassQuery(unittest.TestCase):
         self.assertEqual(len(q_a.indexer),0)
         self.assertEqual(len(q_a1.indexer),0)
         self.assertEqual(len(q_a2.indexer),0)
-
-        q_a_updates = sorted(q_a.indexer.last_deleted)
-        q_a1_updates = sorted(q_a1.indexer.last_deleted)
-        q_a2_updates = sorted(q_a2.indexer.last_deleted)
-
-        self.assertEqual(q_a_updates,['a1_01','a1_02','a2_01','a2_02'])
-        self.assertEqual(q_a1_updates,['a1_01','a1_02'])
-        self.assertEqual(q_a2_updates,['a2_01','a2_02'])

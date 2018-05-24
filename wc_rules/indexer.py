@@ -8,10 +8,10 @@
 class Indexer(dict):
     primitive_type = None
 
-    def __init__(self):
+    def __init__(self,default=None):
         self._values = {}
         self.last_updated = set()
-        self.last_deleted = set()
+        self.default = default
 
     # Internal methods
     def key_exists(self,key):
@@ -26,6 +26,11 @@ class Indexer(dict):
                 raise utils.IndexerError('Value is not compatible with indexer type')
         return True
 
+    def value_is_default(self,value):
+        if self.default is not None:
+            return self.default==value
+        return False
+
     def delete_key(self,key):
         value = self.pop(key)
         self._values[value].pop(key)
@@ -38,42 +43,56 @@ class Indexer(dict):
         if not self.value_exists(value):
             self._values[value] = dict()
         self._values[value][key] = True
+        return self
 
     def update_key_value(self,key,value):
-        if self.key_exists(key):
+        self.value_is_compatible(value)
+        if self.key_exists(key) and self[key] != value:
             self.delete_key(key)
-        self.create_new_key_value(key,value)
+        if not self.value_is_default(value):
+            self.create_new_key_value(key,value)
         return self
 
-    def append_key_to_last_updated(self,key):
+    def update_last_updated(self,key):
         self.last_updated.add(key)
-        return self
-
-    def append_key_to_last_deleted(self,key):
-        self.last_deleted.add(key)
         return self
 
     # Methods available to paired queryobjects
     def update(self,dict_obj):
         for key,val in dict_obj.items():
-            self.value_is_compatible(val)
             self.update_key_value(key,val)
-            self.append_key_to_last_updated(key)
+            self.update_last_updated(key)
         return self
 
     def remove(self,keylist):
         for key in keylist:
             self.delete_key(key)
-            self.append_key_to_last_deleted(key)
+            self.update_last_updated(key)
         return self
 
     def flush(self):
         self.last_updated.clear()
-        self.last_deleted.clear()
         return self
 
 class BooleanIndexer(Indexer):
     primitive_type = bool
+
+    def __init__(self,default=False):
+        super(BooleanIndexer,self).__init__()
+        self.default = default
+
+    def __getitem__(self,key):
+        if isinstance(key,BooleanIndexer):
+            I = key
+            keys = (key for key in self if I[key])
+            return BooleanIndexer(default=self.default).update({key:self[key] for key in keys})
+        if isinstance(key,list):
+            L = key
+            keys = (key for key in self if key in L)
+            return BooleanIndexer(default=self.default).update({key:self[key] for key in keys})
+        if key not in self:
+            return self.default
+        return dict.__getitem__(self,key)
 
     # Methods available to combine indexers
     def __and__(self,other):
@@ -93,4 +112,4 @@ class BooleanIndexer(Indexer):
 
     def __invert__(self):
         ''' Inverts truth values of a boolean indexer. Overloads operator `~`. '''
-        return BooleanIndexer().update({key:not self[key] for key in self})
+        return BooleanIndexer(default= not self.default).update({key:not self[key] for key in self})
