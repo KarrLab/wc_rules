@@ -15,12 +15,15 @@ class Slicer(dict):
 
     A slicer is a positive slicer if,
         it returns a value of True for any key it contains
-        it returns a default value of False for any other key
+        it returns a default value of False for any other key.
     A slicer is a negative slicer if,
         it returns a value of False for any key it contains
-        it returns a default value of True for any other key
+        it returns a default value of True for any other key.
     To create a positive slicer, call Slicer(default=False)
     To create a negative slicer, call Slicer(default=True)
+
+    Note: A slicer does not make a claim about an existence of an object.
+    That should be managed externally using Indexers.
 
     The operators & | ~ are overloaded to mean key-wise AND, OR, and NOT respectively.
     With slicers I & J,
