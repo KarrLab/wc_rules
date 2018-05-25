@@ -198,6 +198,23 @@ class TestIndexer(unittest.TestCase):
         with self.assertRaises(utils.IndexerError):
             I.update({'y':B()})
 
+    def test_indexer_subset(self):
+        I = Indexer().update(dict(a=1,b=2,c=3))
+        self.assertTrue(sorted(I.last_updated)==['a','b','c'])
+
+        I1 = I.subset(['a','b'])
+        self.assertTrue('a' in I1 and 'b' in I1 and 'c' not in I1)
+        self.assertTrue(sorted(I1.last_updated)==['a','b'])
+
+        S = Slicer().add_keys(['a','b'])
+        I2 = I.subset(S)
+        self.assertTrue('a' in I2 and 'b' in I2 and 'c' not in I2)
+        self.assertTrue(sorted(I2.last_updated)==['a','b'])
+
+        I3 = I[S]
+        self.assertTrue('a' in I2 and 'b' in I2 and 'c' not in I2)
+        self.assertTrue(sorted(I2.last_updated)==['a','b'])
+
 class TestClassQuery(unittest.TestCase):
     @unittest.skip
     def test_classquery(self):

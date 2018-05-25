@@ -131,6 +131,11 @@ class Indexer(dict):
         else:
             raise utils.IndexerError('Invalid type provided to indexer.')
 
+    def __getitem__(self,key):
+        if isinstance(key,Slicer):
+            return self.subset(key)
+        return dict.__getitem__(self,key)
+        
     # Internal methods
     def value_is_compatible(self,value):
         if self.primitive_type is not None:
@@ -155,23 +160,17 @@ class Indexer(dict):
         self.last_updated.add(key)
         return self
 
-    def propagate_last_updated(self,keylist):
-        for key in keylist:
-            self.update_last_updated(key)
-        return
-
     # Methods available externally
     def subset(self,keylist,propagate=True):
-        I = Indexer(primitive_type=self.primitive_type)
+        I = Indexer(type=self.primitive_type)
         if isinstance(keylist,list):
             keys = (key for key in self if key in keylist)
         if isinstance(keylist,Slicer):
             keys = (key for key in self if keylist[key])
         for key in keys:
             I.update_key_value(key,self[key])
-        if propagate==True:
-            keys2 = self.last_updated - set(keys)
-            self.propagate_last_updated(keys)
+            if propagate==True and key in self.last_updated:
+                I.update_last_updated(key)
         return I
 
     def update_key_value(self,key,value):
