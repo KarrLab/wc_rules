@@ -6,6 +6,7 @@
 """
 
 from wc_rules.indexer import Indexer, Slicer
+from wc_rules.indexer import BooleanIndexer, NumericIndexer, StringIndexer
 #from wc_rules.query import ClassQuery
 from wc_rules.chem import Molecule
 from wc_rules import utils
@@ -168,17 +169,17 @@ class TestIndexer(unittest.TestCase):
 
     def test_indexer_types(self):
         # Boolean indexer
-        I = Indexer(type='boolean').update({'x':True})
+        I = BooleanIndexer().update({'x':True})
         with self.assertRaises(utils.IndexerError):
             I.update({'y':7})
 
         # Numeric indexer
-        I = Indexer(type='numeric').update({'x':1,'z':1.01})
+        I = NumericIndexer().update({'x':1,'z':1.01})
         with self.assertRaises(utils.IndexerError):
             I.update({'y':'ba'})
 
         # String indexer
-        I = Indexer(type='string').update({'x':'x'})
+        I = StringIndexer().update({'x':'x'})
         with self.assertRaises(utils.IndexerError):
             I.update({'y':True})
             with self.assertRaises(utils.IndexerError):
@@ -187,33 +188,38 @@ class TestIndexer(unittest.TestCase):
         # Arbitrary
         A = type('A',(),{})
         B = type('B',(),{})
+        AIndexer = type('AIndexer',(Indexer,),dict(primitive_type=(A,)))
 
-        I = Indexer(type=A).update({'x':A()})
+        I = AIndexer().update({'x':A()})
         with self.assertRaises(utils.IndexerError):
             I.update({'y':B()})
 
         # Tuple of Arbitrary
         A1 = type('A1',(),{})
-        I = Indexer(type=(A,A1)).update({'x':A(),'z':A1()})
+        AIndexer = type('AIndexer',(Indexer,),dict(primitive_type=(A,A1,)))
+        I = AIndexer().update({'x':A(),'z':A1()})
         with self.assertRaises(utils.IndexerError):
             I.update({'y':B()})
 
     def test_indexer_subset(self):
-        I = Indexer().update(dict(a=1,b=2,c=3))
+        I = NumericIndexer().update(dict(a=1,b=2,c=3))
         self.assertTrue(sorted(I.last_updated)==['a','b','c'])
 
         I1 = I.subset(['a','b'])
         self.assertTrue('a' in I1 and 'b' in I1 and 'c' not in I1)
         self.assertTrue(sorted(I1.last_updated)==['a','b'])
+        self.assertTrue(isinstance(I1,NumericIndexer))
 
         S = Slicer().add_keys(['a','b'])
         I2 = I.subset(S)
         self.assertTrue('a' in I2 and 'b' in I2 and 'c' not in I2)
         self.assertTrue(sorted(I2.last_updated)==['a','b'])
+        self.assertTrue(isinstance(I2,NumericIndexer))
 
         I3 = I[S]
         self.assertTrue('a' in I3 and 'b' in I3 and 'c' not in I3)
         self.assertTrue(sorted(I3.last_updated)==['a','b'])
+        self.assertTrue(isinstance(I3,NumericIndexer))
 
 class TestClassQuery(unittest.TestCase):
     @unittest.skip
