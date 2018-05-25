@@ -155,22 +155,50 @@ class Indexer(dict):
         self.last_updated.add(key)
         return self
 
+    def propagate_last_updated(self,keylist):
+        for key in keylist:
+            self.update_last_updated(key)
+        return
+
     # Methods available externally
-    def update(self,dict_obj):
-        for key,value in dict_obj.items():
-            if key in self and self[key]==value: continue
-            self.value_is_compatible(value)
+    def subset(self,keylist,propagate=True):
+        I = Indexer(primitive_type=self.primitive_type)
+        if isinstance(keylist,list):
+            keys = (key for key in self if key in keylist)
+        if isinstance(keylist,Slicer):
+            keys = (key for key in self if keylist[key])
+        for key in keys:
+            I.update_key_value(key,self[key])
+        if propagate==True:
+            keys2 = self.last_updated - set(keys)
+            self.propagate_last_updated(keys)
+        return I
+
+    def update_key_value(self,key,value):
+        if key in self and self[key]==value:
+            return self
+        if self.value_is_compatible(value):
             if key in self: self.delete_key_from_value_cache(key)
-            self[key] = value
+            dict.__setitem__(self,key,value)
             self.add_key_to_value_cache(key,value)
+        return self
+
+    def remove_key(self,key):
+        if key not in self:
+            return self
+        self.delete_key_from_value_cache(key)
+        self.pop(key)
+        return self
+
+    def update(self,dict_obj):
+        for key in dict_obj:
+            self.update_key_value(key, dict_obj[key])
             self.update_last_updated(key)
         return self
 
     def remove(self,keylist):
-        keys = (key for key in keylist if key in self)
         for key in keylist:
-            self.delete_key_from_value_cache(key)
-            self.pop(key)
+            self.remove_key(key)
             self.update_last_updated(key)
         return self
 
