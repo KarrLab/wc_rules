@@ -5,9 +5,10 @@
 :License: MIT
 """
 
-from wc_rules.indexer import Indexer, BooleanIndexer, Slicer
-from wc_rules.query import ClassQuery
+from wc_rules.indexer import Indexer, Slicer
+#from wc_rules.query import ClassQuery
 from wc_rules.chem import Molecule
+from wc_rules import utils
 import itertools
 
 import unittest
@@ -164,6 +165,38 @@ class TestIndexer(unittest.TestCase):
         self.assertTrue(I.last_updated == set(['b']))
         I.flush()
         self.assertTrue(I.last_updated == set())
+
+    def test_indexer_types(self):
+        # Boolean indexer
+        I = Indexer(type='boolean').update({'x':True})
+        with self.assertRaises(utils.IndexerError):
+            I.update({'y':7})
+
+        # Numeric indexer
+        I = Indexer(type='numeric').update({'x':1,'z':1.01})
+        with self.assertRaises(utils.IndexerError):
+            I.update({'y':'ba'})
+
+        # String indexer
+
+        I = Indexer(type='string').update({'x':'x'})
+        with self.assertRaises(utils.IndexerError):
+            I.update({'y':True})
+            with self.assertRaises(utils.IndexerError):
+                I.update({'y':1})
+        # Arbitrary
+        A = type('A',(),{})
+        B = type('B',(),{})
+
+        I = Indexer(type=A).update({'x':A()})
+        with self.assertRaises(utils.IndexerError):
+            I.update({'y':B()})
+
+        # Tuple of Arbitrary
+        A1 = type('A1',(),{})
+        I = Indexer(type=(A,A1)).update({'x':A(),'z':A1()})
+        with self.assertRaises(utils.IndexerError):
+            I.update({'y':B()})
 
 class TestClassQuery(unittest.TestCase):
     @unittest.skip

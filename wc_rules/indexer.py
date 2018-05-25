@@ -5,6 +5,7 @@
 :License: MIT
 """
 from wc_rules import utils
+import inspect
 class Slicer(dict):
     ''' A hashmap between keys (literals or namedtuples) and Boolean values.
     Slicers are used for composing logical expressions and subsetting Indexers.
@@ -113,11 +114,22 @@ class Slicer(dict):
         return Slicer(default= not self.default).add_keys(self.keys())
 
 class Indexer(dict):
-    primitive_type = None
 
-    def __init__(self):
+    def __init__(self,type='numeric'):
         self.value_cache = {}
         self.last_updated = set()
+        if type=='numeric':
+            self.primitive_type = (int,float,)
+        elif type=='boolean':
+            self.primitive_type = bool
+        elif type=='string':
+            self.primitive_type = str
+        elif inspect.isclass(type):
+            self.primitive_type = type
+        elif isinstance(type,tuple) and all(inspect.isclass(x) for x in type):
+            self.primitive_type = type
+        else:
+            raise utils.IndexerError('Invalid type provided to indexer.')
 
     # Internal methods
     def value_is_compatible(self,value):
@@ -165,6 +177,3 @@ class Indexer(dict):
     def flush(self):
         self.last_updated.clear()
         return self
-
-class BooleanIndexer(Indexer):
-    primitive_type=bool
