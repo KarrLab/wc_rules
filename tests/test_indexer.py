@@ -7,7 +7,6 @@
 
 from wc_rules.indexer import Indexer, Slicer
 from wc_rules.indexer import BooleanIndexer, NumericIndexer, StringIndexer
-#from wc_rules.query import ClassQuery
 from wc_rules.chem import Molecule
 from wc_rules import utils
 import itertools
@@ -48,7 +47,6 @@ class TestIndexer(unittest.TestCase):
         self.assertTrue(I['c'])
         I.update({'a':True,'b':True})
         self.assertTrue(len(I)==0)
-
 
     def test_slicer_AND(self):
         # positive & positive
@@ -186,20 +184,20 @@ class TestIndexer(unittest.TestCase):
                 I.update({'y':1})
 
         # Arbitrary
-        A = type('A',(),{})
-        B = type('B',(),{})
-        AIndexer = type('AIndexer',(Indexer,),dict(primitive_type=(A,)))
+        X = type('X',(),{})
+        Y = type('Y',(),{})
+        XIndexer = type('XIndexer',(Indexer,),dict(primitive_type=(X,)))
 
-        I = AIndexer().update({'x':A()})
+        I = XIndexer().update({'x':X()})
         with self.assertRaises(utils.IndexerError):
-            I.update({'y':B()})
+            I.update({'y':Y()})
 
         # Tuple of Arbitrary
-        A1 = type('A1',(),{})
-        AIndexer = type('AIndexer',(Indexer,),dict(primitive_type=(A,A1,)))
-        I = AIndexer().update({'x':A(),'z':A1()})
+        X1 = type('X1',(),{})
+        XIndexer = type('XIndexer',(Indexer,),dict(primitive_type=(X,X1,)))
+        I = XIndexer().update({'x':X(),'z':X1()})
         with self.assertRaises(utils.IndexerError):
-            I.update({'y':B()})
+            I.update({'y':Y()})
 
     def test_indexer_subset(self):
         I = NumericIndexer().update(dict(a=1,b=2,c=3))
@@ -236,47 +234,3 @@ class TestIndexer(unittest.TestCase):
         I3 = I2[I1.slice([1,2])]
         self.assertTrue('a' in I3 and 'b' in I3 and not 'c' in I3 and not 'd' in I3)
         self.assertTrue(I3['a']=='p' and I3['b']=='q')
-
-
-class TestClassQuery(unittest.TestCase):
-    @unittest.skip
-    def test_classquery(self):
-        a1_01,a1_02 = A1(id='a1_01'), A1(id='a1_02')
-        a2_01,a2_02 = A2(id='a2_01'), A2(id='a2_02')
-
-        q_a = ClassQuery(A)
-        q_a1 = ClassQuery(A1)
-        q_a2 = ClassQuery(A2)
-        instances = [a1_01,a1_02,a2_01,a2_02]
-        queries = [q_a,q_a1,q_a2]
-
-        for q in queries:
-            id_list = [x.get_id() for x in instances if q.verify(x)]
-            q.update(*id_list)
-
-        q_a_keys = sorted(q_a.indexer.keys())
-        q_a1_keys = sorted(q_a1.indexer.keys())
-        q_a2_keys = sorted(q_a2.indexer.keys())
-
-        self.assertEqual(q_a_keys,['a1_01','a1_02','a2_01','a2_02'])
-        self.assertEqual(q_a1_keys,['a1_01','a1_02'])
-        self.assertEqual(q_a2_keys,['a2_01','a2_02'])
-
-        q_a_updates = sorted(q_a.indexer.last_updated)
-        q_a1_updates = sorted(q_a1.indexer.last_updated)
-        q_a2_updates = sorted(q_a2.indexer.last_updated)
-
-        self.assertEqual(q_a_updates,['a1_01','a1_02','a2_01','a2_02'])
-        self.assertEqual(q_a1_updates,['a1_01','a1_02'])
-        self.assertEqual(q_a2_updates,['a2_01','a2_02'])
-
-        for q in queries:
-            q.indexer.flush()
-
-        for q in queries:
-            id_list = [x.get_id() for x in instances if q.verify(x)]
-            q.remove(*id_list)
-
-        self.assertEqual(len(q_a.indexer),0)
-        self.assertEqual(len(q_a1.indexer),0)
-        self.assertEqual(len(q_a2.indexer),0)
