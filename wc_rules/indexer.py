@@ -187,6 +187,23 @@ class Indexer(dict):
         self.last_updated.clear()
         return self
 
+    def __eq__(self,other):
+        if isinstance(other,Indexer):
+            values = (value for value in self.value_cache if value in other.value_cache)
+            S = Slicer(default=False)
+            for value in values:
+                slice = self.slice([value]) & other.slice([value])
+                S = S | slice
+            return S
+        if isinstance(other,self.primitive_type):
+            return self.slice([other])
+        if isinstance(other,list):
+            S = Slicer(default=False)
+            for value in other:
+                slice = self.slice([value])
+                S = S | slice
+        # test against a list of values
+        raise utils.IndexerError('To use __eq__, either compare two Indexers, or an indexer and a compatible value, or an indexer and a list of compatible values.')
 
 class BooleanIndexer(Indexer):
     primitive_type = bool

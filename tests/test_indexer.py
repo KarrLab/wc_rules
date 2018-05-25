@@ -234,3 +234,12 @@ class TestIndexer(unittest.TestCase):
         I3 = I2[I1.slice([1,2])]
         self.assertTrue('a' in I3 and 'b' in I3 and not 'c' in I3 and not 'd' in I3)
         self.assertTrue(I3['a']=='p' and I3['b']=='q')
+
+    def test_indexer_eq(self):
+        I1 = NumericIndexer().update(dict(a=1,b=2,c=3,d=4))
+        I2 = NumericIndexer().update(dict(a=1,b=2,c=3,d=4))
+        self.assertTrue(len(I1 == I2),4)
+        I3 = NumericIndexer().update(dict(a=1,b=2,c=4,d=5))
+        self.assertTrue(len(I1 == I2),2)
+        self.assertTrue(len(I1 == 1),1)
+        
