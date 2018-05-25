@@ -9,18 +9,19 @@ import inspect
 class Slicer(dict):
     ''' A hashmap between keys (literals or namedtuples) and Boolean values.
     Slicers are dict-like and always return True or False when queried with [key].
-    Slicers may be positive slicers (psl's) or negative slicers (nsl's)
+    Slicers may be positive slicers (psl's) or negative slicers (nsl's).
     Given set A,
         psl(A) represents set A
         nsl(A) represents complement(A)
     The operator `~` inverts positive and negative slicers.
         ~psl(A) = nsl(A)
-    The operator `&` performs an intersection of the indexed elements according to deMorgan's laws.
+        ~nsl(A) = psl(B)
+    The operator `&` performs a set intersection according to deMorgan's laws.
         psl(A) & psl(B) = psl(intersection(A,B))
         psl(A) & nsl(B) = psl(A - intersection(A,B))
         nsl(A) & psl(B) = psl(B - intersection(A,B))
         nsl(A) & nsl(B) = nsl(union(A,B))
-    The operator `|` performs a union of the indexed elements according to deMorgan's laws.
+    The operator `|` performs a set union according to deMorgan's laws.
         psl(A) | psl(B) = psl(union(A,B))
         psl(A) | nsl(B) = complement(B - intersection(A,B))
         nsl(A) | psl(B) = complement(A - intersection(A,B))
