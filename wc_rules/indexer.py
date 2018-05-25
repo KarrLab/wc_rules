@@ -8,44 +8,23 @@ from wc_rules import utils
 import inspect
 class Slicer(dict):
     ''' A hashmap between keys (literals or namedtuples) and Boolean values.
-    Slicers are used for composing logical expressions and subsetting Indexers.
-
-    Slicers have the following dict-like operations:
-        [key]                 returns the value of key
-        update(dict_obj)      updates the hashmap
-
-    A slicer is a positive slicer if,
-        it returns a value of True for any key it contains
-        it returns a default value of False for any other key.
-    A slicer is a negative slicer if,
-        it returns a value of False for any key it contains
-        it returns a default value of True for any other key.
-    To create a positive slicer, call Slicer(default=False)
-    To create a negative slicer, call Slicer(default=True)
-
-    Note: A slicer does not make a claim about an existence of an object.
-    That should be managed externally using Indexers.
-
-    The operators & | ~ are overloaded to mean key-wise AND, OR, and NOT respectively.
-    With slicers I & J,
-    I & J returns True for any key for which that both I and J will return True.
-    I | J returns True for any key for which either I or J will return True.
-    ~I returns True for any key for which I returns False, and vice versa.
-
-    When & | ~ mixes positive & negative slicers, deMorgan's laws are used to determine the output/
-    Let A , A' denote positive & negative slicers matching corresponding sets of objects on a Venn diagram.
-    Similarly, B, B' ...
-    The following hold:
-        A & B   = a positive slicer corresponding to intersection(A,B)
-        A & B'  = a positive slicer corresponding to A - intersection(A,B)
-        A' & B  = a positive slicer corresponding to B - intersection(A,B)
-        A' & B' = a negative slicer corresponding to complement(union(A,B))
-        A | B   = a positive slicer corresponding to union(A,B)
-        A | B'  = a negative slicer corresponding to complement(B - intersection(A,B))
-        A' | B  = a negative slicer corresponding to complement(A - intersection(A,B))
-        A' | B' = a negative slicer corresponding to complement(intersection(A,B))
-        ~A  = a negative slicer corresponding to complement(A)
-        ~~A = a positive slicer corresponds to A
+    Slicers are dict-like and always return True or False when queried with [key].
+    Slicers may be positive slicers (psl's) or negative slicers (nsl's)
+    Given set A,
+        psl(A) represents set A
+        nsl(A) represents complement(A)
+    The operator `~` inverts positive and negative slicers.
+        ~psl(A) = nsl(A)
+    The operator `&` performs an intersection of the indexed elements according to deMorgan's laws.
+        psl(A) & psl(B) = psl(intersection(A,B))
+        psl(A) & nsl(B) = psl(A - intersection(A,B))
+        nsl(A) & psl(B) = psl(B - intersection(A,B))
+        nsl(A) & nsl(B) = nsl(union(A,B))
+    The operator `|` performs a union of the indexed elements according to deMorgan's laws.
+        psl(A) | psl(B) = psl(union(A,B))
+        psl(A) | nsl(B) = complement(B - intersection(A,B))
+        nsl(A) | psl(B) = complement(A - intersection(A,B))
+        nsl(A) | nsl(B) = complement(intersection(A,B))
     '''
     def __init__(self,default=False):
         if not isinstance(default,bool):
