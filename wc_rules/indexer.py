@@ -130,6 +130,18 @@ class Indexer(dict):
         return self
 
     # Methods available externally
+    def slice(self,value_list=None):
+        S = Slicer(default=False)
+        if value_list is None:
+            S.add_keys(k for k in self)
+            return S
+        if inspect.isfunction(value_list):
+            f = value_list
+            value_list = (value for value in self.value_cache if f(value))
+        for value in value_list:
+            S = S | self.value_cache[value]
+        return S
+
     def subset(self,keylist,propagate=True):
         cls = type(self)
         I = cls()
@@ -174,6 +186,7 @@ class Indexer(dict):
     def flush(self):
         self.last_updated.clear()
         return self
+
 
 class BooleanIndexer(Indexer):
     primitive_type = bool

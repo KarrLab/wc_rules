@@ -221,6 +221,23 @@ class TestIndexer(unittest.TestCase):
         self.assertTrue(sorted(I3.last_updated)==['a','b'])
         self.assertTrue(isinstance(I3,NumericIndexer))
 
+    def test_indexer_slice(self):
+        I = NumericIndexer().update(dict(a=1,b=2,c=3,d=4))
+        s = I.slice([1,2])
+        self.assertTrue(s['a'] and s['b'] and not s['c'] and not s['d'])
+        s = I.slice(lambda x: x<=3)
+        self.assertTrue(s['a'] and s['b'] and s['c'] and not s['d'])
+        s = I.slice()
+        self.assertTrue(s['a'] and s['b'] and s['c'] and s['d'])
+
+    def test_indexer_slice_subset(self):
+        I1 = NumericIndexer().update(dict(a=1,b=2,c=3,d=4))
+        I2 = StringIndexer().update(dict(a='p',b='q',c='r',d='s'))
+        I3 = I2[I1.slice([1,2])]
+        self.assertTrue('a' in I3 and 'b' in I3 and not 'c' in I3 and not 'd' in I3)
+        self.assertTrue(I3['a']=='p' and I3['b']=='q')
+
+
 class TestClassQuery(unittest.TestCase):
     @unittest.skip
     def test_classquery(self):
