@@ -178,12 +178,12 @@ class TestIndexer(unittest.TestCase):
             I.update({'y':'ba'})
 
         # String indexer
-
         I = Indexer(type='string').update({'x':'x'})
         with self.assertRaises(utils.IndexerError):
             I.update({'y':True})
             with self.assertRaises(utils.IndexerError):
                 I.update({'y':1})
+
         # Arbitrary
         A = type('A',(),{})
         B = type('B',(),{})
@@ -212,8 +212,8 @@ class TestIndexer(unittest.TestCase):
         self.assertTrue(sorted(I2.last_updated)==['a','b'])
 
         I3 = I[S]
-        self.assertTrue('a' in I2 and 'b' in I2 and 'c' not in I2)
-        self.assertTrue(sorted(I2.last_updated)==['a','b'])
+        self.assertTrue('a' in I3 and 'b' in I3 and 'c' not in I3)
+        self.assertTrue(sorted(I3.last_updated)==['a','b'])
 
 class TestClassQuery(unittest.TestCase):
     @unittest.skip
