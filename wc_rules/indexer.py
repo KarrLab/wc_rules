@@ -214,12 +214,8 @@ class Indexer(dict):
 
     def __eq__(self,other):
         if isinstance(other,Indexer):
-            values = (value for value in self.value_cache if value in other.value_cache)
-            S = Slicer(default=False)
-            for value in values:
-                slice = self.slice([value]) & other.slice([value])
-                S = S | slice
-            return S
+            keys =(key for key in self if self[key]==other[key])
+            return Slicer(default=False).add_keys(list(keys))
         if isinstance(other,self.primitive_type):
             return self.slice([other])
         if isinstance(other,list):
