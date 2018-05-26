@@ -214,8 +214,12 @@ class Indexer(dict):
 
     def __eq__(self,other):
         if isinstance(other,Indexer):
-            keys =(key for key in self if self[key]==other[key])
-            return Slicer(default=False).add_keys(list(keys))
+            S = Slicer(default=False)
+            for val in self.value_cache:
+                if val in other.value_cache:
+                    x = self.slice([val]) & other.slice([val])
+                    S = S | x
+            return S
         if isinstance(other,self.primitive_type):
             return self.slice([other])
         if isinstance(other,list):
@@ -229,7 +233,40 @@ class BooleanIndexer(Indexer):
     primitive_type = bool
 
 class NumericIndexer(Indexer):
+    '''
+    In additon to operators `==` and `!=`, NumericIndexer also supports `>`,`>=`, `<` and `<=`
+
+    I1 > I2            returns a slice for all keys in I1 whose values in I1 are greater than their values in I2
+    I > value          returns a slice for all keys in I mapped to values greater than `value`
+    I > list_of_values is not supported
+    '''
     primitive_type = (int,float,)
+
+    def __lt__(self,other):
+        if isinstance(other,Indexer):
+            keys =(key for key in self if key in other and self[key] < other[key])
+            return Slicer(default=False).add_keys(list(keys))
+        if isinstance(other,self.primitive_type):
+            return self.slice(lambda x: x < other)
+        raise utils.IndexerError('To use __le__, __lt__, __ge__,__gt__, either compare two Indexers, or an indexer and a compatible value.')
+
+    def __gt__(self,other):
+        if isinstance(other,Indexer):
+            keys =(key for key in self if key in other and self[key] > other[key])
+            return Slicer(default=False).add_keys(list(keys))
+        if isinstance(other,self.primitive_type):
+            return self.slice(lambda x: x > other)
+        raise utils.IndexerError('To use __le__, __lt__, __ge__,__gt__, either compare two Indexers, or an indexer and a compatible value.')
+
+    def __le__(self,other):
+        x1 = self < other
+        x2 = self == other
+        return x1|x2
+
+    def __ge__(self,other):
+        x1 = self > other
+        x2 = self == other
+        return x1|x2
 
 class StringIndexer(Indexer):
     primitive_type = str

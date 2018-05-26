@@ -262,3 +262,23 @@ class TestIndexer(unittest.TestCase):
         I6 = I4[I1!=[1,2]]
         self.assertTrue(I6['c']=='r' and I6['d']=='s')
         self.assertTrue('a' not in I6 and 'b' not in I6)
+
+    def test_indexer_lt_le_gt_ge(self):
+        I1 = NumericIndexer().update(dict(a=1,b=2,c=3,d=4))
+        I2 = NumericIndexer().update(dict(a=1,b=1,c=2,d=5))
+
+        x = I1 < I2
+        for key in ['a','b','c']: self.assertTrue(not x[key])
+        for key in ['d']: self.assertTrue(x[key])
+
+        x = I1 <= I2
+        for key in ['b','c']: self.assertTrue(not x[key])
+        for key in ['a','d']: self.assertTrue(x[key])
+
+        x = I1 > I2
+        for key in ['b','c']: self.assertTrue(x[key])
+        for key in ['a','d']: self.assertTrue(not x[key])
+
+        x = I1 >= I2
+        for key in ['a','b','c']: self.assertTrue(x[key])
+        for key in ['d']: self.assertTrue(not x[key])
