@@ -103,21 +103,19 @@ class Indexer(dict):
     I[slice] - returns an indexer which is a subset of the previous indexer, with keys from slice.
 
     In addition to dict-like behavior, Indexer maintains a value cache, which supports
-    reverse lookup of keys from values using the `==` operator
+    reverse lookup of keys from values using the `==` and `!=` operators
 
     I == value          returns a slice of keys such that I[key]==value
     I == list_of_values returns a slice of keys such that I[key] in list_of_values
     I1 == I2            returns a slice of keys with equal values in I1 and I2
+    I != x              returns ~(I==x) where x is a value, list of values or indexer.
 
     Alternatively, one can use the slice method
     I.slice(value)          same as I==value
     I.slice(list_of_values) same as I==list_of_values
+    I.slice(function)       returns a slice of keys whose values evaluate to True under function.
 
-    Slicing and subsetting can be done simultaneously, e.g.,
-
-    I[I==value]          returns the subset of keys corresponding to slice I==value
-    I[I==list_of_values] returns the subset of keys corresponding to slice I==list_of_values
-    I1[I1==I2]           returns the subset of keys corresponding to slice I1==I2   
+    Slicing and subsetting can be done simultaneously, e.g., I[I==value].
 
     Also, Indexer maintains a last_updated list of keys, which is propagated by default when a subset is created.
     '''
@@ -226,7 +224,10 @@ class Indexer(dict):
             return self.slice([other])
         if isinstance(other,list):
             return self.slice(other)
-        raise utils.IndexerError('To use __eq__, either compare two Indexers, or an indexer and a compatible value, or an indexer and a list of compatible values.')
+        raise utils.IndexerError('To use __eq__ or __ne__, either compare two Indexers, or an indexer and a compatible value, or an indexer and a list of compatible values.')
+
+    def __ne__(self,other):
+        return ~self.__eq__(other)
 
 class BooleanIndexer(Indexer):
     primitive_type = bool

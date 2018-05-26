@@ -235,15 +235,30 @@ class TestIndexer(unittest.TestCase):
         self.assertTrue('a' in I3 and 'b' in I3 and not 'c' in I3 and not 'd' in I3)
         self.assertTrue(I3['a']=='p' and I3['b']=='q')
 
-    def test_indexer_eq(self):
+    def test_indexer_eq_ne(self):
         I1 = NumericIndexer().update(dict(a=1,b=2,c=3,d=4))
         I2 = NumericIndexer().update(dict(a=1,b=2,c=3,d=4))
-        self.assertTrue(len(I1 == I2)==4)
-        I3 = NumericIndexer().update(dict(a=1,b=2,c=4,d=5))
-        self.assertTrue(len(I1 == I3)==2)
-        self.assertTrue(len(I1 == 1)==1)
-        self.assertTrue(len(I1 == [1,2])==2)
+        x = I1 == I2
+        y = I1 != I2
+        for i in ['a','b','c','d']:
+            self.assertTrue(x[i])
+            self.assertTrue(not y[i])
 
-        I4 = I1[I1==[1,2]]
-        self.assertTrue('a' in I4 and 'b' in I4)
-        
+        I3 = NumericIndexer().update(dict(a=1,b=2,c=4,d=5))
+        x = I1 == I3
+        y = I1 != I3
+        for i in ['a','b']:
+            self.assertTrue(x[i])
+            self.assertTrue(not y[i])
+        for i in ['c','d']:
+            self.assertTrue(not x[i])
+            self.assertTrue(y[i])
+
+        I4 = StringIndexer().update(dict(a='p',b='q',c='r',d='s'))
+        I5 = I4[I1==[1,2]]
+        self.assertTrue(I5['a']=='p' and I5['b']=='q')
+        self.assertTrue('c' not in I5 and 'd' not in I5)
+
+        I6 = I4[I1!=[1,2]]
+        self.assertTrue(I6['c']=='r' and I6['d']=='s')
+        self.assertTrue('a' not in I6 and 'b' not in I6)
