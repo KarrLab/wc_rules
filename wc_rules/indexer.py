@@ -94,6 +94,25 @@ class Slicer(dict):
         return Slicer(default= not self.default).add_keys(self.keys())
 
 class Indexer(dict):
+    '''
+    A hashmap between keys (literals or named tuples) and arbitary values of the same type
+    (set by the primitive_type class attribute).
+
+    If I is an indexer object,
+    I[key] - returns the value mapped to key
+    I[slice] - returns an indexer which is a subset of the previous indexer, with keys from slice.
+
+    In addition to dict-like behavior, Indexer maintains a reverse lookup of keys from values
+    using the `==` operator
+
+    I == value          returns a slice of keys such that I[key]==value
+    I == list_of_values returns a slice of keys such that I[key] in list_of_values
+    I1 == I2            returns a slice of keys with equal values in I1 and I2
+
+    Alternatively, one can use the slice method
+    I.slice(value)          same as I==value
+    I.slice(list_of_values) same as I==list_of_values
+    '''
     primitive_type = None
 
     def __init__(self):
