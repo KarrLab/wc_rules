@@ -238,8 +238,12 @@ class TestIndexer(unittest.TestCase):
     def test_indexer_eq(self):
         I1 = NumericIndexer().update(dict(a=1,b=2,c=3,d=4))
         I2 = NumericIndexer().update(dict(a=1,b=2,c=3,d=4))
-        self.assertTrue(len(I1 == I2),4)
+        self.assertTrue(len(I1 == I2)==4)
         I3 = NumericIndexer().update(dict(a=1,b=2,c=4,d=5))
-        self.assertTrue(len(I1 == I2),2)
-        self.assertTrue(len(I1 == 1),1)
-        self.assertTrue(len(I1 == [1,2]),2)
+        self.assertTrue(len(I1 == I3)==2)
+        self.assertTrue(len(I1 == 1)==1)
+        self.assertTrue(len(I1 == [1,2])==2)
+
+        I4 = I1[I1==[1,2]]
+        self.assertTrue('a' in I4 and 'b' in I4)
+        

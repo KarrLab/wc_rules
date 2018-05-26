@@ -102,8 +102,8 @@ class Indexer(dict):
     I[key] - returns the value mapped to key
     I[slice] - returns an indexer which is a subset of the previous indexer, with keys from slice.
 
-    In addition to dict-like behavior, Indexer maintains a reverse lookup of keys from values
-    using the `==` operator
+    In addition to dict-like behavior, Indexer maintains a value cache, which supports
+    reverse lookup of keys from values using the `==` operator
 
     I == value          returns a slice of keys such that I[key]==value
     I == list_of_values returns a slice of keys such that I[key] in list_of_values
@@ -112,6 +112,14 @@ class Indexer(dict):
     Alternatively, one can use the slice method
     I.slice(value)          same as I==value
     I.slice(list_of_values) same as I==list_of_values
+
+    Slicing and subsetting can be done simultaneously, e.g.,
+
+    I[I==value]          returns the subset of keys corresponding to slice I==value
+    I[I==list_of_values] returns the subset of keys corresponding to slice I==list_of_values
+    I1[I1==I2]           returns the subset of keys corresponding to slice I1==I2   
+
+    Also, Indexer maintains a last_updated list of keys, which is propagated by default when a subset is created.
     '''
     primitive_type = None
 
