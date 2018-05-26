@@ -242,4 +242,4 @@ class TestIndexer(unittest.TestCase):
         I3 = NumericIndexer().update(dict(a=1,b=2,c=4,d=5))
         self.assertTrue(len(I1 == I2),2)
         self.assertTrue(len(I1 == 1),1)
-        
+        self.assertTrue(len(I1 == [1,2]),2)

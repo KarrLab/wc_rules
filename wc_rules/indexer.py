@@ -198,11 +198,7 @@ class Indexer(dict):
         if isinstance(other,self.primitive_type):
             return self.slice([other])
         if isinstance(other,list):
-            S = Slicer(default=False)
-            for value in other:
-                slice = self.slice([value])
-                S = S | slice
-        # test against a list of values
+            return self.slice(other)
         raise utils.IndexerError('To use __eq__, either compare two Indexers, or an indexer and a compatible value, or an indexer and a list of compatible values.')
 
 class BooleanIndexer(Indexer):
