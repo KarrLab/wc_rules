@@ -120,7 +120,7 @@ class TestIndexer(unittest.TestCase):
         self.assertTrue(not x['d'])
 
     def test_indexing(self):
-        I = Indexer()
+        I = NumericIndexer()
         self.assertTrue(len(I)==len(I.value_cache)==0)
 
         I.update(dict(a=1,b=2))
