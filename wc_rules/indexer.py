@@ -191,8 +191,6 @@ class Indexer(dict):
         return self
 
     def remove_key(self,key):
-        if key not in self:
-            return self
         self.delete_key_from_value_cache(key)
         self.pop(key)
         return self
