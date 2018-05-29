@@ -179,8 +179,8 @@ class Indexer(dict):
             keys = (key for key in self if keylist[key])
         for key in keys:
             I.update_key_value(key,self[key])
-            if propagate==True:
-                I.update_last_updated(self.last_updated.keys())
+        if propagate==True:
+            I.update_last_updated(self.last_updated.keys())
         return I
 
     def update_key_value(self,key,value):
