@@ -23,9 +23,9 @@ class Slicer(dict):
         nsl(A) & nsl(B) = nsl(union(A,B))
     The operator `|` performs a set union according to deMorgan's laws.
         psl(A) | psl(B) = psl(union(A,B))
-        psl(A) | nsl(B) = complement(B - intersection(A,B))
-        nsl(A) | psl(B) = complement(A - intersection(A,B))
-        nsl(A) | nsl(B) = complement(intersection(A,B))
+        psl(A) | nsl(B) = nsl(B - intersection(A,B))
+        nsl(A) | psl(B) = nsl(A - intersection(A,B))
+        nsl(A) | nsl(B) = nsl(intersection(A,B))
     '''
     def __init__(self,default=False):
         if not isinstance(default,bool):
