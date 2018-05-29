@@ -123,7 +123,7 @@ class Indexer(dict):
 
     def __init__(self):
         self.value_cache = {}
-        self.last_updated = set()
+        self.last_updated = Slicer(default=False)
 
     def __getitem__(self,key):
         if isinstance(key,Slicer):
@@ -150,8 +150,11 @@ class Indexer(dict):
         self.value_cache[value].add_keys([key])
         return self
 
-    def update_last_updated(self,key):
-        self.last_updated.add(key)
+    def update_last_updated(self,keylist):
+        if isinstance(keylist,list):
+            self.last_updated.add_keys(keylist)
+        else:
+            self.last_updated.add_keys(list(keylist))
         return self
 
     # Methods available externally
@@ -176,13 +179,11 @@ class Indexer(dict):
             keys = (key for key in self if keylist[key])
         for key in keys:
             I.update_key_value(key,self[key])
-            if propagate==True and key in self.last_updated:
-                I.update_last_updated(key)
+            if propagate==True:
+                I.update_last_updated(self.last_updated.keys())
         return I
 
     def update_key_value(self,key,value):
-        if key in self and self[key]==value:
-            return self
         if self.value_is_compatible(value):
             if key in self: self.delete_key_from_value_cache(key)
             dict.__setitem__(self,key,value)
@@ -197,19 +198,21 @@ class Indexer(dict):
         return self
 
     def update(self,dict_obj):
-        for key in dict_obj:
+        keys = (key for key in dict_obj if (key in self and self[key]!=dict_obj[key]) or key not in self)
+        for key in keys:
             self.update_key_value(key, dict_obj[key])
             self.update_last_updated(key)
         return self
 
     def remove(self,keylist):
-        for key in keylist:
+        keys = (key for key in keylist if key in self)
+        for key in keys:
             self.remove_key(key)
             self.update_last_updated(key)
         return self
 
     def flush(self):
-        self.last_updated.clear()
+        self.last_updated = Slicer(default=False)
         return self
 
     def __eq__(self,other):

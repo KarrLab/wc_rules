@@ -128,42 +128,42 @@ class TestIndexer(unittest.TestCase):
         self.assertTrue(1 in I.value_cache and 2 in I.value_cache)
         self.assertTrue('a' in I.value_cache[1] and 'b' in I.value_cache[2])
         self.assertTrue(len(I)==2 and len(I.value_cache)==2)
-        self.assertTrue(I.last_updated == set(['a','b']))
+        self.assertTrue(I.last_updated['a'] and I.last_updated['b'])
         I.flush()
-        self.assertTrue(I.last_updated == set())
+        self.assertTrue(len(I.last_updated) == 0)
 
         I.update(dict(b=1))
         self.assertTrue('a' in I and 'b' in I)
         self.assertTrue(1 in I.value_cache and 2 not in I.value_cache)
         self.assertTrue('a' in I.value_cache[1] and 'b' in I.value_cache[1])
         self.assertTrue(len(I)==2 and len(I.value_cache)==1)
-        self.assertTrue(I.last_updated == set(['b']))
+        self.assertTrue(I.last_updated['b'])
         I.flush()
-        self.assertTrue(I.last_updated == set())
+        self.assertTrue(len(I.last_updated) == 0)
 
         I.update(dict(a=3))
         self.assertTrue('a' in I and 'b' in I)
         self.assertTrue(1 in I.value_cache and 2 not in I.value_cache and 3 in I.value_cache)
         self.assertTrue('a' in I.value_cache[3] and 'b' in I.value_cache[1])
         self.assertTrue(len(I)==2 and len(I.value_cache)==2)
-        self.assertTrue(I.last_updated == set(['a']))
+        self.assertTrue(I.last_updated['a'])
         I.flush()
-        self.assertTrue(I.last_updated == set())
+        self.assertTrue(len(I.last_updated) == 0)
 
         I.remove(['a'])
         self.assertTrue('a' not in I and 'b' in I)
         self.assertTrue(1 in I.value_cache and 2 not in I.value_cache and 3 not in I.value_cache)
         self.assertTrue('b' in I.value_cache[1])
         self.assertTrue(len(I)==1 and len(I.value_cache)==1)
-        self.assertTrue(I.last_updated == set(['a']))
+        self.assertTrue(I.last_updated['a'])
         I.flush()
-        self.assertTrue(I.last_updated == set())
+        self.assertTrue(len(I.last_updated) == 0)
 
         I.remove(['b'])
         self.assertTrue(len(I)==len(I.value_cache)==0)
-        self.assertTrue(I.last_updated == set(['b']))
+        self.assertTrue(I.last_updated['b'])
         I.flush()
-        self.assertTrue(I.last_updated == set())
+        self.assertTrue(len(I.last_updated) == 0)
 
     def test_indexer_types(self):
         # Boolean indexer
@@ -205,18 +205,18 @@ class TestIndexer(unittest.TestCase):
 
         I1 = I.subset(['a','b'])
         self.assertTrue('a' in I1 and 'b' in I1 and 'c' not in I1)
-        self.assertTrue(sorted(I1.last_updated)==['a','b'])
+        self.assertTrue(sorted(I1.last_updated.keys())==['a','b','c'])
         self.assertTrue(isinstance(I1,NumericIndexer))
 
         S = Slicer().add_keys(['a','b'])
         I2 = I.subset(S)
         self.assertTrue('a' in I2 and 'b' in I2 and 'c' not in I2)
-        self.assertTrue(sorted(I2.last_updated)==['a','b'])
+        self.assertTrue(sorted(I2.last_updated.keys())==['a','b','c'])
         self.assertTrue(isinstance(I2,NumericIndexer))
 
         I3 = I[S]
         self.assertTrue('a' in I3 and 'b' in I3 and 'c' not in I3)
-        self.assertTrue(sorted(I3.last_updated)==['a','b'])
+        self.assertTrue(sorted(I3.last_updated.keys())==['a','b','c'])
         self.assertTrue(isinstance(I3,NumericIndexer))
 
     def test_indexer_slice(self):
