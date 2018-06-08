@@ -6,7 +6,7 @@
 """
 
 from wc_rules.indexer import Indexer, Slicer
-from wc_rules.indexer import BooleanIndexer, NumericIndexer, StringIndexer
+from wc_rules.indexer import BooleanIndexer, NumericIndexer, StringIndexer, HashableDict
 from wc_rules.chem import Molecule
 from wc_rules import utils
 import itertools
@@ -282,3 +282,10 @@ class TestIndexer(unittest.TestCase):
         x = I1 >= I2
         for key in ['a','b','c']: self.assertTrue(x[key])
         for key in ['d']: self.assertTrue(not x[key])
+
+    def test_hashabledict(self):
+        a = HashableDict(x=1,y=2)
+        d = {a:1}
+        b = HashableDict(x=1,y=2)
+        self.assertTrue(d[b]==1)
+        self.assertTrue(dict(x=1) in a)

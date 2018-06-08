@@ -6,6 +6,7 @@
 """
 from wc_rules import utils
 import inspect
+
 class Slicer(dict):
     ''' A hashmap between keys (literals or namedtuples) and Boolean values.
     Slicers are dict-like and always return True or False when queried with [key].
@@ -92,6 +93,15 @@ class Slicer(dict):
 
     def __invert__(self):
         return Slicer(default= not self.default).add_keys(self.keys())
+
+class HashableDict(dict):
+    def __hash__(self):
+        return hash(tuple(sorted(self.items())))
+
+    def __contains__(self,other):
+        if isinstance(other,dict):
+            return all(item in self.items() for item in other.items())
+        return dict.__contains__(self,other)
 
 class Indexer(dict):
     '''
