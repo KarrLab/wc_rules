@@ -289,3 +289,13 @@ class TestIndexer(unittest.TestCase):
         b = HashableDict(x=1,y=2)
         self.assertTrue(d[b]==1)
         self.assertTrue(dict(x=1) in a)
+
+    def test_indexer_with_hashabledict(self):
+        a = HashableDict(x=1,y=2)
+        b = HashableDict(x=1,y=3)
+        i = NumericIndexer().update({a:1,b:2})
+        self.assertTrue(i[a]==1 and i[b]==2)
+        j = i[i==dict(x=1)]
+        self.assertTrue(j[a]==1 and j[b]==2)
+        j = i[i==dict(y=2)]
+        self.assertTrue(j[a]==1 and b not in j)

@@ -231,6 +231,9 @@ class Indexer(dict):
                     x = self.slice([val]) & other.slice([val])
                     S = S | x
             return S
+        if isinstance(other,dict):
+            keys = (key for key in self if other in key)
+            return Slicer(default=False).add_keys(keys)
         if isinstance(other,self.primitive_type):
             return self.slice([other])
         if isinstance(other,list):
