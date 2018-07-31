@@ -13,21 +13,6 @@ import random
 idgen = random.Random()
 idgen.seed(0)
 
-###### Factory ######
-class Factory(object):
-
-    def build(self, obj_type, names, instances=True):
-        types = dict()
-        vec = []
-        for name in names:
-            if name not in moltypes:
-                types[name] = type(name, (obj_type,), {})
-                if instances == False:
-                    vec.append(types[name])
-            if instances == True:
-                vec.append(types[name]())
-        return vec
-
 ###### Methods ######
 def listify(value):
     if not isinstance(value, list):
