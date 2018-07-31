@@ -12,7 +12,7 @@ class Pattern(object):
                 self.add_node(node,recurse)
 
     def __contains__(self,node):
-        return node.get_id() in self._nodes
+        return node in self._nodes
 
     def add_node(self,node,recurse=True):
         if node in self:
