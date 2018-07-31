@@ -70,6 +70,32 @@ class BaseClass(core.Model):
 
         return attrdict
 
+    def get_related_attributes(self,none_allowed=True):
+        attrdict = self.attribute_properties
+        a = (x for x in attrdict if attrdict[x]['related'])
+        if not none_allowed:
+            return (x for x in a if getattr(self,x,None) is not None)
+        return a
+
+    def get_scalar_attributes(self,none_allowed=True):
+        attrdict = self.attribute_properties
+        a = (x for x in attrdict if not attrdict[x]['related'])
+        if not none_allowed:
+            return (x for x in a if getattr(self,x,None) is not None)
+        return a
+
+    def duplicate(self,id=None):
+        ''' duplicates node up to scalar attributes '''
+        new_node = self.__class__()
+        for attr in self.get_scalar_attributes():
+            if attr=='id': continue
+            setattr(new_node,attr,getattr(self,attr,None))
+        if id:
+            new_node.set_id(id)
+        return new_node
+
+
+
     def set_id(self, id):
         """ Sets id attribute.
 

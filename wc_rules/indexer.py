@@ -103,6 +103,18 @@ class HashableDict(dict):
             return all(item in self.items() for item in other.items())
         return dict.__contains__(self,other)
 
+class Index_By_ID(dict):
+    '''A dict that looks like a list, but enables recovering by ID'''
+    def append(self,obj1):
+        self[obj1.get_id()] = obj1
+        return self
+
+    def remove(self,obj1):
+        del self[obj1.get_id()]
+
+    def retrieve(self,idx):
+        return self[idx]
+
 class Indexer(dict):
     '''
     A hashmap between keys (literals or named tuples) and arbitary values of the same type
