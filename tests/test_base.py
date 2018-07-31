@@ -29,7 +29,7 @@ class Pet(base.BaseClass):
 class TestBase(unittest.TestCase):
 
     def setUp(self):
-        base.idgen.seed(0)
+        utils.idgen.seed(0)
         self.Sherlock = Person(name='Sherlock')
         self.John = Person(name='John')
         self.Mary = Person(name='Mary')
@@ -53,7 +53,7 @@ class TestBase(unittest.TestCase):
             'e443df78-9558-867f-5ba9-1faf7a024204',
             '23a7711a-8133-2876-37eb-dcd9e87a1613',
         ]
-        # works only when base.idgen.seed(0) in setUp()
+        # works only when utils.idgen.seed(0) in setUp()
         self.assertEqual(id_arr, check_str)
 
     def test_attribute_properties(self):

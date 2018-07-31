@@ -4,6 +4,14 @@
 :Copyright: 2017, Karr Lab
 :License: MIT
 """
+import uuid
+import random
+
+
+# Seed for creating ids
+# To modify this seed, load utils module, then execute utils.idgen.seed(<new_seed>)
+idgen = random.Random()
+idgen.seed(0)
 
 ###### Factory ######
 class Factory(object):
@@ -25,6 +33,9 @@ def listify(value):
     if not isinstance(value, list):
         return [value]
     return value
+
+def generate_id():
+    return str(uuid.UUID(int=idgen.getrandbits(128)))
 
 ###### Error ######
 class GenericError(Exception):

@@ -38,8 +38,8 @@ class BaseClass(core.Model):
     def __init__(self, **kwargs):
         super(BaseClass, self).__init__(**kwargs)
         if 'id' not in kwargs.keys():
-            self.id = str(uuid.UUID(int=idgen.getrandbits(128)))
-
+            #self.id = str(uuid.UUID(int=idgen.getrandbits(128)))
+            self.id = utils.generate_id()
         self.attribute_properties = self.make_attribute_properties_dict()
 
     def make_attribute_properties_dict(self):
