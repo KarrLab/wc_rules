@@ -7,8 +7,9 @@ class A(chem.Molecule):pass
 class X(chem.Site):
     ph1 = core.BooleanAttribute(default=None)
     ph2 = core.BooleanAttribute(default=None)
-
-
+class Y(chem.Site):
+    ph = core.BooleanAttribute(default=None)
+    v = core.IntegerAttribute(default=None)
 
 class TestPattern(unittest.TestCase):
 
@@ -37,4 +38,41 @@ class TestPattern(unittest.TestCase):
         p2 = p1.duplicate(preserve_ids=True)
         self.assertTrue(len(p2)==3)
         self.assertEquals(sorted(p1._nodes.keys()), sorted(p2._nodes.keys()))
-        
+
+    def test_generate_queries(self):
+        a = A(id='a')
+        y1 = Y(id='y1',ph=True,v=0)
+        y2 = Y(id='y2',ph=False,v=-5)
+        a.add_sites(y1,y2)
+
+        p = Pattern('p').add_node(a,recurse=True)
+        qdict = p.generate_queries()
+
+        self.assertEqual(sorted(list(qdict.keys())), ['attr','rel','type'])
+
+        for idx in qdict['type']:
+            node = p._nodes[idx]
+            tuplist = qdict['type'][idx]
+            for tup in tuplist:
+                _class = tup[1]
+                self.assertTrue(isinstance(node,_class))
+
+        for idx in qdict['attr']:
+            node = p._nodes[idx]
+            tuplist = qdict['attr'][idx]
+            for tup in tuplist:
+                attr = tup[1]
+                op = tup[2]
+                value = tup[3]
+                self.assertTrue(op(getattr(node,attr),value))
+
+        for tup in qdict['rel']:
+            idx1 = tup[1]
+            attr1 = tup[2]
+            attr2 = tup[3]
+            idx2 = tup[4]
+
+            node1 = p._nodes[idx1]
+            node2 = p._nodes[idx2]
+            self.assertTrue(node1 in utils.listify(getattr(node2,attr2)))
+            self.assertTrue(node2 in utils.listify(getattr(node1,attr1)))

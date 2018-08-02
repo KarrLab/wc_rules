@@ -102,10 +102,21 @@ class Pattern(object):
                     if node2.id in already_encountered:
                         continue
                     related_attr = node.attribute_properties[attr]['related_attr']
-                    v = ['rel',idx,attr,related_attr,node2.id]
+                    # this is alphabetical comparison 'ab' < 'b'
+                    if attr <= related_attr:
+                            v = ['rel',idx,attr,related_attr,node2.id]
+                    else:
+                        v = ['rel',node2.id,related_attr,attr,idx]
                     rel_queries.append(tuple(v))
-            already_encountered.append(node.id)
+            already_encountered.append(idx)
         return rel_queries
+
+    def generate_queries(self):
+        return {
+            'type': self.generate_queries_TYPE(),
+            'attr': self.generate_queries_ATTR(),
+            'rel': self.generate_queries_REL(),
+        }
 
 def main():
     pass
