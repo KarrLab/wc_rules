@@ -12,7 +12,6 @@ from wc_rules import utils
 import uuid
 import random
 
-
 # Seed for creating ids
 # To modify this seed, load base module, then execute base.idgen.seed(<new_seed>)
 idgen = random.Random()
@@ -38,8 +37,8 @@ class BaseClass(core.Model):
     def __init__(self, **kwargs):
         super(BaseClass, self).__init__(**kwargs)
         if 'id' not in kwargs.keys():
-            self.id = str(uuid.UUID(int=idgen.getrandbits(128)))
-
+            #self.id = str(uuid.UUID(int=idgen.getrandbits(128)))
+            self.id = utils.generate_id()
         self.attribute_properties = self.make_attribute_properties_dict()
 
     def make_attribute_properties_dict(self):
@@ -53,11 +52,13 @@ class BaseClass(core.Model):
                 x['related_class'] = attr.related_class
                 if isinstance(attr, (core.OneToManyAttribute, core.ManyToManyAttribute,)):
                     x['append'] = True
+                x['related_attr'] = attr.related_name
             elif check == 'primary_class' and hasattr(attr, 'primary_class'):
                 x['related'] = True
                 x['related_class'] = attr.primary_class
                 if isinstance(attr, (core.ManyToManyAttribute, core.ManyToOneAttribute,)):
                     x['append'] = True
+                x['related_attr'] = attr.name
             return x
 
         for attrname, attr in cls.Meta.attributes.items():
@@ -67,8 +68,39 @@ class BaseClass(core.Model):
             if attrname not in attrdict:
                 attrdict[attrname] = dict()
             attrdict[attrname].update(populate_attribute(attrname, attr, 'primary_class'))
-
         return attrdict
+
+    def get_related_attributes(self):
+        attrdict = self.attribute_properties
+        return [x for x in attrdict if attrdict[x]['related']]
+
+    def get_scalar_attributes(self):
+        attrdict = self.attribute_properties
+        return [x for x in attrdict if not attrdict[x]['related']]
+
+    def get_nonempty_scalar_attributes(self):
+        attrs = self.get_scalar_attributes()
+        return [x for x in attrs if getattr(self,x,None) is not None]
+
+    def get_nonempty_related_attributes(self):
+        attrs = self.get_related_attributes()
+        final_attrs = []
+        for attr in attrs:
+            if self.attribute_properties[attr]['append']:
+                if getattr(self,attr,[])!=[]: final_attrs.append(attr)
+            else:
+                if getattr(self,attr,None) is not None: final_attrs.append(attr)
+        return final_attrs
+
+    def duplicate(self,id=None):
+        ''' duplicates node up to scalar attributes '''
+        new_node = self.__class__()
+        for attr in self.get_nonempty_scalar_attributes():
+            if attr=='id': continue
+            setattr(new_node,attr,getattr(self,attr))
+        if id:
+            new_node.set_id(id)
+        return new_node
 
     def set_id(self, id):
         """ Sets id attribute.

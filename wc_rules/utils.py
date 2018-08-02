@@ -4,27 +4,23 @@
 :Copyright: 2017, Karr Lab
 :License: MIT
 """
+import uuid
+import random
 
-###### Factory ######
-class Factory(object):
 
-    def build(self, obj_type, names, instances=True):
-        types = dict()
-        vec = []
-        for name in names:
-            if name not in moltypes:
-                types[name] = type(name, (obj_type,), {})
-                if instances == False:
-                    vec.append(types[name])
-            if instances == True:
-                vec.append(types[name]())
-        return vec
+# Seed for creating ids
+# To modify this seed, load utils module, then execute utils.idgen.seed(<new_seed>)
+idgen = random.Random()
+idgen.seed(0)
 
 ###### Methods ######
 def listify(value):
     if not isinstance(value, list):
         return [value]
     return value
+
+def generate_id():
+    return str(uuid.UUID(int=idgen.getrandbits(128)))
 
 ###### Error ######
 class GenericError(Exception):
