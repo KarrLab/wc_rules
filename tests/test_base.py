@@ -78,6 +78,10 @@ class TestBase(unittest.TestCase):
         self.assertEqual(attrprops['pets']['related_class'], type(self.Dog001))
         self.assertEqual(attrprops['children']['related_class'], type(self.Kid001))
 
+        self.assertEqual(attrprops['parents']['related_attr'],'children')
+        self.assertEqual(attrprops['children']['related_attr'],'parents')
+        self.assertEqual(attrprops['pets']['related_attr'],'owner')
+
     def test_duplicate(self):
         John2 = self.John.duplicate()
         self.assertEqual(John2.name,self.John.name)

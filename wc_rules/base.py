@@ -11,6 +11,7 @@ from wc_rules import graph_utils
 from wc_rules import utils
 import uuid
 import random
+from pprint import pprint
 
 
 # Seed for creating ids
@@ -53,11 +54,13 @@ class BaseClass(core.Model):
                 x['related_class'] = attr.related_class
                 if isinstance(attr, (core.OneToManyAttribute, core.ManyToManyAttribute,)):
                     x['append'] = True
+                x['related_attr'] = attr.related_name
             elif check == 'primary_class' and hasattr(attr, 'primary_class'):
                 x['related'] = True
                 x['related_class'] = attr.primary_class
                 if isinstance(attr, (core.ManyToManyAttribute, core.ManyToOneAttribute,)):
                     x['append'] = True
+                x['related_attr'] = attr.name
             return x
 
         for attrname, attr in cls.Meta.attributes.items():
@@ -67,7 +70,6 @@ class BaseClass(core.Model):
             if attrname not in attrdict:
                 attrdict[attrname] = dict()
             attrdict[attrname].update(populate_attribute(attrname, attr, 'primary_class'))
-
         return attrdict
 
     def get_related_attributes(self):
