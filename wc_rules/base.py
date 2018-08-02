@@ -79,12 +79,10 @@ class BaseClass(core.Model):
         return [x for x in attrdict if not attrdict[x]['related']]
 
     def get_nonempty_scalar_attributes(self):
-        attrdict = self.attribute_properties
         attrs = self.get_scalar_attributes()
         return [x for x in attrs if getattr(self,x,None) is not None]
 
     def get_nonempty_related_attributes(self):
-        attrdict = self.attribute_properties
         attrs = self.get_related_attributes()
         final_attrs = []
         for attr in attrs:
