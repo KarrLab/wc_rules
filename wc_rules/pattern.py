@@ -1,5 +1,6 @@
 from wc_rules.indexer import Index_By_ID
 from wc_rules.utils import listify,generate_id
+from operator import eq
 import random
 import pprint
 
@@ -69,6 +70,42 @@ class Pattern(object):
                 new_pattern.add_node(x,recurse=False)
         return new_pattern
 
+    def generate_queries_TYPE(self):
+        type_queries = {}
+        for idx,node in self._nodes.items():
+            type_queries[idx] = []
+            list_of_classes = node.__class__.__mro__
+            for _class in reversed(list_of_classes):
+                if _class.__name__ in ['BaseClass','Model','object']:
+                    continue
+                v = ['type',_class]
+                type_queries[idx].append(tuple(v))
+        return type_queries
+
+    def generate_queries_ATTR(self):
+        attr_queries = {}
+        for idx,node in self._nodes.items():
+            attr_queries[idx] = []
+            for attr in node.get_nonempty_scalar_attributes():
+                if attr=='id': continue
+                v = ['attr',attr,eq,getattr(node,attr)]
+                attr_queries[idx].append(tuple(v))
+        return attr_queries
+
+    def generate_queries_REL(self):
+        rel_queries = []
+        already_encountered = []
+        for idx,node in self._nodes.items():
+            for attr in node.get_nonempty_related_attributes():
+                nodelist = listify(getattr(node,attr))
+                for node2 in nodelist:
+                    if node2.id in already_encountered:
+                        continue
+                    related_attr = node.attribute_properties[attr]['related_attr']
+                    v = ['rel',idx,attr,related_attr,node2.id]
+                    rel_queries.append(tuple(v))
+            already_encountered.append(node.id)
+        return rel_queries
 
 def main():
     pass
