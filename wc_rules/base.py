@@ -11,8 +11,6 @@ from wc_rules import graph_utils
 from wc_rules import utils
 import uuid
 import random
-from pprint import pprint
-
 
 # Seed for creating ids
 # To modify this seed, load base module, then execute base.idgen.seed(<new_seed>)
