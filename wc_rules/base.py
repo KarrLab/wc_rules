@@ -70,31 +70,39 @@ class BaseClass(core.Model):
 
         return attrdict
 
-    def get_related_attributes(self,none_allowed=True):
+    def get_related_attributes(self):
         attrdict = self.attribute_properties
-        a = (x for x in attrdict if attrdict[x]['related'])
-        if not none_allowed:
-            return (x for x in a if getattr(self,x,None) is not None)
-        return a
+        return [x for x in attrdict if attrdict[x]['related']]
 
-    def get_scalar_attributes(self,none_allowed=True):
+    def get_scalar_attributes(self):
         attrdict = self.attribute_properties
-        a = (x for x in attrdict if not attrdict[x]['related'])
-        if not none_allowed:
-            return (x for x in a if getattr(self,x,None) is not None)
-        return a
+        return [x for x in attrdict if not attrdict[x]['related']]
+
+    def get_nonempty_scalar_attributes(self):
+        attrdict = self.attribute_properties
+        attrs = self.get_scalar_attributes()
+        return [x for x in attrs if getattr(self,x,None) is not None]
+
+    def get_nonempty_related_attributes(self):
+        attrdict = self.attribute_properties
+        attrs = self.get_related_attributes()
+        final_attrs = []
+        for attr in attrs:
+            if self.attribute_properties[attr]['append']:
+                if getattr(self,attr,[])!=[]: final_attrs.append(attr)
+            else:
+                if getattr(self,attr,None) is not None: final_attrs.append(attr)
+        return final_attrs
 
     def duplicate(self,id=None):
         ''' duplicates node up to scalar attributes '''
         new_node = self.__class__()
-        for attr in self.get_scalar_attributes():
+        for attr in self.get_nonempty_scalar_attributes():
             if attr=='id': continue
-            setattr(new_node,attr,getattr(self,attr,None))
+            setattr(new_node,attr,getattr(self,attr))
         if id:
             new_node.set_id(id)
         return new_node
-
-
 
     def set_id(self, id):
         """ Sets id attribute.

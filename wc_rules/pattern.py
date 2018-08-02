@@ -19,7 +19,7 @@ class Pattern(object):
             return self
         self._nodes.append(node)
         if recurse:
-            for attr in node.get_related_attributes(none_allowed=False):
+            for attr in node.get_nonempty_related_attributes():
                 nodelist = listify(getattr(node,attr))
                 for node2 in nodelist:
                     self.add_node(node2,recurse)
@@ -43,12 +43,9 @@ class Pattern(object):
         already_encountered = []
         for idx,node in self._nodes.items():
             new_node = new_pattern._nodes[nodemap[idx]]
-            attrs = node.get_related_attributes(none_allowed=True)
+            attrs = node.get_nonempty_related_attributes()
             for attr in attrs:
-                val = getattr(node,attr,None)
-                if val is None:
-                    setattr(new_node,attr,None)
-                elif node.attribute_properties[attr]['append']:
+                if node.attribute_properties[attr]['append']:
                     setattr(new_node,attr,[])
                     for node2 in getattr(node,attr):
                         if node2.get_id() in already_encountered:
