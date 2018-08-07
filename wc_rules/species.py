@@ -1,7 +1,14 @@
 from wc_rules.pattern import Pattern
+from wc_rules.utils import generate_id
 from numpy.random import choice
 
-class Species(Pattern):pass
+
+class Species(Pattern):
+    def __init__(self,idx=None,nodelist=None,recurse=True):
+        if idx is None:
+            idx = generate_id()
+        super().__init__(idx,nodelist,recurse)
+
 
 class SpeciesFactory(object):
 

@@ -71,6 +71,7 @@ class Pattern(object):
         return new_pattern
 
     def generate_queries_TYPE(self):
+        ''' Generates tuples ('type',_class) '''
         type_queries = {}
         for idx,node in self._nodes.items():
             type_queries[idx] = []
@@ -83,6 +84,7 @@ class Pattern(object):
         return type_queries
 
     def generate_queries_ATTR(self):
+        ''' Generates tuples ('attr',attrname,operator,value) '''
         attr_queries = {}
         for idx,node in self._nodes.items():
             attr_queries[idx] = []
@@ -93,6 +95,7 @@ class Pattern(object):
         return attr_queries
 
     def generate_queries_REL(self):
+        ''' Generate tuples ('rel',idx1,attrname,related_attrname,idx2) '''
         rel_queries = []
         already_encountered = []
         for idx,node in self._nodes.items():
