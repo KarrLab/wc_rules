@@ -1,7 +1,9 @@
 import networkx as nx
+from networkx.drawing.nx_agraph import write_dot, graphviz_layout
 from wc_rules.indexer import Index_By_ID
 from utils import AddError, generate_id
 import matplotlib.pyplot as plt
+from palettable.colorbrewer.qualitative import Pastel1_9
 import pprint
 import operator as op
 from collections import defaultdict
@@ -73,13 +75,58 @@ class Matcher(object):
         self.append_rete_edge(node2,new_node)
         return new_node
 
-    def draw_rete_net(self):
-        labels_dict = dict()
+    def draw_rete_net(self,cmap=None):
+
+        ids_dict = dict()
         for n,node in enumerate(self.rete_net.nodes):
-            labels_dict[node] = ''.join(['(',str(n),') ',str(self.get_rete_node(node))])
-        g1 = nx.relabel_nodes(self.rete_net,labels_dict)
-        nx.write_gml(g1, "rete.gml",stringizer=str)
+            ids_dict[node]=n
+
+        nodetexts = []
+        nodecolors = self.get_colors(cmap)
+        for n,node in enumerate(self.rete_net.nodes):
+            idx = n
+            rete_node = self.get_rete_node(node)
+            fill = nodecolors[rete_node.__class__.__name__]
+            nodetexts.append(self.generate_GML_node(node,idx,fill))
+
+        edgetexts = []
+        for edge in self.rete_net.edges:
+            (source,target) = tuple(ids_dict[x] for x in edge)
+            edgetexts.append(self.generate_GML_edge(source,target))
+
+        graphtext = "graph\n[\n directed 1"
+        alltexts = [graphtext] + nodetexts + edgetexts + ["]\n"]
+        final_text = '\n'.join(alltexts)
+        with open('rete.gml','w') as f:
+            f.write(final_text)
         return self
+
+    # Drawing GML
+    def get_colors(self,cmap):
+        if cmap is None:
+            cmap = Pastel1_9
+        rete_node_categories = []
+        for node in self.rete_net.nodes:
+            x = self.get_rete_node(node)
+            name = x.__class__.__name__
+            if name not in rete_node_categories:
+                rete_node_categories.append(name)
+        n = len(rete_node_categories)
+        x = cmap.hex_colors[:n]
+        return dict(zip(rete_node_categories,x))
+
+    def generate_GML_node(self,node,idx,fill):
+        label = ''.join(['(',str(idx),') ',str(self.get_rete_node(node))])
+        graphics = " graphics [ hasOutline 0 fill \"" + fill + "\" ] "
+        labelgraphics = " LabelGraphics [text \"" + label + "\" ] "
+        nodetext = "node [id " + str(idx) + graphics + labelgraphics + " ] "
+        return nodetext
+
+    def generate_GML_edge(self,source,target):
+        st_text = "source " + str(source) + " target " + str(target)
+        graphics = " graphics [ fill \"#999999\" targetArrow \"standard\" ] "
+        edgetext = "edge [ " + st_text + graphics + " ] "
+        return edgetext
 
     # Rete net advanced operations
     def add_checkTYPE_path(self,current_node,type_vec):
