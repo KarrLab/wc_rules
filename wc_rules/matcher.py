@@ -8,6 +8,7 @@ import pprint
 import operator as op
 from collections import defaultdict
 from itertools import chain
+from numpy import argmax
 
 class Token(dict):
     ''' Each token is a dict whose keys are pattern node ids
@@ -225,15 +226,39 @@ class Matcher(object):
             vartuple_nodes[(var1_new,var2_new)].add(current_node)
 
         # compute local subgraphs (1-deep) for each variable
-        merge_nodes = list()
-        for old_name,var in new_varnames.items():
-            vartuples = sorted(x for x in vartuple_nodes if var in x)
-            vartuple_nodelist = list(chain(*[vartuple_nodes[x] for x in vartuples]))
-            current_node = self.add_mergenode_path(vartuple_nodelist)
-            merge_nodes.append(current_node)
+        #merge_nodes = list()
+        #for old_name,var in new_varnames.items():
+        #    vartuples = sorted(x for x in vartuple_nodes if var in x)
+        #    vartuple_nodelist = list(chain(*[vartuple_nodes[x] for x in vartuples]))
+        #    current_node = self.add_mergenode_path(vartuple_nodelist)
+        #    merge_nodes.append(current_node)
 
-        # put together local subgraphs
-        current_node = self.add_mergenode_path(merge_nodes)
+        # Merging when multiple vartuple_nodes have the same vartuple
+
+        vartuple_nodes2 = dict()
+        for vartuple, nodeset in vartuple_nodes.items():
+            if len(nodeset) > 1:
+                current_node = self.add_mergenode_path(sorted(nodeset))
+                vartuple_nodes2[vartuple] = current_node
+            if len(nodeset) == 1:
+                vartuple_nodes2[vartuple] = sorted(nodeset)[0]
+
+        def sort_tuples(vartuples):
+            right = vartuples
+            left = []
+            flatten_left_set = set()
+            while len(right) > 0:
+                tuple_scorer = lambda x,set1: sum(y in set1 for y in x)
+                max_index = argmax(list(tuple_scorer(x,flatten_left_set) for x in right))
+                elem = right.pop(max_index)
+                left.append(elem)
+                for x in elem:
+                    flatten_left_set.add(x)
+            return left
+
+        sorted_vartuples = sort_tuples(sorted(vartuple_nodes2.keys()))
+        sorted_nodes = list(vartuple_nodes2[x] for x in sorted_vartuples)
+        current_node = self.add_mergenode_path(sorted_nodes)
         current_node = self.add_aliasPATTERN(current_node,pattern.id)
 
         return current_node
