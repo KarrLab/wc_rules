@@ -1,13 +1,9 @@
 import networkx as nx
-from networkx.drawing.nx_agraph import write_dot, graphviz_layout
 from wc_rules.indexer import Index_By_ID
 from utils import AddError, generate_id
-import matplotlib.pyplot as plt
 from palettable.colorbrewer.qualitative import Pastel1_9
-import pprint
 import operator as op
 from collections import defaultdict
-from itertools import chain
 from numpy import argmax
 
 class Token(dict):
@@ -225,16 +221,6 @@ class Matcher(object):
             current_node = self.add_aliasEDGE(current_node,var1_new,var2_new)
             vartuple_nodes[(var1_new,var2_new)].add(current_node)
 
-        # compute local subgraphs (1-deep) for each variable
-        #merge_nodes = list()
-        #for old_name,var in new_varnames.items():
-        #    vartuples = sorted(x for x in vartuple_nodes if var in x)
-        #    vartuple_nodelist = list(chain(*[vartuple_nodes[x] for x in vartuples]))
-        #    current_node = self.add_mergenode_path(vartuple_nodelist)
-        #    merge_nodes.append(current_node)
-
-        # Merging when multiple vartuple_nodes have the same vartuple
-
         vartuple_nodes2 = dict()
         for vartuple, nodeset in vartuple_nodes.items():
             if len(nodeset) > 1:
@@ -247,8 +233,8 @@ class Matcher(object):
             right = vartuples
             left = []
             flatten_left_set = set()
+            tuple_scorer = lambda x,set1: sum(y in set1 for y in x)
             while len(right) > 0:
-                tuple_scorer = lambda x,set1: sum(y in set1 for y in x)
                 max_index = argmax(list(tuple_scorer(x,flatten_left_set) for x in right))
                 elem = right.pop(max_index)
                 left.append(elem)
@@ -267,14 +253,12 @@ class ReteNode(object):
     def __init__(self,id=None):
         if id is None:
             self.id = generate_id()
-            self.archetype = ''
 
 class SingleInputNode(ReteNode): pass
 
 class Root(SingleInputNode):
     def __init__(self):
         self.id = 'root'
-        self.archetype='root'
 
     def __str__(self):
         return 'root'
@@ -282,7 +266,6 @@ class Root(SingleInputNode):
 class check(SingleInputNode):
     def __init__(self,id=None):
         super().__init__(id)
-        self.archetype = 'check'
 
 class checkTYPE(check):
     def __init__(self,_class,id=None):
@@ -311,7 +294,6 @@ class checkATTR(check):
 class store(SingleInputNode):
     def __init__(self,id=None):
         super().__init__(id)
-        self.archetype = 'store'
 
     def __str__(self):
         return 'store'
@@ -319,7 +301,6 @@ class store(SingleInputNode):
 class alias(SingleInputNode):
     def __init__(self,var_tuple,id=None):
         super().__init__(id)
-        self.archetype = 'alias'
         self.variable_names = var_tuple
 
     def __str__(self):
@@ -338,7 +319,6 @@ class merge(ReteNode):
     def __init__(self,var_tuple,id=None):
         super().__init__(id)
         self.variable_names = var_tuple
-        self.archetype = 'merge'
 
     def __str__(self):
         return ','.join(self.variable_names)
