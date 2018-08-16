@@ -65,7 +65,7 @@ class Matcher(object):
             varname_set.add(name)
         for name in node2.variable_names:
             varname_set.add(name)
-        varnames = tuple(sorted(list(varname_set)))
+        varnames = tuple(sorted(varname_set))
         new_node = merge(varnames)
         self.append_rete_node(new_node)
         self.append_rete_edge(node1,new_node)
@@ -73,7 +73,6 @@ class Matcher(object):
         return new_node
 
     def draw_rete_net(self,cmap=None):
-
         ids_dict = dict()
         for n,node in enumerate(self.rete_net.nodes):
             ids_dict[node]=n
@@ -227,22 +226,22 @@ class Matcher(object):
                 current_node = self.add_mergenode_path(sorted(nodeset))
                 vartuple_nodes2[vartuple] = current_node
             if len(nodeset) == 1:
-                vartuple_nodes2[vartuple] = sorted(nodeset)[0]
+                vartuple_nodes2[vartuple] = list(nodeset)[0]
 
         def sort_tuples(vartuples):
             right = vartuples
             left = []
-            flatten_left_set = set()
+            flatten_left = set()
             tuple_scorer = lambda x,set1: sum(y in set1 for y in x)
             while len(right) > 0:
-                max_index = argmax(list(tuple_scorer(x,flatten_left_set) for x in right))
+                max_index = argmax(list(tuple_scorer(x,flatten_left) for x in right))
                 elem = right.pop(max_index)
                 left.append(elem)
                 for x in elem:
-                    flatten_left_set.add(x)
+                    flatten_left.add(x)
             return left
 
-        sorted_vartuples = sort_tuples(sorted(vartuple_nodes2.keys()))
+        sorted_vartuples = sort_tuples(sorted(vartuple_nodes2))
         sorted_nodes = list(vartuple_nodes2[x] for x in sorted_vartuples)
         current_node = self.add_mergenode_path(sorted_nodes)
         current_node = self.add_aliasPATTERN(current_node,pattern.id)
