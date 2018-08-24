@@ -1,8 +1,6 @@
 biopython
 networkx
 numpy
+git+https://github.com/KarrLab/obj_model.git#egg=obj_model-0.0.5
 palettable
-git+https://github.com/KarrLab/log.git
-git+https://github.com/KarrLab/wc_utils.git@4a325bed58201f92a2eda47dc4ce14ec6d27c75d
-git+https://github.com/KarrLab/obj_model.git@dd70277754d026db3d34b3e0c4a6e0f45a2dbe76
 setuptools
