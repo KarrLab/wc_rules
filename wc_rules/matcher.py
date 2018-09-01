@@ -77,22 +77,19 @@ class Matcher(object):
         for n,node in enumerate(self.rete_net.nodes):
             ids_dict[node]=n
 
-        nodetexts = []
+        lines = []
         nodecolors = self.get_colors(cmap)
         for n,node in enumerate(self.rete_net.nodes):
             idx = n
             rete_node = self.get_rete_node(node)
             fill = nodecolors[rete_node.__class__.__name__]
-            nodetexts.append(self.generate_GML_node(node,idx,fill))
+            lines.append(self.generate_GML_node(node,idx,fill))
 
-        edgetexts = []
         for edge in self.rete_net.edges:
             (source,target) = tuple(ids_dict[x] for x in edge)
-            edgetexts.append(self.generate_GML_edge(source,target))
+            lines.append(self.generate_GML_edge(source,target))
 
-        graphtext = "graph\n[\n directed 1"
-        alltexts = [graphtext] + nodetexts + edgetexts + ["]\n"]
-        final_text = '\n'.join(alltexts)
+        final_text = self.generate_GML(lines)
         with open('rete.gml','w') as f:
             f.write(final_text)
         return self
@@ -123,6 +120,12 @@ class Matcher(object):
         graphics = " graphics [ fill \"#999999\" targetArrow \"standard\" ] "
         edgetext = "edge [ " + st_text + graphics + " ] "
         return edgetext
+
+    def generate_GML(self,lines):
+        graphtext = "graph\n[\n directed 1"
+        alltexts = [graphtext] + lines + ["]\n"]
+        final_text = '\n'.join(alltexts)
+        return final_text
 
     # Rete net advanced operations
     def add_checkTYPE_path(self,current_node,type_vec):
