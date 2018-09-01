@@ -88,7 +88,7 @@ class Pattern(object):
         attr_queries = {}
         for idx,node in self._nodes.items():
             attr_queries[idx] = []
-            for attr in node.get_nonempty_scalar_attributes():
+            for attr in sorted(node.get_nonempty_scalar_attributes()):
                 if attr=='id': continue
                 v = ['attr',attr,eq,getattr(node,attr)]
                 attr_queries[idx].append(tuple(v))

@@ -135,8 +135,8 @@ class Matcher(object):
 
     def add_checkATTR_path(self,current_node,attr_vec):
         new_tuples = sorted([tuple(x[1:]) for x in attr_vec])
-        for attr_tuple in new_tuples:
-            current_node = self.check_attribute_and_add_successor(current_node,checkATTR,'attr_tuple',attr_tuple)
+        if len(new_tuples)  > 0:
+            current_node = self.check_attribute_and_add_successor(current_node,checkATTR,'tuple_of_attr_tuples',tuple(new_tuples))
         return current_node
 
     def add_store(self,current_node):
@@ -283,15 +283,18 @@ class checkATTR(check):
     'eq':'==', 'ne':'!=',
     'ge':'>=', 'gt':'>',
     }
-    def __init__(self,attr_tuple,id=None):
+    def __init__(self,tuple_of_attr_tuples,id=None):
         super().__init__(id)
-        self.attr_tuple = attr_tuple
+        self.tuple_of_attr_tuples = tuple_of_attr_tuples
 
     def __str__(self):
-        attrname = self.attr_tuple[0]
-        opname = self.operator_dict[self.attr_tuple[1].__name__]
-        value = str(self.attr_tuple[2])
-        return ''.join(['*.',attrname,opname,value])
+        strs = []
+        for tup in self.tuple_of_attr_tuples:
+            attrname = tup[0]
+            opname = self.operator_dict[tup[1].__name__]
+            value = str(tup[2])
+            strs.append(''.join(['*.',attrname,opname,value]))
+        return '\n'.join(strs)
 
 class store(SingleInputNode):
     def __init__(self,id=None):
