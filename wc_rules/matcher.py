@@ -1,10 +1,11 @@
 import networkx as nx
 from wc_rules.indexer import Index_By_ID
-from utils import AddError, generate_id
+from utils import AddError
 from palettable.colorbrewer.qualitative import Pastel1_9
 import operator as op
 from collections import defaultdict
 from numpy import argmax
+import rete_nodes as rn
 
 class Token(dict):
     ''' Each token is a dict whose keys are pattern node ids
@@ -20,7 +21,7 @@ class Token(dict):
 class Matcher(object):
     def __init__(self):
         self.rete_net = nx.DiGraph()
-        self.rete_net.add_node('root', data=Root())
+        self.rete_net.add_node('root', data=rn.Root())
         self._patterns = Index_By_ID()
         self.map_pattern_to_rete_nodes = dict()
 
@@ -66,7 +67,7 @@ class Matcher(object):
         for name in node2.variable_names:
             varname_set.add(name)
         varnames = tuple(sorted(varname_set))
-        new_node = merge(varnames)
+        new_node = rn.merge(varnames)
         self.append_rete_node(new_node)
         self.append_rete_edge(node1,new_node)
         self.append_rete_edge(node2,new_node)
@@ -130,22 +131,22 @@ class Matcher(object):
     # Rete net advanced operations
     def add_checkTYPE_path(self,current_node,type_vec):
         for (kw,_class) in type_vec:
-            current_node = self.check_attribute_and_add_successor(current_node,checkTYPE,'_class',_class)
+            current_node = self.check_attribute_and_add_successor(current_node,rn.checkTYPE,'_class',_class)
         return current_node
 
     def add_checkATTR_path(self,current_node,attr_vec):
         new_tuples = sorted([tuple(x[1:]) for x in attr_vec])
         if len(new_tuples)  > 0:
-            current_node = self.check_attribute_and_add_successor(current_node,checkATTR,'tuple_of_attr_tuples',tuple(new_tuples))
+            current_node = self.check_attribute_and_add_successor(current_node,rn.checkATTR,'tuple_of_attr_tuples',tuple(new_tuples))
         return current_node
 
     def add_store(self,current_node):
         existing_successors = self.get_rete_successors(current_node)
-        existing_stores = [x for x in existing_successors if isinstance(x,store)]
+        existing_stores = [x for x in existing_successors if isinstance(x,rn.store)]
         if len(existing_stores) == 1:
             current_node = existing_stores[0]
         elif len(existing_stores) == 0:
-            new_node = store()
+            new_node = rn.store()
             self.append_rete_node(new_node)
             self.append_rete_edge(current_node,new_node)
             current_node = new_node
@@ -155,17 +156,17 @@ class Matcher(object):
 
     def add_aliasNODE(self,current_node,varname):
         var = (varname,)
-        current_node = self.check_attribute_and_add_successor(current_node,alias,'variable_names',var)
+        current_node = self.check_attribute_and_add_successor(current_node,rn.alias,'variable_names',var)
         return current_node
 
     def add_checkEDGETYPE(self,current_node,attr1,attr2):
         attrpair = tuple([attr1,attr2])
-        current_node = self.check_attribute_and_add_successor(current_node,checkEDGETYPE,'attribute_pair',attrpair)
+        current_node = self.check_attribute_and_add_successor(current_node,rn.checkEDGETYPE,'attribute_pair',attrpair)
         return current_node
 
     def add_aliasEDGE(self,current_node,var1,var2):
         varnames = (var1,var2)
-        current_node = self.check_attribute_and_add_successor(current_node,alias,'variable_names',varnames)
+        current_node = self.check_attribute_and_add_successor(current_node,rn.alias,'variable_names',varnames)
         return current_node
 
     def add_mergenode_path(self,list_of_nodes):
@@ -177,7 +178,7 @@ class Matcher(object):
         return current_node
 
     def add_aliasPATTERN(self,current_node,name):
-        alias_node = alias((name,))
+        alias_node = rn.alias((name,))
         self.append_rete_node(alias_node)
         self.append_rete_edge(current_node,alias_node)
         current_node = alias_node
@@ -250,83 +251,6 @@ class Matcher(object):
         current_node = self.add_aliasPATTERN(current_node,pattern.id)
 
         return current_node
-
-class ReteNode(object):
-    def __init__(self,id=None):
-        if id is None:
-            self.id = generate_id()
-
-class SingleInputNode(ReteNode): pass
-
-class Root(SingleInputNode):
-    def __init__(self):
-        self.id = 'root'
-
-    def __str__(self):
-        return 'root'
-
-class check(SingleInputNode):
-    def __init__(self,id=None):
-        super().__init__(id)
-
-class checkTYPE(check):
-    def __init__(self,_class,id=None):
-        super().__init__(id)
-        self._class = _class
-
-    def __str__(self):
-        return 'isinstance(*,'+self._class.__name__+')'
-
-class checkATTR(check):
-    operator_dict = {
-    'lt':'<', 'le':'<=',
-    'eq':'==', 'ne':'!=',
-    'ge':'>=', 'gt':'>',
-    }
-    def __init__(self,tuple_of_attr_tuples,id=None):
-        super().__init__(id)
-        self.tuple_of_attr_tuples = tuple_of_attr_tuples
-
-    def __str__(self):
-        strs = []
-        for tup in self.tuple_of_attr_tuples:
-            attrname = tup[0]
-            opname = self.operator_dict[tup[1].__name__]
-            value = str(tup[2])
-            strs.append(''.join(['*.',attrname,opname,value]))
-        return '\n'.join(strs)
-
-class store(SingleInputNode):
-    def __init__(self,id=None):
-        super().__init__(id)
-
-    def __str__(self):
-        return 'store'
-
-class alias(SingleInputNode):
-    def __init__(self,var_tuple,id=None):
-        super().__init__(id)
-        self.variable_names = var_tuple
-
-    def __str__(self):
-        return ','.join(list(self.variable_names))
-
-class checkEDGETYPE(check):
-    def __init__(self,attrpair,id=None):
-        super().__init__(id)
-        self.attribute_pair = attrpair
-
-    def __str__(self):
-        v = ['*'+str(i)+'.'+x for i,x in enumerate(self.attribute_pair)]
-        return '--'.join(v)
-
-class merge(ReteNode):
-    def __init__(self,var_tuple,id=None):
-        super().__init__(id)
-        self.variable_names = var_tuple
-
-    def __str__(self):
-        return ','.join(self.variable_names)
 
 def main():
     from wc_rules.chem import Molecule, Site, Bond
