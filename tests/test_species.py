@@ -19,7 +19,7 @@ class TestPattern(unittest.TestCase):
         x2 = X(ph1=True,ph2=True)
         a1.add_sites(x1,x2)
         s1 = Species('s1').add_node(a1,recurse=True)
-        self.assertEquals(len(s1),3)
+        self.assertEqual(len(s1),3)
 
     def test_species_factory(self):
         a1 = A(id='a')

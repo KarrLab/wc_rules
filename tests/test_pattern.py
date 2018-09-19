@@ -37,7 +37,7 @@ class TestPattern(unittest.TestCase):
 
         p2 = p1.duplicate(preserve_ids=True)
         self.assertTrue(len(p2)==3)
-        self.assertEquals(sorted(p1._nodes.keys()), sorted(p2._nodes.keys()))
+        self.assertEqual(sorted(p1._nodes.keys()), sorted(p2._nodes.keys()))
 
     def test_generate_queries(self):
         a = A(id='a')
