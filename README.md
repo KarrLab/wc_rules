@@ -8,3 +8,14 @@
 
 # wc_rules
 Rule-based modeling for whole-cell models.
+
+## Developer notes:
+To install dependencies, first install Docker, then do
+```
+docker pull karrlab/wc_rules_deps:dev
+```
+To work on a local wc_rules repo, do
+```
+docker run --rm -it -v local/path/to/wc_rules:/codebase/wc_rules --name containername karrlab/wc_rules_deps:dev
+#: pip install -e /codebase/wc_rules
+```
