@@ -6,22 +6,14 @@ import operator as op
 from collections import defaultdict
 from numpy import argmax
 import rete_nodes as rn
-
-class Token(dict):
-    ''' Each token is a dict whose keys are pattern node ids
-    and values are wmg node ids '''
-
-    def __init__(self,**kwargs):
-        self['tag'] = kwargs.pop('tag')
-        self['species'] = kwargs.pop('species')
-        for kwarg in kwargs:
-            self[kwarg] = kwargs[kwarg]
-
+import rete_token as rt
+import weakref
 
 class Matcher(object):
     def __init__(self):
         self.rete_net = nx.DiGraph()
-        self.rete_net.add_node('root', data=rn.Root())
+        #self.rete_net.add_node('root', data=rn.Root())
+        self.append_rete_node(rn.Root())
         self._patterns = Index_By_ID()
         self.map_pattern_to_rete_nodes = dict()
 
@@ -31,14 +23,21 @@ class Matcher(object):
 
     def append_rete_node(self,node):
         self.rete_net.add_node(node.id,data=node)
+        node.matcher = weakref.ref(self)
         return self
 
     def append_rete_edge(self,node1,node2):
         self.rete_net.add_edge(node1.id,node2.id)
+        node2.predecessors.append(node1.id)
+        node1.successors.append(node2.id)
         return self
 
     def get_rete_successors(self,node):
         x = list(self.rete_net.successors(node.id))
+        return [self.get_rete_node(idx) for idx in x]
+
+    def get_rete_predecessors(self,node):
+        x = list(self.rete_net.predecessors(node.id))
         return [self.get_rete_node(idx) for idx in x]
 
     def filter_rete_successors(self,node,attr=None,value=None):
@@ -273,9 +272,12 @@ def main():
     p4 = Pattern('p4').add_node(a1)
 
     m = Matcher()
-    for p in [p1,p2,p3,p4]:
+    for p in [p4]:
         m.add_pattern(p)
     m.draw_rete_net()
+
+    tok = rt.ReteToken(id='tok',level=0)
+    print(m.get_rete_node('root').receive_token(tok))
 
 
 if __name__ == '__main__':

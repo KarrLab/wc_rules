@@ -3,13 +3,40 @@ from utils import generate_id
 class ReteNode(object):
     def __init__(self,id=None):
         if id is None:
-            self.id = generate_id()
+            id = generate_id()
+        self.id = id
+        self.matcher = None
+        self.predecessors = []
+        self.successors = []
+
+    def receive_token(self,token):
+        # logic for receiving tokens
+        # subsequent calls to process_token and send_token
+        tokens = self.process_token(token)
+        for token in tokens:
+            self.send_token(token)
+        return
+
+    def send_token(self,token):
+        # logic for sending token to successors
+        for node_id in self.successors:
+            self.matcher().get_rete_node(node_id).receive_token(token)
+        return
+
+    def process_token(self,token):
+        # logic for processing token internally
+        # should generate a list of tokens
+        selfstr = str(self).replace("\n",",")
+        print( " "*token.level + selfstr)
+        tok = token.duplicate(sender=self.id)
+        return [tok]
+
 
 class SingleInputNode(ReteNode): pass
 
 class Root(SingleInputNode):
     def __init__(self):
-        self.id = 'root'
+        super().__init__(id='root')
 
     def __str__(self):
         return 'root'
