@@ -25,7 +25,7 @@ class TestSimulationState(unittest.TestCase):
 
         ss =SimulationState().load_new_species(list(sf.generate(100,preserve_ids=True)))
 
-        c = sum(s._nodes['x'].ph1 and s._nodes['x'].ph2 for x,s in ss._species.items())
+        c = sum(s.as_dict()['x'].ph1 and s.as_dict()['x'].ph2 for x,s in ss._species.items())
         self.assertTrue(c < 50)
-        c = sum(s._nodes['x'].ph1 or s._nodes['x'].ph2 for x,s in ss._species.items())
+        c = sum(s.as_dict()['x'].ph1 or s.as_dict()['x'].ph2 for x,s in ss._species.items())
         self.assertTrue(c > 50)

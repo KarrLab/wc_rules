@@ -1,4 +1,4 @@
-from wc_rules.indexer import Index_By_ID
+from wc_rules.indexer import Index_By_ID, HashableDict
 from wc_rules.utils import listify,generate_id
 from operator import eq
 import random
@@ -7,7 +7,7 @@ import pprint
 class Pattern(object):
     def __init__(self,idx,nodelist=None,recurse=True):
         self.id = idx
-        self._nodes = Index_By_ID()
+        self._nodes = set()
         if nodelist is not None:
             for node in nodelist:
                 self.add_node(node,recurse)
@@ -15,10 +15,20 @@ class Pattern(object):
     def __contains__(self,node):
         return node in self._nodes
 
+    def __iter__(self):
+        return iter(self._nodes)
+
+    def as_dict(self):
+        return { x.id:x for x in self }
+
+    def __getitem__(self,key):
+        d = self.as_dict()
+        return d[key]
+
     def add_node(self,node,recurse=True):
         if node in self:
             return self
-        self._nodes.append(node)
+        self._nodes.add(node)
         if recurse:
             for attr in node.get_nonempty_related_attributes():
                 nodelist = listify(getattr(node,attr))
@@ -27,12 +37,12 @@ class Pattern(object):
         return self
 
     def __str__(self):
-        s = pprint.pformat(self) + '\n' + pprint.pformat(self._nodes)
+        s = pprint.pformat(self) + '\n' + pprint.pformat(sorted(self._nodes,key=lambda x: (x.label,x.id)))
         return s
 
     def __len__(self): return len(self._nodes)
 
-    def duplicate(self,idx=None,preserve_ids=False):
+    def duplicate2(self,idx=None,preserve_ids=False):
         nodemap = {}
         if idx is None:
             idx = generate_id()
@@ -70,10 +80,39 @@ class Pattern(object):
                 new_pattern.add_node(x,recurse=False)
         return new_pattern
 
+    def duplicate(self,idx=None,preserve_ids=False):
+        if idx is None:
+            idx = generate_id()
+        new_pattern = self.__class__(idx)
+        nodemap = dict()
+        for node in self:
+            # this duplicates upto scalar attributes
+            new_node = node.duplicate(preserve_id=preserve_ids)
+            nodemap[node.id] = new_node
+            new_pattern.add_node(new_node,recurse=False)
+        encountered = set()
+        for node in self:
+            attrcontents = node.generate_attr_contents()
+            appendable = node.generate_appendability_dict()
+            for attr in attrcontents:
+                objs = set(attrcontents[attr]) - encountered
+                if len(objs) == 0: continue
+                new_objs = [nodemap[x.id] for x in objs]
+                new_node = nodemap[node.id]
+                if appendable[attr]:
+                    new_attr = getattr(new_node,attr)
+                    new_attr.extend(new_objs)
+                else:
+                    setattr(new_node,attr,new_objs.pop())
+            encountered.add(node)
+        return new_pattern
+
+
     def generate_queries_TYPE(self):
         ''' Generates tuples ('type',_class) '''
         type_queries = {}
-        for idx,node in self._nodes.items():
+        for node in self:
+            idx = node.id
             type_queries[idx] = []
             list_of_classes = node.__class__.__mro__
             for _class in reversed(list_of_classes):
@@ -86,7 +125,8 @@ class Pattern(object):
     def generate_queries_ATTR(self):
         ''' Generates tuples ('attr',attrname,operator,value) '''
         attr_queries = {}
-        for idx,node in self._nodes.items():
+        for node in self:
+            idx = node.id
             attr_queries[idx] = []
             for attr in sorted(node.get_nonempty_scalar_attributes()):
                 if attr=='id': continue
@@ -98,7 +138,8 @@ class Pattern(object):
         ''' Generate tuples ('rel',idx1,attrname,related_attrname,idx2) '''
         rel_queries = []
         already_encountered = []
-        for idx,node in self._nodes.items():
+        for node in self:
+            idx = node.id
             for attr in node.get_nonempty_related_attributes():
                 nodelist = listify(getattr(node,attr))
                 for node2 in nodelist:
@@ -123,6 +164,7 @@ class Pattern(object):
 
 def main():
     pass
+
 
 if __name__ == '__main__':
     main()

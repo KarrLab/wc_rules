@@ -35,16 +35,16 @@ class TestPattern(unittest.TestCase):
         factory1 = SpeciesFactory().add_species(s1)
         sp_list =list(factory1.generate(100,preserve_ids=True))
 
-        c = Counter(x._nodes['a'].label for x in sp_list)
+        c = Counter(x.as_dict()['a'].label for x in sp_list)
         self.assertEqual(c['A'],100)
 
-        c = Counter(x._nodes['x'].label for x in sp_list)
+        c = Counter(x.as_dict()['x'].label for x in sp_list)
         self.assertEqual(c['X'],100)
 
-        c = Counter(x._nodes['x'].ph1 for x in sp_list)
+        c = Counter(x.as_dict()['x'].ph1 for x in sp_list)
         self.assertEqual(c[True],100)
 
-        c = Counter(x._nodes['x'].ph2 for x in sp_list)
+        c = Counter(x.as_dict()['x'].ph2 for x in sp_list)
         self.assertEqual(c[True],100)
         del sp_list
 
@@ -53,8 +53,8 @@ class TestPattern(unittest.TestCase):
         factory2.add_species(s2,weight=2)
         sp_list =list(factory2.generate(100,preserve_ids=True))
 
-        c = Counter(x._nodes['x'].ph1 for x in sp_list)
+        c = Counter(x.as_dict()['x'].ph1 for x in sp_list)
         self.assertEqual(c[True],100)
 
-        c = Counter(x._nodes['x'].ph2 for x in sp_list)
+        c = Counter(x.as_dict()['x'].ph2 for x in sp_list)
         self.assertTrue(c[True] < 50)

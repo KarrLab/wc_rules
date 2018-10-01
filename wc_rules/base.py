@@ -92,7 +92,7 @@ class BaseClass(core.Model):
                 if getattr(self,attr,None) is not None: final_attrs.append(attr)
         return final_attrs
 
-    def duplicate(self,id=None):
+    def duplicate(self,id=None,preserve_id=False):
         ''' duplicates node up to scalar attributes '''
         new_node = self.__class__()
         for attr in self.get_nonempty_scalar_attributes():
@@ -100,7 +100,24 @@ class BaseClass(core.Model):
             setattr(new_node,attr,getattr(self,attr))
         if id:
             new_node.set_id(id)
+        elif preserve_id:
+            # use cautiously
+            new_node.set_id(self.id)
         return new_node
+
+    def generate_attr_contents(self,nonempty_only=True):
+        ''' return a dict of attrname:[list of objects] '''
+        v = dict()
+        if nonempty_only:
+            attrs = self.get_nonempty_related_attributes()
+        else:
+            attrs = self.get_related_attributes()
+        for attr in attrs:
+            v[attr] = utils.listify(getattr(self,attr))
+        return v
+
+    def generate_appendability_dict(self):
+        return {x:self.attribute_properties[x]['append'] for x in self.get_related_attributes()}
 
     def set_id(self, id):
         """ Sets id attribute.
