@@ -57,7 +57,7 @@ class Pattern(object):
             new_node = nodemap[node.id]
             node.duplicate_relations(new_node,nodemap)
         return new_pattern
-        
+
     def generate_queries_TYPE(self):
         ''' Generates tuples ('type',_class) '''
         type_queries = {}
