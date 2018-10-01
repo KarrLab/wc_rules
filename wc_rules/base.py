@@ -110,7 +110,10 @@ class BaseClass(core.Model):
         return new_node
 
     def duplicate_relations(self,target,nodemap,attrlist=None):
-        ''' Duplicates self's relations, converts them using nodemap {id:new_node}, and applies to target '''
+        ''' Duplicates self's relations, converts them using nodemap {id:new_node}, and applies to targetself.
+        E.g. if old A1->X1, and nodemap { A1.id:A2, X1.id:X2 }
+        A1.duplicate_relations(A2,nodemap) builds the new edge A2->X2
+         '''
         if attrlist is None:
             attrlist = self.get_nonempty_related_attributes()
         else:
