@@ -110,12 +110,12 @@ class BaseClass(core.Model):
         return new_node
 
     def duplicate_relations(self,target,nodemap,attrlist=None):
-        ''' Duplicates self's relations, converts them using nodemap, and applies to target '''
+        ''' Duplicates self's relations, converts them using nodemap {id:new_node}, and applies to target '''
         if attrlist is None:
             attrlist = self.get_nonempty_related_attributes()
         else:
             attrlist = set(self.get_nonempty_related_attributes()) - set(attrlist)
-        for attr in self.get_nonempty_related_attributes():
+        for attr in attrlist:
             old_relations = utils.listify(getattr(self,attr))
             converted_old_relations = [nodemap[x.id] for x in old_relations]
             new_relations = utils.listify(getattr(target,attr))
