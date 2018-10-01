@@ -42,44 +42,6 @@ class Pattern(object):
 
     def __len__(self): return len(self._nodes)
 
-    def duplicate2(self,idx=None,preserve_ids=False):
-        nodemap = {}
-        if idx is None:
-            idx = generate_id()
-        new_pattern = self.__class__(idx)
-        for idx,node in self._nodes.items():
-            new_node = node.duplicate()
-            nodemap[idx] = new_node.get_id()
-            new_pattern.add_node(new_node)
-        already_encountered = []
-        for idx,node in self._nodes.items():
-            new_node = new_pattern._nodes[nodemap[idx]]
-            attrs = node.get_nonempty_related_attributes()
-            for attr in attrs:
-                if node.attribute_properties[attr]['append']:
-                    setattr(new_node,attr,[])
-                    for node2 in getattr(node,attr):
-                        if node2.get_id() in already_encountered:
-                            continue
-                        x = getattr(new_node,attr)
-                        node2_map = new_pattern._nodes[nodemap[node2.get_id()]]
-                        x.append(node2_map)
-                else:
-                    node2 = getattr(node,attr)
-                    if node2.get_id() in already_encountered:
-                        continue
-                    node2_map = new_pattern._nodes[nodemap[node2.get_id()]]
-                    setattr(new_node,attr,node2_map)
-            already_encountered.append(node.get_id())
-        if preserve_ids:
-            new_idx = list(new_pattern._nodes.keys())
-            reverse_nodemap = {v:k for k,v in nodemap.items()}
-            for idx in new_idx:
-                x = new_pattern._nodes.pop(idx)
-                x.set_id(reverse_nodemap[idx])
-                new_pattern.add_node(x,recurse=False)
-        return new_pattern
-
     def duplicate(self,idx=None,preserve_ids=False):
         if idx is None:
             idx = generate_id()
@@ -90,24 +52,12 @@ class Pattern(object):
             new_node = node.duplicate(preserve_id=preserve_ids)
             nodemap[node.id] = new_node
             new_pattern.add_node(new_node,recurse=False)
-        encountered = set()
         for node in self:
-            attrcontents = node.generate_attr_contents()
-            appendable = node.generate_appendability_dict()
-            for attr in attrcontents:
-                objs = set(attrcontents[attr]) - encountered
-                if len(objs) == 0: continue
-                new_objs = [nodemap[x.id] for x in objs]
-                new_node = nodemap[node.id]
-                if appendable[attr]:
-                    new_attr = getattr(new_node,attr)
-                    new_attr.extend(new_objs)
-                else:
-                    setattr(new_node,attr,new_objs.pop())
-            encountered.add(node)
+            # this duplicates related attributes given nodemap
+            new_node = nodemap[node.id]
+            node.duplicate_relations(new_node,nodemap)
         return new_pattern
-
-
+        
     def generate_queries_TYPE(self):
         ''' Generates tuples ('type',_class) '''
         type_queries = {}

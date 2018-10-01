@@ -92,10 +92,14 @@ class BaseClass(core.Model):
                 if getattr(self,attr,None) is not None: final_attrs.append(attr)
         return final_attrs
 
-    def duplicate(self,id=None,preserve_id=False):
+    def duplicate(self,id=None,preserve_id=False,attrlist=None):
         ''' duplicates node up to scalar attributes '''
         new_node = self.__class__()
-        for attr in self.get_nonempty_scalar_attributes():
+        if attrlist is None:
+            attrlist = self.get_nonempty_scalar_attributes()
+        else:
+            attrlist = set(self.get_nonempty_scalar_attributes()) - set(attrlist)
+        for attr in attrlist:
             if attr=='id': continue
             setattr(new_node,attr,getattr(self,attr))
         if id:
@@ -105,19 +109,23 @@ class BaseClass(core.Model):
             new_node.set_id(self.id)
         return new_node
 
-    def generate_attr_contents(self,nonempty_only=True):
-        ''' return a dict of attrname:[list of objects] '''
-        v = dict()
-        if nonempty_only:
-            attrs = self.get_nonempty_related_attributes()
+    def duplicate_relations(self,target,nodemap,attrlist=None):
+        ''' Duplicates self's relations, converts them using nodemap, and applies to target '''
+        if attrlist is None:
+            attrlist = self.get_nonempty_related_attributes()
         else:
-            attrs = self.get_related_attributes()
-        for attr in attrs:
-            v[attr] = utils.listify(getattr(self,attr))
-        return v
-
-    def generate_appendability_dict(self):
-        return {x:self.attribute_properties[x]['append'] for x in self.get_related_attributes()}
+            attrlist = set(self.get_nonempty_related_attributes()) - set(attrlist)
+        for attr in self.get_nonempty_related_attributes():
+            old_relations = utils.listify(getattr(self,attr))
+            converted_old_relations = [nodemap[x.id] for x in old_relations]
+            new_relations = utils.listify(getattr(target,attr))
+            to_add = set(converted_old_relations) - set(new_relations)
+            if len(to_add) > 0:
+                if self.attribute_properties[attr]['append']:
+                    getattr(target,attr).extend(list(to_add))
+                else:
+                    setattr(target,attr,to_add.pop())
+        return self
 
     def set_id(self, id):
         """ Sets id attribute.
