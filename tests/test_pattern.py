@@ -48,20 +48,20 @@ class TestPattern(unittest.TestCase):
         a.add_sites(y1,y2)
 
         p = Pattern('p').add_node(a,recurse=True)
-        d = p.as_dict()
+
         qdict = p.generate_queries()
 
         self.assertEqual(sorted(list(qdict.keys())), ['attr','rel','type'])
 
         for idx in qdict['type']:
-            node = d[idx]
+            node = p[idx]
             tuplist = qdict['type'][idx]
             for tup in tuplist:
                 _class = tup[1]
                 self.assertTrue(isinstance(node,_class))
 
         for idx in qdict['attr']:
-            node = d[idx]
+            node = p[idx]
             tuplist = qdict['attr'][idx]
             for tup in tuplist:
                 attr = tup[1]
@@ -75,7 +75,7 @@ class TestPattern(unittest.TestCase):
             attr2 = tup[3]
             idx2 = tup[4]
 
-            node1 = d[idx1]
-            node2 = d[idx2]
+            node1 = p[idx1]
+            node2 = p[idx2]
             self.assertTrue(node1 in utils.listify(getattr(node2,attr2)))
             self.assertTrue(node2 in utils.listify(getattr(node1,attr1)))

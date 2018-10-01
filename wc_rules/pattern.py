@@ -8,6 +8,7 @@ class Pattern(object):
     def __init__(self,idx,nodelist=None,recurse=True):
         self.id = idx
         self._nodes = set()
+        self._nodesdict = dict()
         if nodelist is not None:
             for node in nodelist:
                 self.add_node(node,recurse)
@@ -18,22 +19,24 @@ class Pattern(object):
     def __iter__(self):
         return iter(self._nodes)
 
-    def as_dict(self):
-        return { x.id:x for x in self }
-
     def __getitem__(self,key):
-        d = self.as_dict()
-        return d[key]
+        return self._nodesdict[key]
 
     def add_node(self,node,recurse=True):
         if node in self:
             return self
         self._nodes.add(node)
+        self._nodesdict[node.id] = node
         if recurse:
             for attr in node.get_nonempty_related_attributes():
                 nodelist = listify(getattr(node,attr))
                 for node2 in nodelist:
                     self.add_node(node2,recurse)
+        return self
+
+    def remove_node(self,node):
+        self._nodes.remove(node)
+        self._nodesdict.pop(node.id)
         return self
 
     def __str__(self):
