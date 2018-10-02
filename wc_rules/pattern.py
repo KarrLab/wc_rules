@@ -1,49 +1,32 @@
-from wc_rules.indexer import Index_By_ID, HashableDict
+from wc_rules.indexer import Index_By_ID, HashableDict, DictSet
 from wc_rules.utils import listify,generate_id
 from operator import eq
 import random
 import pprint
 
-class Pattern(object):
+class Pattern(DictSet):
     def __init__(self,idx,nodelist=None,recurse=True):
         self.id = idx
-        self._nodes = set()
-        self._nodesdict = dict()
-        if nodelist is not None:
+        super().__init__()
+        if nodelist:
             for node in nodelist:
                 self.add_node(node,recurse)
 
-    def __contains__(self,node):
-        return node in self._nodes
-
-    def __iter__(self):
-        return iter(self._nodes)
-
-    def __getitem__(self,key):
-        return self._nodesdict[key]
-
     def add_node(self,node,recurse=True):
-        if node in self:
-            return self
-        self._nodes.add(node)
-        self._nodesdict[node.id] = node
-        if recurse:
-            for attr in node.get_nonempty_related_attributes():
-                nodelist = listify(getattr(node,attr))
-                for node2 in nodelist:
-                    self.add_node(node2,recurse)
+        if node not in self:
+            self.add(node)
+            if recurse:
+                for attr in node.get_nonempty_related_attributes():
+                    nodelist = listify(getattr(node,attr))
+                    for node2 in nodelist:
+                        self.add_node(node2,recurse)
         return self
 
     def remove_node(self,node):
-        self._nodes.remove(node)
-        self._nodesdict.pop(node.id)
-        return self
+        return self.remove(node)
 
     def __str__(self):
-        s = pprint.pformat(self) + '\n' + pprint.pformat(sorted(self._nodes,key=lambda x: (x.label,x.id)))
-        return s
-
-    def __len__(self): return len(self._nodes)
+        return pprint.pformat(self) + '\n' + super().__str__(self)
 
     def duplicate(self,idx=None,preserve_ids=False):
         if idx is None:
