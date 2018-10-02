@@ -120,25 +120,29 @@ class Index_By_ID(dict):
         return obj1.id in self.keys()
 
 class DictSet(object):
-    ''' A container that is primarily a set, but also indexes the elements like a dict using `id` attribute as key '''
+    ''' A container that is primarily a set, but also indexes the elements using a key function (default keyfunc is getting the object's id).'''
 
-    def __init__(self,iterable=None):
+    def __init__(self,iterable=None,keyfunc=None):
         self._set = set()
         self._dict = dict()
+        if keyfunc is None:
+            keyfunc = lambda x: x.id
+        self._keyfunc = keyfunc
+
         if iterable:
             elems = set(iterable)
             self._set.update(elems)
             for elem in elems:
-                self._dict[elem.id] = elem
+                self._dict[self._keyfunc(elem)] = elem
 
     def add(self,elem):
         self._set.add(elem)
-        self._dict[elem.id] = elem
+        self._dict[self._keyfunc(elem)] = elem
         return self
 
     def remove(self,elem):
         self._set.remove(elem)
-        self._dict.pop(elem.id)
+        self._dict.pop(self._keyfunc(elem))
         return self
 
     def __contains__(self,other):
@@ -156,7 +160,7 @@ class DictSet(object):
         return iter(self._set)
 
     def __str__(self):
-        return pprint.pformat(sorted(self._set,key=lambda x: (x.label,x.id)))
+        return pprint.pformat(sorted(self._set,key=self._keyfunc))
 
 
 class Indexer(dict):
