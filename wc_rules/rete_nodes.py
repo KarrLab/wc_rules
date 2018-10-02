@@ -5,9 +5,8 @@ class ReteNode(object):
         if id is None:
             id = generate_id()
         self.id = id
-        self.matcher = None
-        self.predecessors = []
-        self.successors = []
+        self.predecessors = set()
+        self.successors = set()
 
     def receive_token(self,token):
         # logic for receiving tokens
