@@ -21,7 +21,6 @@ class ReteNet(DictSet):
         self.add_node(node2)
         node1.successors.add(node2)
         node2.predecessors.add(node1)
-        print([str(x) for x in self])
         return self
 
     def get_root(self):
@@ -38,7 +37,7 @@ class ReteNet(DictSet):
             self.add_edge(current_node,new_node)
             return new_node
         elif len(existing_successors)==1:
-            return existing_successors[0]
+            return list(existing_successors)[0]
         else:
             utils.GenericError('Duplicates on the Rete net. Bad!')
         return None
@@ -111,19 +110,20 @@ class ReteNet(DictSet):
         for n,node in enumerate(self):
             ids_dict[node.id]=n
 
-        lines = []
+        nodelines = []
+        edgelines = []
         nodecolors = self.get_colors(cmap)
         for n,node in enumerate(self):
             idx = n
             fill = nodecolors[node.__class__.__name__]
-            lines.append(self.generate_GML_node(node,idx,fill))
+            nodelines.append(self.generate_GML_node(node,idx,fill))
             for elem in node.successors:
                 source = idx
                 target = ids_dict[elem.id]
                 #(source,target) = tuple(ids_dict[x] for x in edge)
-                lines.append(self.generate_GML_edge(source,target))
+                edgelines.append(self.generate_GML_edge(source,target))
 
-        final_text = self.generate_GML(lines)
+        final_text = self.generate_GML(nodelines + edgelines)
         with open(filename,'w') as f:
             f.write(final_text)
         return self
@@ -248,7 +248,7 @@ def main():
 
     p5 = Pattern('p4').add_node( A(id='a3') )
     m = Matcher()
-    for p in [p5]:
+    for p in [p1,p2,p3,p4,p5]:
         m.add_pattern(p)
     m.rete_net.draw_as_gml()
 
