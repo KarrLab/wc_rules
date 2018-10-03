@@ -1,9 +1,9 @@
 import networkx as nx
-from wc_rules.indexer import Index_By_ID, DictSet
+from wc_rules.indexer import DictSet
+from wc_rules import gml
 from utils import AddError
-from palettable.colorbrewer.qualitative import Pastel1_9
 import operator as op
-from collections import defaultdict
+from collections import defaultdict, deque
 from numpy import argmax
 import rete_nodes as rn
 import rete_token as rt
@@ -25,6 +25,19 @@ class ReteNet(DictSet):
 
     def get_root(self):
         return self['root']
+
+    def depth_first_search(self,start_node):
+        # return depth-first exploration of graph as an iter
+        visited = set()
+        next_nodes = deque()
+        next_nodes.appendleft(start_node)
+        while len(next_nodes) > 0:
+            current_node = next_nodes.popleft()
+            suc = current_node.successors - visited
+            suc2 = sorted(suc,reverse=True,key=str)
+            next_nodes.extendleft(suc2)
+            visited.add(current_node)
+            yield current_node
 
     # Building the rete-net incremenetally
     # the following methods check a node's successors for a particular type of node
@@ -102,62 +115,25 @@ class ReteNet(DictSet):
         return current_node
 
     ### Drawing the rete-net as a gml
-    def draw_as_gml(self,cmap=None,filename=None):
+    def draw_as_gml(self,filename=None):
+        node_labels, node_categories, idx_dict = dict(),dict(),dict()
+        edge_tuples = list()
+        start_node = self.get_root()
+        for idx,node in enumerate(self.depth_first_search(start_node)):
+            node_labels[idx] = '(' + str(idx) + ')' + str(node)
+            node_categories[idx] = node.__class__.__name__
+            idx_dict[node.id] = idx
+        for node in self:
+            for node2 in node.successors:
+                edge_tuple = ( idx_dict[node.id], idx_dict[node2.id] )
+                edge_tuples.append(edge_tuple)
         if not filename:
             filename = 'rete.gml'
-
-        ids_dict = dict()
-        for n,node in enumerate(self):
-            ids_dict[node.id]=n
-
-        nodelines = []
-        edgelines = []
-        nodecolors = self.get_colors(cmap)
-        for n,node in enumerate(self):
-            idx = n
-            fill = nodecolors[node.__class__.__name__]
-            nodelines.append(self.generate_GML_node(node,idx,fill))
-            for elem in node.successors:
-                source = idx
-                target = ids_dict[elem.id]
-                #(source,target) = tuple(ids_dict[x] for x in edge)
-                edgelines.append(self.generate_GML_edge(source,target))
-
-        final_text = self.generate_GML(nodelines + edgelines)
+        final_text = gml.generate_gml(node_labels,edge_tuples,node_categories)
         with open(filename,'w') as f:
             f.write(final_text)
         return self
 
-    def get_colors(self,cmap):
-        if cmap is None:
-            cmap = Pastel1_9
-        rete_node_categories = []
-        for node in self:
-            name = node.__class__.__name__
-            if name not in rete_node_categories:
-                rete_node_categories.append(name)
-        n = len(rete_node_categories)
-        x = cmap.hex_colors[:n]
-        return dict(zip(rete_node_categories,x))
-
-    def generate_GML_node(self,node,idx,fill):
-        label = ''.join(['(',str(idx),') ',str(node)])
-        graphics = " graphics [ hasOutline 0 fill \"" + fill + "\" ] "
-        labelgraphics = " LabelGraphics [text \"" + label + "\" ] "
-        nodetext = "node [id " + str(idx) + graphics + labelgraphics + " ] "
-        return nodetext
-
-    def generate_GML_edge(self,source,target):
-        st_text = "source " + str(source) + " target " + str(target)
-        graphics = " graphics [ fill \"#999999\" targetArrow \"standard\" ] "
-        edgetext = "edge [ " + st_text + graphics + " ] "
-        return edgetext
-
-    def generate_GML(self,lines):
-        graphtext = "graph\n[\n directed 1"
-        alltexts = [graphtext] + lines + ["]\n"]
-        final_text = '\n'.join(alltexts)
-        return final_text
 
 class Matcher(object):
     def __init__(self):
@@ -246,7 +222,7 @@ def main():
     a2 = A(id='A2').add_sites(X(id='x2',ph=True,v=1).set_bond(bnd))
     p4 = Pattern('p4').add_node(a1)
 
-    p5 = Pattern('p4').add_node( A(id='a3') )
+    p5 = Pattern('p5').add_node( A(id='a3') )
     m = Matcher()
     for p in [p1,p2,p3,p4,p5]:
         m.add_pattern(p)
