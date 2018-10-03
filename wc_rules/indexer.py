@@ -6,6 +6,7 @@
 """
 from wc_rules import utils
 import inspect
+import pprint
 
 class Slicer(dict):
     ''' A hashmap between keys (literals or namedtuples) and Boolean values.
@@ -117,6 +118,50 @@ class Index_By_ID(dict):
 
     def __contains__(self,obj1):
         return obj1.id in self.keys()
+
+class DictSet(object):
+    ''' A container that is primarily a set, but also indexes the elements using a key function (default keyfunc is getting the object's id).'''
+
+    def __init__(self,iterable=None,keyfunc=None):
+        self._set = set()
+        self._dict = dict()
+        if keyfunc is None:
+            keyfunc = lambda x: x.id
+        self._keyfunc = keyfunc
+
+        if iterable:
+            elems = set(iterable)
+            self._set.update(elems)
+            for elem in elems:
+                self._dict[self._keyfunc(elem)] = elem
+
+    def add(self,elem):
+        self._set.add(elem)
+        self._dict[self._keyfunc(elem)] = elem
+        return self
+
+    def remove(self,elem):
+        self._set.remove(elem)
+        self._dict.pop(self._keyfunc(elem))
+        return self
+
+    def __contains__(self,other):
+        # set behavior
+        return other in self._set
+
+    def __getitem__(self,key):
+        # dict behavior
+        return self._dict[key]
+
+    def __len__(self):
+        return len(self._set)
+
+    def __iter__(self):
+        return iter(self._set)
+
+    def __str__(self):
+        return pprint.pformat(sorted(self._set,key=self._keyfunc))
+
 
 class Indexer(dict):
     '''

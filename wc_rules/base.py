@@ -92,15 +92,43 @@ class BaseClass(core.Model):
                 if getattr(self,attr,None) is not None: final_attrs.append(attr)
         return final_attrs
 
-    def duplicate(self,id=None):
+    def duplicate(self,id=None,preserve_id=False,attrlist=None):
         ''' duplicates node up to scalar attributes '''
         new_node = self.__class__()
-        for attr in self.get_nonempty_scalar_attributes():
+        if attrlist is None:
+            attrlist = self.get_nonempty_scalar_attributes()
+        else:
+            attrlist = set(self.get_nonempty_scalar_attributes()) - set(attrlist)
+        for attr in attrlist:
             if attr=='id': continue
             setattr(new_node,attr,getattr(self,attr))
         if id:
             new_node.set_id(id)
+        elif preserve_id:
+            # use cautiously
+            new_node.set_id(self.id)
         return new_node
+
+    def duplicate_relations(self,target,nodemap,attrlist=None):
+        ''' Duplicates self's relations, converts them using nodemap {id:new_node}, and applies to targetself.
+        E.g. if old A1->X1, and nodemap { A1.id:A2, X1.id:X2 }
+        A1.duplicate_relations(A2,nodemap) builds the new edge A2->X2
+         '''
+        if attrlist is None:
+            attrlist = self.get_nonempty_related_attributes()
+        else:
+            attrlist = set(self.get_nonempty_related_attributes()) - set(attrlist)
+        for attr in attrlist:
+            old_relations = utils.listify(getattr(self,attr))
+            converted_old_relations = [nodemap[x.id] for x in old_relations]
+            new_relations = utils.listify(getattr(target,attr))
+            to_add = set(converted_old_relations) - set(new_relations)
+            if len(to_add) > 0:
+                if self.attribute_properties[attr]['append']:
+                    getattr(target,attr).extend(list(to_add))
+                else:
+                    setattr(target,attr,to_add.pop())
+        return self
 
     def set_id(self, id):
         """ Sets id attribute.

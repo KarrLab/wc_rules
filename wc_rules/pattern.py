@@ -1,79 +1,54 @@
-from wc_rules.indexer import Index_By_ID
-from wc_rules.utils import listify,generate_id
+from .indexer import DictSet
+from .utils import listify,generate_id
 from operator import eq
 import random
 import pprint
 
-class Pattern(object):
+class Pattern(DictSet):
     def __init__(self,idx,nodelist=None,recurse=True):
         self.id = idx
-        self._nodes = Index_By_ID()
-        if nodelist is not None:
+        super().__init__()
+        if nodelist:
             for node in nodelist:
                 self.add_node(node,recurse)
 
-    def __contains__(self,node):
-        return node in self._nodes
-
     def add_node(self,node,recurse=True):
-        if node in self:
-            return self
-        self._nodes.append(node)
-        if recurse:
-            for attr in node.get_nonempty_related_attributes():
-                nodelist = listify(getattr(node,attr))
-                for node2 in nodelist:
-                    self.add_node(node2,recurse)
+        if node not in self:
+            self.add(node)
+            if recurse:
+                for attr in node.get_nonempty_related_attributes():
+                    nodelist = listify(getattr(node,attr))
+                    for node2 in nodelist:
+                        self.add_node(node2,recurse)
         return self
 
-    def __str__(self):
-        s = pprint.pformat(self) + '\n' + pprint.pformat(self._nodes)
-        return s
+    def remove_node(self,node):
+        return self.remove(node)
 
-    def __len__(self): return len(self._nodes)
+    def __str__(self):
+        return pprint.pformat(self) + '\n' + super().__str__(self)
 
     def duplicate(self,idx=None,preserve_ids=False):
-        nodemap = {}
         if idx is None:
             idx = generate_id()
         new_pattern = self.__class__(idx)
-        for idx,node in self._nodes.items():
-            new_node = node.duplicate()
-            nodemap[idx] = new_node.get_id()
-            new_pattern.add_node(new_node)
-        already_encountered = []
-        for idx,node in self._nodes.items():
-            new_node = new_pattern._nodes[nodemap[idx]]
-            attrs = node.get_nonempty_related_attributes()
-            for attr in attrs:
-                if node.attribute_properties[attr]['append']:
-                    setattr(new_node,attr,[])
-                    for node2 in getattr(node,attr):
-                        if node2.get_id() in already_encountered:
-                            continue
-                        x = getattr(new_node,attr)
-                        node2_map = new_pattern._nodes[nodemap[node2.get_id()]]
-                        x.append(node2_map)
-                else:
-                    node2 = getattr(node,attr)
-                    if node2.get_id() in already_encountered:
-                        continue
-                    node2_map = new_pattern._nodes[nodemap[node2.get_id()]]
-                    setattr(new_node,attr,node2_map)
-            already_encountered.append(node.get_id())
-        if preserve_ids:
-            new_idx = list(new_pattern._nodes.keys())
-            reverse_nodemap = {v:k for k,v in nodemap.items()}
-            for idx in new_idx:
-                x = new_pattern._nodes.pop(idx)
-                x.set_id(reverse_nodemap[idx])
-                new_pattern.add_node(x,recurse=False)
+        nodemap = dict()
+        for node in self:
+            # this duplicates upto scalar attributes
+            new_node = node.duplicate(preserve_id=preserve_ids)
+            nodemap[node.id] = new_node
+            new_pattern.add_node(new_node,recurse=False)
+        for node in self:
+            # this duplicates related attributes given nodemap
+            new_node = nodemap[node.id]
+            node.duplicate_relations(new_node,nodemap)
         return new_pattern
 
     def generate_queries_TYPE(self):
         ''' Generates tuples ('type',_class) '''
         type_queries = {}
-        for idx,node in self._nodes.items():
+        for node in self:
+            idx = node.id
             type_queries[idx] = []
             list_of_classes = node.__class__.__mro__
             for _class in reversed(list_of_classes):
@@ -86,7 +61,8 @@ class Pattern(object):
     def generate_queries_ATTR(self):
         ''' Generates tuples ('attr',attrname,operator,value) '''
         attr_queries = {}
-        for idx,node in self._nodes.items():
+        for node in self:
+            idx = node.id
             attr_queries[idx] = []
             for attr in sorted(node.get_nonempty_scalar_attributes()):
                 if attr=='id': continue
@@ -98,7 +74,8 @@ class Pattern(object):
         ''' Generate tuples ('rel',idx1,attrname,related_attrname,idx2) '''
         rel_queries = []
         already_encountered = []
-        for idx,node in self._nodes.items():
+        for node in self:
+            idx = node.id
             for attr in node.get_nonempty_related_attributes():
                 nodelist = listify(getattr(node,attr))
                 for node2 in nodelist:
@@ -123,6 +100,7 @@ class Pattern(object):
 
 def main():
     pass
+
 
 if __name__ == '__main__':
     main()
