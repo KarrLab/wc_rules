@@ -1,15 +1,11 @@
-import networkx as nx
 from indexer import DictSet
-import gml
 from utils import AddError
+import rete_nodes as rn
+import rete_build as rb
+import gml
+
 import operator as op
 from collections import deque
-
-
-import rete_nodes as rn
-import rete_token as rt
-import rete_build as rb
-import weakref
 
 class ReteNet(DictSet):
     def __init__(self):
@@ -59,7 +55,6 @@ class ReteNet(DictSet):
         with open(filename,'w') as f:
             f.write(final_text)
         return self
-
 
 class Matcher(object):
     def __init__(self):

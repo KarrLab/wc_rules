@@ -1,5 +1,5 @@
-from wc_rules.indexer import Index_By_ID, HashableDict, DictSet
-from wc_rules.utils import listify,generate_id
+from .indexer import DictSet
+from .utils import listify,generate_id
 from operator import eq
 import random
 import pprint

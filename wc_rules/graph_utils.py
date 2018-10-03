@@ -8,7 +8,6 @@
 from obj_model import core
 import networkx
 
-
 class GraphMeta(object):
     """ Inner class holding values used in graph methods
 
