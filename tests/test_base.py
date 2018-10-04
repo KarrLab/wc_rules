@@ -8,14 +8,14 @@
 from wc_rules import base
 from wc_rules import graph_utils
 from wc_rules import utils
-from obj_model import core
+from wc_rules.attributes import *
 import unittest
 
 
 class Person(base.BaseClass):
-    name = core.StringAttribute()
-    parents = core.ManyToManyAttribute('Person', max_related_rev=2, related_name='children')
-    pets = core.OneToManyAttribute('Pet', related_name='owner')
+    name = StringAttribute()
+    parents = ManyToManyAttribute('Person', max_related_rev=2, related_name='children')
+    pets = OneToManyAttribute('Pet', related_name='owner')
 
     class GraphMeta(graph_utils.GraphMeta):
         outward_edges = ('children', 'pets')
@@ -23,7 +23,7 @@ class Person(base.BaseClass):
 
 
 class Pet(base.BaseClass):
-    name = core.StringAttribute()
+    name = StringAttribute()
 
 
 class TestBase(unittest.TestCase):

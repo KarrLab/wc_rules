@@ -4,8 +4,6 @@
 :Copyright: 2017, Karr Lab
 :License: MIT
 """
-
-from obj_model import core
 import networkx
 
 class GraphMeta(object):

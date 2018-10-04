@@ -9,6 +9,7 @@
 from obj_model import core
 from . import graph_utils
 from . import utils
+from .attributes import *
 import uuid
 import random
 
@@ -27,7 +28,7 @@ class BaseClass(core.Model):
     Properties:
         label (:obj:`str`): name of the leaf class from which object is created
     """
-    id = core.StringAttribute(primary=True, unique=True)
+    id = StringAttribute(primary=True, unique=True)
     attribute_properties = dict()
 
     class GraphMeta(graph_utils.GraphMeta):
@@ -50,13 +51,13 @@ class BaseClass(core.Model):
             if check == 'related_class' and hasattr(attr, 'related_class'):
                 x['related'] = True
                 x['related_class'] = attr.related_class
-                if isinstance(attr, (core.OneToManyAttribute, core.ManyToManyAttribute,)):
+                if isinstance(attr, (OneToManyAttribute, ManyToManyAttribute,)):
                     x['append'] = True
                 x['related_attr'] = attr.related_name
             elif check == 'primary_class' and hasattr(attr, 'primary_class'):
                 x['related'] = True
                 x['related_class'] = attr.primary_class
-                if isinstance(attr, (core.ManyToManyAttribute, core.ManyToOneAttribute,)):
+                if isinstance(attr, (ManyToManyAttribute, ManyToOneAttribute,)):
                     x['append'] = True
                 x['related_attr'] = attr.name
             return x

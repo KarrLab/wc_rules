@@ -6,6 +6,7 @@
 """
 from obj_model import core
 from . import base,entity,utils
+from .attributes import *
 
 
 class Molecule(entity.Entity):
@@ -26,7 +27,7 @@ class Molecule(entity.Entity):
         return self
 
 class Site(entity.Entity):
-    molecule = core.ManyToOneAttribute(Molecule,related_name='sites')
+    molecule = ManyToOneAttribute(Molecule,related_name='sites')
     allowed_molecule_types = None
     allowed_to_bind = True
 
@@ -79,7 +80,7 @@ class Site(entity.Entity):
         return
 
 class Bond(entity.Entity):
-    sites = core.OneToManyAttribute(Site,related_name='bond')
+    sites = OneToManyAttribute(Site,related_name='bond')
     allowed_site_types = None
     n_max_sites = 2
 
@@ -116,7 +117,7 @@ class Bond(entity.Entity):
         return
 
 class Overlap(entity.Entity):
-    sites = core.ManyToManyAttribute(Site,related_name='overlaps')
+    sites = ManyToManyAttribute(Site,related_name='overlaps')
 
     # Setters
     def add_sites(self,*sites):
