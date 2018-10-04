@@ -5,7 +5,7 @@
 :License: MIT
 """
 from obj_model import core
-from wc_rules import base,entity,utils
+from . import base,entity,utils
 
 
 class Molecule(entity.Entity):

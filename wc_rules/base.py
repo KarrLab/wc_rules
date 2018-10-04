@@ -7,8 +7,8 @@
 """
 
 from obj_model import core
-from wc_rules import graph_utils
-from wc_rules import utils
+from . import graph_utils
+from . import utils
 import uuid
 import random
 

@@ -1,4 +1,4 @@
-from utils import generate_id
+from .utils import generate_id
 
 class ReteNode(object):
     def __init__(self,id=None):

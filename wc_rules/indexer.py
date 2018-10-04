@@ -4,7 +4,7 @@
 :Copyright: 2018, Karr Lab
 :License: MIT
 """
-from wc_rules import utils
+from . import utils
 import inspect
 import pprint
 

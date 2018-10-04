@@ -1,4 +1,4 @@
-from utils import generate_id
+from .utils import generate_id
 import copy
 
 class ReteToken(object):

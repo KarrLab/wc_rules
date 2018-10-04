@@ -1,6 +1,7 @@
+from . import rete_nodes as rn
+
 from collections import defaultdict
 from numpy import argmax
-import rete_nodes as rn
 
 # Building the rete-net incremenetally
 # the following methods check a node's successors for a particular type of node

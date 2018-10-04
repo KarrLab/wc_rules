@@ -1,5 +1,5 @@
 from palettable.colorbrewer.qualitative import Pastel1_9
-from utils import GenericError
+from .utils import GenericError
 
 def get_colors(categories):
     if len(categories) > 9:
@@ -36,6 +36,6 @@ def generate_gml(node_labels,edge_tuples,node_categories=None):
     for x,y in edge_tuples:
         edgelines.append(generate_gml_edge(x,y))
     graphtext = "graph\n[\n directed 1"
-    alltexts = [graphtext] + nodelines + edgelines + ["]\n"]
+    alltexts = [graphtext] + sorted(nodelines) + sorted(edgelines) + ["]\n"]
     final_text = '\n'.join(alltexts)
     return final_text

@@ -5,14 +5,14 @@
 :License: MIT
 """
 
-from wc_rules import base
+from . import base
 
 class Entity(base.BaseClass):
 
     def __init__(self, **kwargs):
         super(Entity, self).__init__(**kwargs)
         attrdict = self.attribute_properties
-        
+
     @classmethod
     def get_classnames(cls):
         classnames = []

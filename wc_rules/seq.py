@@ -4,8 +4,8 @@
 :Copyright: 2017, Karr Lab
 :License: MIT
 """
-
-from wc_rules import base,chem,utils
+from . import rete_nodes as rn
+from . import chem, utils
 from obj_model import core,extra_attributes
 import Bio.Seq
 import Bio.Alphabet

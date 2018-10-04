@@ -18,4 +18,3 @@ from . import chem
 from . import graph_utils
 from . import seq
 from . import bioseq
-from . import utils
