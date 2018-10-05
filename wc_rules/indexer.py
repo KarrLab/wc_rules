@@ -5,7 +5,7 @@
 :License: MIT
 """
 from . import utils
-import inspect
+import inspect, random,string
 import pprint
 
 class Slicer(dict):
@@ -162,6 +162,24 @@ class DictSet(object):
     def __str__(self):
         return str(sorted(self._set,key=self._keyfunc))
         #return pprint.pformat(sorted(self._set,key=self._keyfunc))
+
+class RestrictedDict(object):
+    ''' A dict restricted to using certain keys only. Can only be instantiated with a dict with the same keys. '''
+    keys = []
+    def __init__(self,init_dict):
+        self._dict = dict()
+        assert sorted(self.keys)==sorted(init_dict.keys())
+        self._dict.update(init_dict)
+
+    def __str__(self):
+        return self._dict.__str__()
+
+    @classmethod
+    def generate_class(cls,variables):
+        if isinstance(variables,tuple):
+            variables = list(variables)
+        clsname = ''.join( random.choices(string.ascii_lowercase,k=10) )
+        return type(clsname,(cls,),{'keys':variables})
 
 
 class Indexer(dict):
