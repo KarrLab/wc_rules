@@ -26,7 +26,7 @@ class Pattern(DictSet):
         return self.remove(node)
 
     def __str__(self):
-        return pprint.pformat(self) + '\n' + super().__str__(self)
+        return 'Pattern id ' + self.id + ' with ' + super().__str__()
 
     def duplicate(self,idx=None,preserve_ids=False):
         if idx is None:

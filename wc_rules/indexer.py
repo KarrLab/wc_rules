@@ -160,7 +160,8 @@ class DictSet(object):
         return iter(self._set)
 
     def __str__(self):
-        return pprint.pformat(sorted(self._set,key=self._keyfunc))
+        return str(sorted(self._set,key=self._keyfunc))
+        #return pprint.pformat(sorted(self._set,key=self._keyfunc))
 
 
 class Indexer(dict):
