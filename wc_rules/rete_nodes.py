@@ -1,5 +1,4 @@
 from .utils import generate_id
-from . import rete_token as rt
 
 class ReteNode(object):
     def __init__(self,id=None):
@@ -8,7 +7,6 @@ class ReteNode(object):
         self.id = id
         self.predecessors = set()
         self.successors = set()
-        self.content_instantiator = None
 
     def receive_token(self,token):
         # logic for receiving tokens
@@ -74,9 +72,8 @@ class checkATTR(check):
         return '\n'.join(strs)
 
 class store(SingleInputNode):
-    def __init__(self,var_tuple,id=None):
+    def __init__(self,id=None):
         super().__init__(id)
-        self.content_instantiator = rt.Content.generate_class(var_tuple)
 
     def __str__(self):
         return 'store'
@@ -85,7 +82,6 @@ class alias(SingleInputNode):
     def __init__(self,var_tuple,id=None):
         super().__init__(id)
         self.variable_names = var_tuple
-        self.keymap = dict()
 
     def __str__(self):
         return ','.join(list(self.variable_names))
@@ -103,7 +99,6 @@ class merge(ReteNode):
     def __init__(self,var_tuple,id=None):
         super().__init__(id)
         self.variable_names = var_tuple
-        self.content_instantiator = rt.Content.generate_class(sorted(self.variable_names))
 
     def __str__(self):
         return ','.join(self.variable_names)
