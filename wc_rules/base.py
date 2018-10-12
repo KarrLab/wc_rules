@@ -28,7 +28,8 @@ class BaseClass(core.Model):
     Properties:
         label (:obj:`str`): name of the leaf class from which object is created
     """
-    id = StringAttribute(primary=True, unique=True)
+    #id = StringAttribute(primary=True, unique=True)
+    id = IdAttribute()
     attribute_properties = dict()
 
     class GraphMeta(graph_utils.GraphMeta):
