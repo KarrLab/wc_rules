@@ -22,8 +22,12 @@ class Token(object):
         return " ".join(['token',self.id,str(self._dict)])
 
     def update(self,tok):
-        for key,value in tok._dict.items():
-            self.__setitem__(key,value)
+        common_keys = set(tok.keys()) & set(self.keys())
+        different_keys = set(tok.keys()) - common_keys
+        for key in common_keys:
+            assert(self[key]==tok[key])
+        for key in different_keys:
+            self.__setitem__(key,tok[key])
         return self
 
     def subset(self,keys):
@@ -36,12 +40,13 @@ class Token(object):
         return self
 
     def items(self): return self._dict.items()
+    def keys(self): return self._dict.keys()
 
     def modify_with_keymap(self,keymap):
         keys = list(self.keys())
         for key in keys:
             self[keymap[key]] = self[key]
-            del self[key]
+            self._dict.pop(key)
         return self
 
 
