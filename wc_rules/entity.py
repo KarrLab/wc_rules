@@ -12,6 +12,7 @@ class Entity(base.BaseClass):
     def __init__(self, **kwargs):
         super(Entity, self).__init__(**kwargs)
         attrdict = self.attribute_properties
+        self._tokens = set()
 
     @classmethod
     def get_classnames(cls):
