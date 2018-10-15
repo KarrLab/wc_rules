@@ -19,6 +19,9 @@ def listify(value):
         return [value]
     return value
 
+def iter_to_string(iterable):
+    return '\n'.join([str(x) for x in list(iterable)])
+
 def generate_id():
     return str(uuid.UUID(int=idgen.getrandbits(128)))
 

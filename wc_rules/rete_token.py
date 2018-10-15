@@ -1,4 +1,4 @@
-from .utils import generate_id
+from .utils import generate_id, iter_to_string
 
 class Token(object):
     def __init__(self,contents=None):
@@ -37,6 +37,8 @@ class Token(object):
         for value in self._dict.values():
             if hasattr(value,'_tokens'):
                 value._tokens.remove(self)
+        if self._location is not None:
+            self._location.remove_token(self)
         return self
 
     def items(self): return self._dict.items()
@@ -49,11 +51,21 @@ class Token(object):
             self._dict.pop(key)
         return self
 
+    def duplicate_with_keymap(self,keymap=None):
+        if keymap is None:
+            return Token(self)
+        t = Token()
+        for key in self.keys():
+            t[keymap[key]] = self[key]
+        return t
 
 class TokenRegister(object):
     def __init__(self):
         self._dict = dict()
         self._set = set()
+
+    def __str__(self):
+        return iter_to_string(self._set)
 
     def register(self,key,value,token):
         t = tuple([key,value])
@@ -84,3 +96,29 @@ class TokenRegister(object):
                 self.deregister(key,value,token)
             self._set.remove(token)
         return self
+
+    def get(self,key,value):
+        t = tuple([key,value])
+        if t in self._dict:
+            return self._dict[tuple([key,value])]
+        return set()
+
+    def filter(self,token):
+        return set.intersection(*(self.get(key,value) for key, value in token.items()))
+
+
+def token_create_node(node):
+    attrs = node.get_nonempty_scalar_attributes()
+    return Token({'create_node':node,'modified_attrs':tuple(attrs)})
+
+def token_edit_attrs(node,attrlist):
+    return Token({'node':node,'modified_attrs':tuple(attrlist)})
+
+def token_delete_node(node):
+    return Token({'delete_node':node})
+
+def token_create_edge(node1,attr1,attr2,node2):
+    return Token({'create_edge':(node1,attr1,attr2,node2)})
+
+def token_delete_edge(node1,attr1,attr2,node2):
+    return Token({'delete_edge':(node1,attr1,attr2,node2)})
