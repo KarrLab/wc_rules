@@ -103,9 +103,9 @@ class TokenRegister(object):
 
 
 def token_create_node(node):
-    attrs = node.get_nonempty_scalar_attributes()
+    attrs = node.get_nonempty_scalar_attributes(ignore_id=True)
     return Token({'create_node':node,'modified_attrs':tuple(attrs)})
-
+    
 def token_edit_attrs(node,attrlist):
     return Token({'node':node,'modified_attrs':tuple(attrlist)})
 
