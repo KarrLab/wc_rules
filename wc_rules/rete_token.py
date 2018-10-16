@@ -2,7 +2,6 @@ from .utils import generate_id, iter_to_string
 
 class Token(object):
     def __init__(self,contents=None):
-        self.id = generate_id()
         self._dict = dict()
         if contents:
             for key,value in contents.items():
@@ -10,15 +9,13 @@ class Token(object):
 
     def __setitem__(self,key,value):
         self._dict[key] = value
-        if hasattr(value,'_tokens'):
-            value._tokens.add(self)
         return self
 
     def __getitem__(self,key):
         return self._dict[key]
 
     def __str__(self):
-        return " ".join(['token',self.id,str(self._dict)])
+        return " ".join(['token',str(self._dict)])
 
     def update(self,tok):
         common_keys = set(tok.keys()) & set(self.keys())
@@ -29,32 +26,29 @@ class Token(object):
             self.__setitem__(key,tok[key])
         return self
 
-    def subset(self,keys):
-        return { k:self[k] for k in keys }
-
-    def prep_safe_delete(self):
-        for value in self._dict.values():
-            if hasattr(value,'_tokens'):
-                value._tokens.remove(self)
-        return self
-
     def items(self): return self._dict.items()
     def keys(self): return self._dict.keys()
 
-    def modify_with_keymap(self,keymap):
-        keys = list(self.keys())
-        for key in keys:
-            self[keymap[key]] = self[key]
-            self._dict.pop(key)
-        return self
+    def subset(self,keys):
+        return {k:self[k] for k in self._dict}
 
-    def duplicate(self,keymap=None):
-        if keymap is None:
-            return Token(self)
-        t = Token()
-        for key in self.keys():
-            t[keymap[key]] = self[key]
-        return t
+
+class AddToken(Token):
+    def get_type(self): return 'add'
+
+class RemoveToken(Token):
+    def get_type(self): return 'remove'
+
+def new_token(token,invert=False,keymap=None,subsetkeys=None):
+    d = token._dict
+    if subsetkeys is None:
+        subsetkeys = token.keys()
+    if keymap:
+        d = {keymap[x]:y for x,y in token.items() if x in subsetkeys}
+    if not invert:
+        return token.__class__(d)
+    inv = {AddToken:RemoveToken,RemoveToken:AddToken}
+    return inv[token.__class__](d)
 
 class TokenRegister(object):
     def __init__(self):
@@ -110,16 +104,16 @@ class TokenRegister(object):
 
 def token_create_node(node):
     attrs = node.get_nonempty_scalar_attributes(ignore_id=True)
-    return Token({'node':node,'modified_attrs':tuple(attrs)})
+    return AddToken({'node':node,'modified_attrs':tuple(attrs)})
 
 def token_edit_attrs(node,attrlist):
-    return Token({'node':node,'modified_attrs':tuple(attrlist)})
+    return AddToken({'node':node,'modified_attrs':tuple(attrlist)})
 
 def token_delete_node(node):
-    return Token({'delete_node':node})
+    return RemoveToken({'node':node})
 
 def token_create_edge(node1,attr1,attr2,node2):
-    return Token({'create_edge':(node1,attr1,attr2,node2)})
+    return AddToken({'edge':(node1,attr1,attr2,node2)})
 
 def token_delete_edge(node1,attr1,attr2,node2):
-    return Token({'delete_edge':(node1,attr1,attr2,node2)})
+    return RemoveToken({'edge':(node1,attr1,attr2,node2)})

@@ -1,5 +1,5 @@
 from .utils import generate_id
-from .rete_token import Token,TokenRegister
+from .rete_token import new_token,TokenRegister
 
 class ReteNode(object):
     def __init__(self,id=None):
@@ -8,6 +8,11 @@ class ReteNode(object):
         self.id = id
         self.predecessors = set()
         self.successors = set()
+
+    # Rules for token-passing.
+    # On receiving a token, do NOT modify it.
+    # Use process_token to generate NEW tokens. Old token dies here.
+    # Send each new token to each successor (nobody modifies it!)
 
     def receive_token(self,token,sender,verbose=False):
         # logic for receiving tokens
@@ -26,10 +31,12 @@ class ReteNode(object):
     # re-implement this method for all subclasses
     def process_token(self,token,sender,verbose=False):
         # logic for processing token internally
-        # should generate a list of tokens
+        # should generate a list of NEW tokens
+        # the old token should be destroyed when this method closes
+        tokens_to_pass = [new_token(token)]
         if verbose:
-            print(self.processing_message(token))
-        return [token]
+            print(self.verbose_mode_message(token,tokens_to_pass))
+        return tokens_to_pass
 
     # messages for verbose mode
     def processing_message(self,token):
@@ -46,18 +53,24 @@ class ReteNode(object):
         tabsp = " "*tab
         return " ".join([tabsp,'adding',str(token._dict)])
 
-    def verbose_mode_message(self,token,passthru_tokens,added_tokens=None):
-        str1 = self.processing_message(token)
-        strs_added = []
-        strs_passthru = []
-        if added_tokens:
-            strs_added = [self.adding_message(x) for x in added_tokens]
-        if len(passthru_tokens)==0:
-            strs_passthru = [self.passing_message()]
-        else:
-            strs_passthru = [self.passing_message(x) for x in passthru_tokens]
-        return '\n'.join([str1] + strs_added + strs_passthru)
+    def removing_message(self,token,tab=4):
+        tabsp = " "*tab
+        return " ".join([tabsp,'removing',str(token._dict)])
 
+    def verbose_mode_message(self,token,tokens_to_pass=[],tokens_to_add=[],tokens_to_remove=[]):
+        strs_processing = [self.processing_message(token)]
+        strs_adding = []
+        strs_removing = []
+        strs_passing = []
+        if len(tokens_to_add)>0:
+            strs_adding = [self.adding_message(x) for x in tokens_to_add]
+        if len(tokens_to_remove)>0:
+            strs_removing = [self.removing_message(x) for x in tokens_to_remove]
+        if len(tokens_to_pass)>0:
+            strs_passing = [self.passing_message(x) for x in tokens_to_pass]
+        else:
+            strs_passing = [self.passing_message()]
+        return '\n'.join(strs_processing + strs_adding + strs_removing + strs_passing)
 
 class SingleInputNode(ReteNode): pass
 
@@ -81,13 +94,11 @@ class checkTYPE(check):
         return 'isinstance(*,'+self._class.__name__+')'
 
     def process_token(self,token,sender,verbose):
-        passthru_tokens = []
-        if 'node' in token.keys():
-            if isinstance(token['node'],self._class):
-                passthru_tokens = [token]
+        tokens_to_pass = [new_token(token)]
         if verbose:
-            print(self.verbose_mode_message(token,passthru_tokens))
-        return passthru_tokens
+            print(self.verbose_mode_message(token,tokens_to_pass))
+        return tokens_to_pass
+
 
 class checkATTR(check):
     operator_dict = {
@@ -117,18 +128,10 @@ class store(SingleInputNode):
         return 'store'
 
     def process_token(self,token,sender,verbose):
-        added_tokens = []
-        passthru_tokens = []
-        if 'node' in token.keys():
-            d = {'node':token['node']}
-            if self._register.get(d) is None:
-                t = Token(d)
-                self._register.add_token(t)
-                added_tokens = [t]
-                passthru_tokens = [t.duplicate()]
+        tokens_to_pass = [new_token(token)]
         if verbose:
-            print(self.verbose_mode_message(token,passthru_tokens,added_tokens))
-        return passthru_tokens
+            print(self.verbose_mode_message(token,tokens_to_pass))
+        return tokens_to_pass
 
 class alias(SingleInputNode):
     def __init__(self,var_tuple,id=None):
@@ -139,18 +142,10 @@ class alias(SingleInputNode):
         return ','.join(list(self.variable_names))
 
     def process_token(self,token,sender,verbose):
-        passthru_tokens = []
-        if 'node' in token.keys():
-            keymap = {'node':self.variable_names[0]}
-            d = {keymap['node']:token['node']}
-            passthru_tokens = [Token(d)]
-        else:
-            # this is for alias Pattern nodes
-            # may need fixing later
-            passthru_tokens = [token]
+        tokens_to_pass = [new_token(token)]
         if verbose:
-            print(self.verbose_mode_message(token,passthru_tokens))
-        return passthru_tokens
+            print(self.verbose_mode_message(token,tokens_to_pass))
+        return tokens_to_pass
 
 class checkEDGETYPE(check):
     def __init__(self,attrpair,id=None):
