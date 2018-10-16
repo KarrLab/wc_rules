@@ -92,20 +92,26 @@ class TokenRegister(object):
             self._set.remove(token)
         return self
 
-    def get(self,key,value):
+    def getkv(self,key,value):
         t = tuple([key,value])
         if t in self._dict:
             return self._dict[tuple([key,value])]
         return set()
 
     def filter(self,token):
-        return set.intersection(*(self.get(key,value) for key, value in token.items()))
+        return set.intersection(*(self.getkv(key,value) for key, value in token.items()))
 
+    def get(self,token):
+        f = self.filter(token)
+        assert 0 <= len(f) <=1
+        if len(f)==1:
+            return f.pop()
+        return None
 
 def token_create_node(node):
     attrs = node.get_nonempty_scalar_attributes(ignore_id=True)
-    return Token({'create_node':node,'modified_attrs':tuple(attrs)})
-    
+    return Token({'node':node,'modified_attrs':tuple(attrs)})
+
 def token_edit_attrs(node,attrlist):
     return Token({'node':node,'modified_attrs':tuple(attrlist)})
 

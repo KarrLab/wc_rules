@@ -10,6 +10,11 @@ class Matcher(object):
         increment_net_with_pattern(self.rete_net,pattern)
         return self
 
+    def send_token(self,token,verbose):
+        root = self.rete_net.get_root()
+        root.receive_token(token,self,verbose)
+        return self
+
 def main():
     pass
 
