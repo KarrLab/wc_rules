@@ -47,9 +47,8 @@ class TestTokenSystem(unittest.TestCase):
         }
         self.assertEqual(R._dict,dict_to_compare)
         self.assertEqual(R._set,set([t1]))
-        self.assertEqual(t1._location,R)
 
         R.remove_token(t1)
         self.assertEqual(len(R._dict),0)
         self.assertEqual(len(R._set),0)
-        self.assertEqual(t1._location,None)
+        

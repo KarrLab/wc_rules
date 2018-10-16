@@ -4,7 +4,6 @@ class Token(object):
     def __init__(self,contents=None):
         self.id = generate_id()
         self._dict = dict()
-        self._location = None
         if contents:
             for key,value in contents.items():
                 self.__setitem__(key,value)
@@ -37,8 +36,6 @@ class Token(object):
         for value in self._dict.values():
             if hasattr(value,'_tokens'):
                 value._tokens.remove(self)
-        if self._location is not None:
-            self._location.remove_token(self)
         return self
 
     def items(self): return self._dict.items()
@@ -86,12 +83,10 @@ class TokenRegister(object):
         for key,value in token.items():
             self.register(key,value,token)
         self._set.add(token)
-        token._location = self
         return self
 
     def remove_token(self,token):
         if token in self._set:
-            token._location = None
             for (key,value) in token.items():
                 self.deregister(key,value,token)
             self._set.remove(token)
