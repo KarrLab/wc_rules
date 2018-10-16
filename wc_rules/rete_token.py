@@ -48,7 +48,7 @@ class Token(object):
             self._dict.pop(key)
         return self
 
-    def duplicate_with_keymap(self,keymap=None):
+    def duplicate(self,keymap=None):
         if keymap is None:
             return Token(self)
         t = Token()

@@ -33,6 +33,12 @@ class TestTokenSystem(unittest.TestCase):
 
         self.assertEqual(t1._dict,{'A1':a1,'X1':x1})
 
+        t2 = t1.duplicate()
+        self.assertEqual(t2._dict,{'A1':a1,'X1':x1})
+        t2 = t1.duplicate({'A1':'A','X1':'X'})
+        self.assertEqual(t2._dict,{'A':a1,'X':x1})
+
+
 
     def test_token_register(self):
         a1 = A(id='a1')
