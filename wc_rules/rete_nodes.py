@@ -1,4 +1,5 @@
 from .utils import generate_id
+from .rete_token import Token,TokenRegister
 
 class ReteNode(object):
     def __init__(self,id=None):
@@ -8,7 +9,7 @@ class ReteNode(object):
         self.predecessors = set()
         self.successors = set()
 
-    def receive_token(self,token):
+    def receive_token(self,token,sender):
         # logic for receiving tokens
         # subsequent calls to process_token and send_token
         tokens = self.process_token(token)
@@ -18,8 +19,8 @@ class ReteNode(object):
 
     def send_token(self,token):
         # logic for sending token to successors
-        for node_id in self.successors:
-            self.matcher().get_rete_node(node_id).receive_token(token)
+        for node in self.successors:
+            node.receive_token(token,self)
         return
 
     def process_token(self,token):
@@ -74,6 +75,7 @@ class checkATTR(check):
 class store(SingleInputNode):
     def __init__(self,id=None):
         super().__init__(id)
+        self._register = TokenRegister()
 
     def __str__(self):
         return 'store'
@@ -99,6 +101,7 @@ class merge(ReteNode):
     def __init__(self,var_tuple,id=None):
         super().__init__(id)
         self.variable_names = var_tuple
+        self._register = TokenRegister()
 
     def __str__(self):
         return ','.join(self.variable_names)
