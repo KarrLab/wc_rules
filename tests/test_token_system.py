@@ -51,4 +51,17 @@ class TestTokenSystem(unittest.TestCase):
         R.remove_token(t1)
         self.assertEqual(len(R._dict),0)
         self.assertEqual(len(R._set),0)
-        
+        del a1,x1,t1,R
+
+        a1,x1,x2 = A(id='a1'),X(id='x1'),X(id='x2')
+        t1,t2 = Token({'a':a1,'x':x1}),Token({'a':a1,'x':x2})
+        R = TokenRegister()
+        for t in [t1,t2]:
+            R.add_token(t)
+
+        f1 = R.filter({'a':a1})
+        self.assertEqual(len(f1),2)
+        f2 = R.filter({'x':x1})
+        self.assertEqual(len(f2),1)
+        f3 = R.filter({'a':x1})
+        self.assertEqual(len(f3),0)
