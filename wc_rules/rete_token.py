@@ -32,6 +32,9 @@ class Token(object):
     def subset(self,keys):
         return {k:self[k] for k in self._dict}
 
+    def get_subtoken(self,keys):
+        return self.__class__(self.subset(keys))
+
 
 class AddToken(Token):
     def get_type(self): return 'add'
@@ -102,18 +105,18 @@ class TokenRegister(object):
             return f.pop()
         return None
 
-def token_create_node(node):
+def token_add_node(node):
     attrs = node.get_nonempty_scalar_attributes(ignore_id=True)
     return AddToken({'node':node,'modified_attrs':tuple(attrs)})
 
 def token_edit_attrs(node,attrlist):
     return AddToken({'node':node,'modified_attrs':tuple(attrlist)})
 
-def token_delete_node(node):
+def token_remove_node(node):
     return RemoveToken({'node':node})
 
-def token_create_edge(node1,attr1,attr2,node2):
+def token_add_edge(node1,attr1,attr2,node2):
     return AddToken({'edge':(node1,attr1,attr2,node2)})
 
-def token_delete_edge(node1,attr1,attr2,node2):
+def token_remove_edge(node1,attr1,attr2,node2):
     return RemoveToken({'edge':(node1,attr1,attr2,node2)})

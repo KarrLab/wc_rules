@@ -34,11 +34,14 @@ class ReteNode(object):
         # should generate a list of NEW tokens
         # the old token should be destroyed when this method closes
         tokens_to_pass = []
+        passthrough_fail = ''
         evaluate = self.evaluate_token(token)
         if evaluate:
             tokens_to_pass = [new_token(token)]
+        else:
+            passthrough_fail = self.passthrough_fail_message()
         if verbose:
-            print(self.verbose_mode_message(token,tokens_to_pass,evaluation_fail=not evaluate))
+            print(self.verbose_mode_message(token,tokens_to_pass,passthrough_fail=passthrough_fail))
         return tokens_to_pass
 
     def evaluate_token(self,token):
@@ -51,9 +54,10 @@ class ReteNode(object):
         selfstr = '\"' + str(self) + '\"'
         return " ".join([selfstr,'processing',str(token._dict)])
 
-    def failing_message(self,tab=4):
+    def failing_message(self,msg='',tab=4):
         tabsp = " "*tab
-        return " ".join([tabsp,'evaluation failed! token stops here.'])
+        msg = '`'+msg+'`'
+        return " ".join([tabsp,'passthrough failed! token stops here. Reason:',msg])
 
     def passing_message(self,token,tab=4):
         tabsp = " "*tab
@@ -67,7 +71,7 @@ class ReteNode(object):
         tabsp = " "*tab
         return " ".join([tabsp,'removing',str(token._dict)])
 
-    def verbose_mode_message(self,token,tokens_to_pass=[],tokens_to_add=[],tokens_to_remove=[],evaluation_fail=False):
+    def verbose_mode_message(self,token,tokens_to_pass=[],tokens_to_add=[],tokens_to_remove=[],passthrough_fail=''):
         strs_processing = [self.processing_message(token)]
         strs_adding = []
         strs_removing = []
@@ -77,8 +81,8 @@ class ReteNode(object):
             strs_adding = [self.adding_message(x) for x in tokens_to_add]
         if len(tokens_to_remove)>0:
             strs_removing = [self.removing_message(x) for x in tokens_to_remove]
-        if evaluation_fail:
-            strs_fail = [self.failing_message()]
+        if passthrough_fail != '':
+            strs_fail = [self.failing_message(passthrough_fail)]
         strs_passing = [self.passing_message(x) for x in tokens_to_pass]
         return '\n'.join(strs_processing + strs_adding + strs_removing + strs_fail + strs_passing)
 
@@ -110,6 +114,11 @@ class checkTYPE(check):
     def evaluate_token(self,token):
         return isinstance(token['node'],self._class)
 
+    def passthrough_fail_message(self):
+        return 'Evalutation failed!'
+
+
+
 class checkATTR(check):
     operator_dict = {
     'lt':'<', 'le':'<=',
@@ -138,11 +147,54 @@ class store(SingleInputNode):
     def __str__(self):
         return 'store'
 
+    def keys(self):
+        if self._number_of_variables==1:
+            return ['node']
+        if self._number_of_variables==2:
+            return ['node1','node2']
+        return None
+
+    ### Store does not have passthrough functionality.
+    # depending on whether token is Add or Remove
+    # they update their register
+    # then pass out their updated register tokens
+
     def process_token(self,token,sender,verbose):
-        tokens_to_pass = [new_token(token)]
+        token_type = token.get_type()
+        existing_token = self._register.get(token)
+        tokens_to_pass = []
+        tokens_to_add = []
+        tokens_to_remove = []
+        passthrough_fail = ''
+        subtoken = token.get_subtoken(self.keys())
+        # Add token if existing_token is None and type is 'add'
+        if token_type=='add' and existing_token is None:
+            tokens_to_add = [new_token(subtoken)]
+            tokens_to_pass = [new_token(subtoken)]
+        # Remove token if existing_token is not None and type is 'remove'
+        elif token_type=='remove' and existing_token is not None:
+            tokens_to_remove = [existing_token]
+            tokens_to_pass = [new_token(existing_token,invert=True)]
+        else:
+            # do nothing
+            passthrough_fail = self.passthrough_fail_message(token_type)
+
+        # implement changes
+        for token in tokens_to_add:
+            self._register.add_token(token)
+        for token in tokens_to_remove:
+            self._register.remove_token(token)
+
         if verbose:
-            print(self.verbose_mode_message(token,tokens_to_pass))
+            print(self.verbose_mode_message(token,tokens_to_pass,tokens_to_add,tokens_to_remove,passthrough_fail))
         return tokens_to_pass
+
+    def passthrough_fail_message(self,msgtype='add'):
+        if msgtype=='add':
+            return 'Token already found in register. Cannot add again!'
+        if msgtype=='remove':
+            return 'Token not found in register. Cannot remove!'
+        return ''
 
 class alias(SingleInputNode):
     def __init__(self,var_tuple,id=None):
