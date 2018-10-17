@@ -33,20 +33,30 @@ class ReteNode(object):
         # logic for processing token internally
         # should generate a list of NEW tokens
         # the old token should be destroyed when this method closes
-        tokens_to_pass = [new_token(token)]
+        tokens_to_pass = []
+        evaluate = self.evaluate_token(token)
+        if evaluate:
+            tokens_to_pass = [new_token(token)]
         if verbose:
-            print(self.verbose_mode_message(token,tokens_to_pass))
+            print(self.verbose_mode_message(token,tokens_to_pass,evaluation_fail=not evaluate))
         return tokens_to_pass
+
+    def evaluate_token(self,token):
+        # Here, use the internal variables of self to evaluate whether token
+        # should be passed through
+        return True
 
     # messages for verbose mode
     def processing_message(self,token):
         selfstr = '\"' + str(self) + '\"'
         return " ".join([selfstr,'processing',str(token._dict)])
 
-    def passing_message(self,token=None,tab=4):
+    def failing_message(self,tab=4):
         tabsp = " "*tab
-        if token is None:
-            return " ".join([tabsp,'token stops here!'])
+        return " ".join([tabsp,'evaluation failed! token stops here.'])
+
+    def passing_message(self,token,tab=4):
+        tabsp = " "*tab
         return " ".join([tabsp,'passing',str(token._dict)])
 
     def adding_message(self,token,tab=4):
@@ -57,20 +67,21 @@ class ReteNode(object):
         tabsp = " "*tab
         return " ".join([tabsp,'removing',str(token._dict)])
 
-    def verbose_mode_message(self,token,tokens_to_pass=[],tokens_to_add=[],tokens_to_remove=[]):
+    def verbose_mode_message(self,token,tokens_to_pass=[],tokens_to_add=[],tokens_to_remove=[],evaluation_fail=False):
         strs_processing = [self.processing_message(token)]
         strs_adding = []
         strs_removing = []
         strs_passing = []
+        strs_fail = []
         if len(tokens_to_add)>0:
             strs_adding = [self.adding_message(x) for x in tokens_to_add]
         if len(tokens_to_remove)>0:
             strs_removing = [self.removing_message(x) for x in tokens_to_remove]
-        if len(tokens_to_pass)>0:
-            strs_passing = [self.passing_message(x) for x in tokens_to_pass]
-        else:
-            strs_passing = [self.passing_message()]
-        return '\n'.join(strs_processing + strs_adding + strs_removing + strs_passing)
+        if evaluation_fail:
+            strs_fail = [self.failing_message()]
+        strs_passing = [self.passing_message(x) for x in tokens_to_pass]
+        return '\n'.join(strs_processing + strs_adding + strs_removing + strs_fail + strs_passing)
+
 
 class SingleInputNode(ReteNode): pass
 
@@ -93,12 +104,11 @@ class checkTYPE(check):
     def __str__(self):
         return 'isinstance(*,'+self._class.__name__+')'
 
-    def process_token(self,token,sender,verbose):
-        tokens_to_pass = [new_token(token)]
-        if verbose:
-            print(self.verbose_mode_message(token,tokens_to_pass))
-        return tokens_to_pass
-
+    # checkTYPE is has PASSTHROUGH functionality.
+    # It simply evaluates token, and if it passes,
+    # It duplicates it and passes it along
+    def evaluate_token(self,token):
+        return isinstance(token['node'],self._class)
 
 class checkATTR(check):
     operator_dict = {
