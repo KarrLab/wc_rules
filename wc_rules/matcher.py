@@ -12,6 +12,9 @@ class Matcher(object):
         self.pattern_nodes[pattern.id] = current_node
         return self
 
+    def get_pattern(self,pattern_id):
+        return self.pattern_nodes[pattern_id]
+
     def send_token(self,token,verbose=False):
         root = self.rete_net.get_root()
         root.receive_token(token,self,verbose)

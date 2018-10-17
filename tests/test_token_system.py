@@ -65,7 +65,7 @@ class TestTokenSystem(unittest.TestCase):
         m.add_pattern(p1)
 
         # currently empty
-        p1_rn  = m.pattern_nodes['p1']
+        p1_rn  = m.get_pattern('p1')
         self.assertEqual(len(p1_rn),0)
 
         # add tok1
@@ -91,4 +91,9 @@ class TestTokenSystem(unittest.TestCase):
         # remove tok2, which doesnt exist, should fail
         tok2 = token_remove_node(A())
         m.send_token(tok2)
+        self.assertEqual(len(p1_rn),1)
+
+        # non-matching token, should fail
+        tok3 = token_add_node(X())
+        m.send_token(tok3)
         self.assertEqual(len(p1_rn),1)
