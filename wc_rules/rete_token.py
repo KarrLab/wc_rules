@@ -48,7 +48,7 @@ class AddToken(Token):
 class RemoveToken(Token):
     def get_type(self): return 'remove'
 
-def new_token(token,invert=False,keymap=None,subsetkeys=None,flip_edge=False):
+def new_token(token,invert=False,keymap=None,subsetkeys=None):
     d = token._dict
     if subsetkeys is None:
         subsetkeys = token.keys()

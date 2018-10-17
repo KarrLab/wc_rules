@@ -283,10 +283,6 @@ class store(SingleInputNode):
             return 'Token not found in register. Cannot remove!'
         return ''
 
-    def filter(self,token):
-        subtoken = token.subset(self.keys())
-        return self._register.filter(subtoken)
-
 class alias(SingleInputNode):
     def __init__(self,var_tuple,id=None):
         super().__init__(id)
@@ -305,7 +301,7 @@ class alias(SingleInputNode):
         return len(list(self.predecessors)[0])
 
     def transform_token(self,token,keymap):
-        return new_token(token,keymap,subsetkeys=keymap.keys())
+        return new_token(token,keymap=keymap,subsetkeys=keymap.keys())
 
     ### alias is PASSTHROUGH with a twist
     # it has to use an internal keymap to transform the incoming token first
@@ -317,15 +313,6 @@ class alias(SingleInputNode):
     def passthrough_fail_message(self):
         return 'Somthing wrong with aliasing!'
 
-    # filter takes a token, transforms it to its predecessor format,
-    # asks predecessor to filter
-    # transforms results back to alias format and passes it on
-    def filter(self,token):
-        predecessor = list(self.predecessors)[0]
-        new_token = self.transform_token(token,keymap=self.reverse_keymap)
-        results = predecessor.filter(new_token)
-        new_results = set([self.transform_token(x,keymap=self.keymap) for x in results])
-        return new_results
 
 class merge(ReteNode):
     def __init__(self,var_tuple,id=None):
@@ -338,7 +325,3 @@ class merge(ReteNode):
 
     def __len__(self):
         return len(self._register)
-
-    def filter(self,token):
-        subtoken = token.subset(list(self.variable_names))
-        return self._register.filter(token)
