@@ -115,7 +115,7 @@ class checkTYPE(check):
         return isinstance(token['node'],self._class)
 
     def passthrough_fail_message(self):
-        return 'Evaluation failed!'
+        return 'Evaluation failed! Token node does not match type.'
 
 class checkATTR(check):
     operator_dict = {
@@ -126,6 +126,43 @@ class checkATTR(check):
     def __init__(self,tuple_of_attr_tuples,id=None):
         super().__init__(id)
         self.tuple_of_attr_tuples = tuple_of_attr_tuples
+        self.attrs = [tup[0] for tup in tuple_of_attr_tuples]
+        # tuple of attrtuple is a tuple of (attr,op,value)
+        # attr is a string, op is an operator object
+
+    # checkATTR has PASSTHROUGH functionality.
+    # However, token passing is a bit more complex than checkTYPE
+    # shared attrs <==> token has modified_attrs overlapping with self.attrs
+
+    # Case 0: Token is Remove type. Pass it on.
+    # Why? Remove instructions supersede everything else.
+
+    # Case 1: Token is Add type, but no shared attrs. Do nothing.
+    # Why? If relevant attrs weren't modified, downstream matches are unaffeced.
+
+    # Case 2: Token is Add type with shared attrs.
+    # Evaluate attr expressions. If true, pass it on.
+    # Why? New match. Needs to be added.
+
+    # Case 3: Token is Add type with shared attrs.
+    # Evaluate attr expressions. If false, invert and pass it on.
+    # Why? Potential old match that is currently failing. Need to be deleted if so.
+
+    def process_token(self,token,sender,verbose=False):
+        tokens_to_pass = []
+        passthrough_fail = ''
+        if token.get_type()=='remove':
+            tokens_to_pass = [new_token(token)]
+        elif not self.has_shared_attrs(token):
+            passthrough_fail = self.passthrough_fail_message()
+        elif self.evaluate_expressions(token):
+            tokens_to_pass = [new_token(token)]
+        else:
+            tokens_to_pass = [new_token(token,invert=True)]
+
+        if verbose:
+            print(self.verbose_mode_message(token,tokens_to_pass,passthrough_fail=passthrough_fail))
+        return tokens_to_pass
 
     def __str__(self):
         strs = []
@@ -135,6 +172,20 @@ class checkATTR(check):
             value = str(tup[2])
             strs.append(''.join(['*.',attrname,opname,value]))
         return '\n'.join(strs)
+
+    def has_shared_attrs(self,token):
+        return len([x for x in self.attrs if x in token['modified_attrs']]) > 0
+
+    def evaluate_expression(self,node,attr,op,value):
+        return op(getattr(node,attr),value)
+
+    def evaluate_expressions(self,token):
+        node = token['node']
+        return all([self.evaluate_expression(node,attr,op,value) for attr,op,value in self.tuple_of_attr_tuples])
+
+    def passthrough_fail_message(self):
+        return 'Evaluation failed! Token has no shared attributes with node queries.'
+
 
 class store(SingleInputNode):
     def __init__(self,id=None,number_of_variables=1):
@@ -162,12 +213,13 @@ class store(SingleInputNode):
 
     def process_token(self,token,sender,verbose):
         token_type = token.get_type()
-        existing_token = self._register.get(token)
+        subtoken = token.get_subtoken(self.keys())
+        existing_token = self._register.get(subtoken)
         tokens_to_pass = []
         tokens_to_add = []
         tokens_to_remove = []
         passthrough_fail = ''
-        subtoken = token.get_subtoken(self.keys())
+
         # Add token if existing_token is None and type is 'add'
         if token_type=='add' and existing_token is None:
             tokens_to_add = [new_token(subtoken)]

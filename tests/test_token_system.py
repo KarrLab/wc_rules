@@ -2,9 +2,13 @@ from wc_rules.chem import Molecule, Site
 from wc_rules.rete_token import *
 from wc_rules.matcher import Matcher
 from wc_rules.pattern import Pattern
+from wc_rules.attributes import *
+
 import unittest
 class A(Molecule):pass
-class X(Site):pass
+class X(Site):
+    ph = BooleanAttribute()
+    v = IntegerAttribute()
 
 class TestTokenSystem(unittest.TestCase):
     def test_token(self):
@@ -65,35 +69,97 @@ class TestTokenSystem(unittest.TestCase):
         m.add_pattern(p1)
 
         # currently empty
-        p1_rn  = m.get_pattern('p1')
-        self.assertEqual(len(p1_rn),0)
+        n  = m.get_pattern('p1')
+        self.assertEqual(len(n),0)
 
-        # add tok1
-        tok1 = token_add_node(A())
-        m.send_token(tok1)
-        self.assertEqual(len(p1_rn),1)
+        a2 = A()
 
-        # remove tok1
-        tok1_minus = new_token(tok1,invert=True)
-        m.send_token(tok1_minus)
-        self.assertEqual(len(p1_rn),0)
+        tok = token_add_node(a2)
+        m.send_token(tok)
+        self.assertEqual(len(n),1)
 
-        # add tok1 again
-        tok1 = new_token(tok1)
-        m.send_token(tok1)
-        self.assertEqual(len(p1_rn),1)
+        tok = token_remove_node(a2)
+        m.send_token(tok)
+        self.assertEqual(len(n),0)
 
-        # add tok1 again, should fail to add
-        tok1 = new_token(tok1)
-        m.send_token(tok1)
-        self.assertEqual(len(p1_rn),1)
+        tok = token_edit_attrs(a2,['a','b','c'])
+        m.send_token(tok)
+        self.assertEqual(len(n),1)
 
-        # remove tok2, which doesnt exist, should fail
-        tok2 = token_remove_node(A())
-        m.send_token(tok2)
-        self.assertEqual(len(p1_rn),1)
+        tok = token_add_node(a2)
+        m.send_token(tok)
+        self.assertEqual(len(n),1)
 
-        # non-matching token, should fail
-        tok3 = token_add_node(X())
-        m.send_token(tok3)
-        self.assertEqual(len(p1_rn),1)
+        tok = token_remove_node(A())
+        m.send_token(tok)
+        self.assertEqual(len(n),1)
+
+    def test_token_passing_2(self):
+        m = Matcher()
+
+        x1 = X(id='x1',ph=True)
+        p1 = Pattern('p1').add_node(x1)
+        m.add_pattern(p1)
+
+        # currently empty
+        n  = m.get_pattern('p1')
+        self.assertEqual(len(n),0)
+
+        x2 = X(ph=True,v=0)
+        tok = token_add_node(x2)
+        m.send_token(tok)
+        self.assertEqual(len(n),1)
+
+        tok = token_remove_node(x2)
+        m.send_token(tok)
+        self.assertEqual(len(n),0)
+
+        tok = token_edit_attrs(x2,['ph'])
+        m.send_token(tok)
+        self.assertEqual(len(n),1)
+
+        tok = token_edit_attrs(x2,['v'])
+        m.send_token(tok)
+        self.assertEqual(len(n),1)
+
+        tok = token_add_node(X(ph=False,v=0))
+        m.send_token(tok)
+        self.assertEqual(len(n),1)
+
+    def test_token_passing_3(self):
+        m = Matcher()
+
+        x1 = X(id='x1',ph=True,v=0)
+        p1 = Pattern('p1').add_node(x1)
+        m.add_pattern(p1)
+
+        # currently empty
+        n  = m.get_pattern('p1')
+        self.assertEqual(len(n),0)
+
+        x2 = X(ph=True,v=0)
+        tok = token_add_node(x2)
+        m.send_token(tok,verbose=True)
+        self.assertEqual(len(n),1)
+
+        x2.v = 1
+        tok = token_edit_attrs(x2,['v'])
+        m.send_token(tok,verbose=True)
+        self.assertEqual(len(n),0)
+
+        x2.v = 0
+        tok = token_edit_attrs(x2,['v'])
+        m.send_token(tok,verbose=True)
+        self.assertEqual(len(n),1)
+
+        tok = token_add_node(X(ph=False,v=0))
+        m.send_token(tok,verbose=True)
+        self.assertEqual(len(n),1)
+
+        tok = token_add_node(X(ph=True,v=1))
+        m.send_token(tok,verbose=True)
+        self.assertEqual(len(n),1)
+
+        tok = token_add_node(X(ph=True,v=0))
+        m.send_token(tok,verbose=True)
+        self.assertEqual(len(n),2)

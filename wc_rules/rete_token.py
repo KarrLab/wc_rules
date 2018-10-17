@@ -32,7 +32,7 @@ class Token(object):
     def keys(self): return self._dict.keys()
 
     def subset(self,keys):
-        return {k:self[k] for k in self._dict}
+        return {k:self[k] for k in keys if k in self._dict}
 
     def get_subtoken(self,keys):
         return self.__class__(self.subset(keys))
