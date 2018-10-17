@@ -4,10 +4,12 @@ from .rete_build import increment_net_with_pattern
 class Matcher(object):
     def __init__(self):
         self.rete_net = ReteNet()
+        self.pattern_nodes = dict()
 
     # Matcher-level operations
     def add_pattern(self,pattern):
-        increment_net_with_pattern(self.rete_net,pattern)
+        current_node = increment_net_with_pattern(self.rete_net,pattern)
+        self.pattern_nodes[pattern.id] = current_node
         return self
 
     def send_token(self,token,verbose):

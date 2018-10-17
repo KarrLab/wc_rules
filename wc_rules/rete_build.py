@@ -48,7 +48,7 @@ def add_store(net,current_node,number_of_variables):
     else:
         raise utils.GenericError('Duplicates on the Rete net! Bad!')
     return current_node
-    
+
 def add_aliasNODE(net,current_node,varname):
     var = (varname,)
     current_node = check_attribute_and_add_successor(net,current_node,rn.alias,'variable_names',var)
@@ -134,6 +134,6 @@ def increment_net_with_pattern(net,pattern):
     sorted_vartuples = sort_tuples(sorted(vartuple_nodes2))
     sorted_nodes = list(vartuple_nodes2[x] for x in sorted_vartuples)
     current_node = add_mergenode_path(net,sorted_nodes)
-    current_node = add_aliasPATTERN(net,current_node,pattern.id)
+    #current_node = add_aliasPATTERN(net,current_node,pattern.id)
 
-    return
+    return current_node
