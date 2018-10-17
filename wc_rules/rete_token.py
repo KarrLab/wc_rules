@@ -15,7 +15,9 @@ class Token(object):
         return self._dict[key]
 
     def __str__(self):
-        return " ".join(['token',str(self._dict)])
+        type1 =  self.get_type()
+        return type1 + ':' + str(self._dict)
+        #return " ".join(['token',type1+":"+str(self._dict)])
 
     def update(self,tok):
         common_keys = set(tok.keys()) & set(self.keys())
@@ -35,6 +37,7 @@ class Token(object):
     def get_subtoken(self,keys):
         return self.__class__(self.subset(keys))
 
+    def get_type(self): return None
 
 class AddToken(Token):
     def get_type(self): return 'add'

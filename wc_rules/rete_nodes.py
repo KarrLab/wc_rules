@@ -52,7 +52,7 @@ class ReteNode(object):
     # messages for verbose mode
     def processing_message(self,token):
         selfstr = '\"' + str(self) + '\"'
-        return " ".join([selfstr,'processing',str(token._dict)])
+        return " ".join([selfstr,'processing',str(token)])
 
     def failing_message(self,msg='',tab=4):
         tabsp = " "*tab
@@ -61,15 +61,15 @@ class ReteNode(object):
 
     def passing_message(self,token,tab=4):
         tabsp = " "*tab
-        return " ".join([tabsp,'passing',str(token._dict)])
+        return " ".join([tabsp,'passing',str(token)])
 
     def adding_message(self,token,tab=4):
         tabsp = " "*tab
-        return " ".join([tabsp,'adding',str(token._dict)])
+        return " ".join([tabsp,'adding',str(token)])
 
     def removing_message(self,token,tab=4):
         tabsp = " "*tab
-        return " ".join([tabsp,'removing',str(token._dict)])
+        return " ".join([tabsp,'removing',str(token)])
 
     def verbose_mode_message(self,token,tokens_to_pass=[],tokens_to_add=[],tokens_to_remove=[],passthrough_fail=''):
         strs_processing = [self.processing_message(token)]
@@ -204,11 +204,20 @@ class alias(SingleInputNode):
     def __str__(self):
         return ','.join(list(self.variable_names))
 
+    def transform_token(self,token):
+        keymap = {}
+        if len(self.variable_names)==1:
+            keymap = dict(zip(['node'],self.variable_names))
+        if len(self.variable_names)==2:
+            keymap = dict(zip(['node1','node2'],self.variable_names))
+        return new_token(token,keymap=keymap,subsetkeys=keymap.keys())
+
+    ### alias is PASSTHROUGH with a twist
+    # it has to use an internal keymap to transform the incoming token first
+
     def process_token(self,token,sender,verbose):
-        tokens_to_pass = [new_token(token)]
-        if verbose:
-            print(self.verbose_mode_message(token,tokens_to_pass))
-        return tokens_to_pass
+        transformed_token = self.transform_token(token)
+        return super().process_token(transformed_token,sender,verbose)
 
 class checkEDGETYPE(check):
     def __init__(self,attrpair,id=None):
