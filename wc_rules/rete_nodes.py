@@ -104,7 +104,7 @@ class checkTYPE(check):
     def __str__(self):
         return 'isinstance(*,'+self._class.__name__+')'
 
-    # checkTYPE is has PASSTHROUGH functionality.
+    # checkTYPE has PASSTHROUGH functionality.
     # It simply evaluates token, and if it passes,
     # It duplicates it and passes it along
     def evaluate_token(self,token):
@@ -130,9 +130,10 @@ class checkATTR(check):
         return '\n'.join(strs)
 
 class store(SingleInputNode):
-    def __init__(self,id=None):
+    def __init__(self,id=None,number_of_variables=1):
         super().__init__(id)
         self._register = TokenRegister()
+        self._number_of_variables = number_of_variables
 
     def __str__(self):
         return 'store'

@@ -37,18 +37,18 @@ def add_checkATTR_path(net,current_node,attr_vec):
         current_node = check_attribute_and_add_successor(net,current_node,rn.checkATTR,'tuple_of_attr_tuples',tuple(new_tuples))
     return current_node
 
-def add_store(net,current_node):
+def add_store(net,current_node,number_of_variables):
     existing_stores = [x for x in current_node.successors if isinstance(x,rn.store)]
     if len(existing_stores) == 1:
         current_node = existing_stores[0]
     elif len(existing_stores) == 0:
-        new_node = rn.store()
+        new_node = rn.store(number_of_variables=number_of_variables)
         net.add_edge(current_node,new_node)
         current_node = new_node
     else:
         raise utils.GenericError('Duplicates on the Rete net! Bad!')
     return current_node
-
+    
 def add_aliasNODE(net,current_node,varname):
     var = (varname,)
     current_node = check_attribute_and_add_successor(net,current_node,rn.alias,'variable_names',var)
@@ -109,7 +109,7 @@ def increment_net_with_pattern(net,pattern):
         current_node = net.get_root()
         current_node = add_checkTYPE_path(net,current_node,type_vec)
         current_node = add_checkATTR_path(net,current_node,attr_vec)
-        current_node = add_store(net,current_node)
+        current_node = add_store(net,current_node,1)
         current_node = add_aliasNODE(net,current_node,new_varname)
         vartuple_nodes[(new_varname,)].add(current_node)
 
@@ -117,7 +117,7 @@ def increment_net_with_pattern(net,pattern):
         (kw,var1,attr1,attr2,var2) = rel
         current_node = net.get_root()
         current_node = add_checkEDGETYPE(net,current_node,attr1,attr2)
-        current_node = add_store(net,current_node)
+        current_node = add_store(net,current_node,2)
         var1_new = new_varnames[var1]
         var2_new = new_varnames[var2]
         current_node = add_aliasEDGE(net,current_node,var1_new,var2_new)
