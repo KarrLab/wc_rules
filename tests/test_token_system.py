@@ -1,5 +1,7 @@
 from wc_rules.chem import Molecule, Site
-from wc_rules.rete_token import Token, TokenRegister
+from wc_rules.rete_token import *
+from wc_rules.matcher import Matcher
+from wc_rules.pattern import Pattern
 import unittest
 class A(Molecule):pass
 class X(Site):pass
@@ -54,3 +56,39 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(len(f2),1)
         f3 = R.filter({'a':x1})
         self.assertEqual(len(f3),0)
+
+    def test_token_passing_1(self):
+        m = Matcher()
+
+        a1 = A(id='a1')
+        p1 = Pattern('p1').add_node(a1)
+        m.add_pattern(p1)
+
+        # currently empty
+        p1_rn  = m.pattern_nodes['p1']
+        self.assertEqual(len(p1_rn),0)
+
+        # add tok1
+        tok1 = token_add_node(A())
+        m.send_token(tok1)
+        self.assertEqual(len(p1_rn),1)
+
+        # remove tok1
+        tok1_minus = new_token(tok1,invert=True)
+        m.send_token(tok1_minus)
+        self.assertEqual(len(p1_rn),0)
+
+        # add tok1 again
+        tok1 = new_token(tok1)
+        m.send_token(tok1)
+        self.assertEqual(len(p1_rn),1)
+
+        # add tok1 again, should fail to add
+        tok1 = new_token(tok1)
+        m.send_token(tok1)
+        self.assertEqual(len(p1_rn),1)
+
+        # remove tok2, which doesnt exist, should fail
+        tok2 = token_remove_node(A())
+        m.send_token(tok2)
+        self.assertEqual(len(p1_rn),1)

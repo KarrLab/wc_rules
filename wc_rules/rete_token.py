@@ -64,6 +64,9 @@ class TokenRegister(object):
     def __str__(self):
         return iter_to_string(self._set)
 
+    def __len__(self):
+        return len(self._set)
+
     def register(self,key,value,token):
         t = tuple([key,value])
         if t not in self._dict:
