@@ -145,6 +145,9 @@ class store(SingleInputNode):
     def __str__(self):
         return 'store'
 
+    def __len__(self):
+        return len(self._register)
+
     def keys(self):
         if self._number_of_variables==1:
             return ['node']
@@ -202,6 +205,9 @@ class alias(SingleInputNode):
     def __str__(self):
         return ','.join(list(self.variable_names))
 
+    def __len__(self):
+        return len(list(self.predecessors)[0])
+
     def transform_token(self,token):
         keymap = {}
         if len(self.variable_names)==1:
@@ -237,3 +243,6 @@ class merge(ReteNode):
 
     def __str__(self):
         return ','.join(self.variable_names)
+
+    def __len__(self):
+        return len(self._register)

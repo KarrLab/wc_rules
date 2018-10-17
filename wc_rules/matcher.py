@@ -12,7 +12,7 @@ class Matcher(object):
         self.pattern_nodes[pattern.id] = current_node
         return self
 
-    def send_token(self,token,verbose):
+    def send_token(self,token,verbose=False):
         root = self.rete_net.get_root()
         root.receive_token(token,self,verbose)
         return self
