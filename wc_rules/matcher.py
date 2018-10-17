@@ -16,6 +16,7 @@ class Matcher(object):
         return self.pattern_nodes[pattern_id]
 
     def send_token(self,token,verbose=False):
+        print(" ".join(['sending token',str(token)]))
         root = self.rete_net.get_root()
         root.receive_token(token,self,verbose)
         return self
