@@ -17,7 +17,9 @@ class ReteNode(object):
     def receive_token(self,token,sender,verbose=False):
         # logic for receiving tokens
         # subsequent calls to process_token and send_token
-        tokens = self.process_token(token,sender,verbose)
+        tokens = []
+        if self.entry_check(token):
+            tokens = self.process_token(token,sender,verbose)
         for token in tokens:
             self.send_token(token,verbose)
         return
@@ -27,6 +29,9 @@ class ReteNode(object):
         for node in self.successors:
             node.receive_token(token,self,verbose)
         return
+
+    def entry_check(self,token):
+        return True
 
     # re-implement this method for all subclasses
     def process_token(self,token,sender,verbose=False):
@@ -117,6 +122,9 @@ class checkTYPE(check):
     def passthrough_fail_message(self):
         return 'Evaluation failed! Token node does not match type.'
 
+    def entry_check(self,token):
+        return 'node' in token
+
 class checkATTR(check):
     operator_dict = {
     'lt':'<', 'le':'<=',
@@ -186,6 +194,30 @@ class checkATTR(check):
     def passthrough_fail_message(self):
         return 'Evaluation failed! Token has no shared attributes with node queries.'
 
+    def entry_check(self,token):
+        return 'node' in token
+
+class checkEDGETYPE(check):
+    def __init__(self,attrpair,id=None):
+        super().__init__(id)
+        self.attribute_pair = attrpair
+
+    def __str__(self):
+        v = ['*'+str(i)+'.'+x for i,x in enumerate(self.attribute_pair)]
+        return '--'.join(v)
+
+    # checkEDGE has PASSTHROUGH functionality.
+    # It simply evaluates token, and if it passes,
+    # It duplicates it and passes it along
+
+    def evaluate_token(self,token):
+        return ([token[x] for x in ['attr1','attr2']]==list(self.attribute_pair))
+
+    def passthrough_fail_message(self):
+        return 'Evaluation failed! Token edge does not match type.'
+
+    def entry_check(self,token):
+        return 'attr1' in token.keys() and 'attr2' in token.keys()
 
 class store(SingleInputNode):
     def __init__(self,id=None,number_of_variables=1):
@@ -210,6 +242,8 @@ class store(SingleInputNode):
     # depending on whether token is Add or Remove
     # they update their register
     # then pass out their updated register tokens
+    def entry_check(self,token):
+        return all([x in token for x in self.keys()])
 
     def process_token(self,token,sender,verbose):
         token_type = token.get_type()
@@ -277,15 +311,6 @@ class alias(SingleInputNode):
 
     def passthrough_fail_message(self):
         return 'Somthing wrong with aliasing!'
-
-class checkEDGETYPE(check):
-    def __init__(self,attrpair,id=None):
-        super().__init__(id)
-        self.attribute_pair = attrpair
-
-    def __str__(self):
-        v = ['*'+str(i)+'.'+x for i,x in enumerate(self.attribute_pair)]
-        return '--'.join(v)
 
 class merge(ReteNode):
     def __init__(self,var_tuple,id=None):

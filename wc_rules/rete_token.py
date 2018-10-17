@@ -19,6 +19,9 @@ class Token(object):
         return type1 + ':' + str(self._dict)
         #return " ".join(['token',type1+":"+str(self._dict)])
 
+    def __contains__(self,key):
+        return key in self._dict
+
     def update(self,tok):
         common_keys = set(tok.keys()) & set(self.keys())
         different_keys = set(tok.keys()) - common_keys
@@ -45,16 +48,19 @@ class AddToken(Token):
 class RemoveToken(Token):
     def get_type(self): return 'remove'
 
-def new_token(token,invert=False,keymap=None,subsetkeys=None):
+def new_token(token,invert=False,keymap=None,subsetkeys=None,flip_edge=False):
     d = token._dict
     if subsetkeys is None:
         subsetkeys = token.keys()
     if keymap:
         d = {keymap[x]:y for x,y in token.items() if x in subsetkeys}
+    _class = None
     if not invert:
-        return token.__class__(d)
-    inv = {AddToken:RemoveToken,RemoveToken:AddToken}
-    return inv[token.__class__](d)
+        _class = token.__class__
+    else:
+        inv = {AddToken:RemoveToken,RemoveToken:AddToken}
+        _class = inv[token.__class__]
+    return _class(d)
 
 class TokenRegister(object):
     def __init__(self):
@@ -121,8 +127,19 @@ def token_edit_attrs(node,attrlist):
 def token_remove_node(node):
     return RemoveToken({'node':node})
 
+def flip_edge_correctly(node1,attr1,attr2,node2):
+    as_is = True
+    if attr1 > attr2 :
+        as_is = False
+    if not as_is:
+        return node2,attr2,attr1,node1
+    # TODO: Need to handle symmetric edges
+    return node1,attr1,attr2,node2
+
 def token_add_edge(node1,attr1,attr2,node2):
-    return AddToken({'edge':(node1,attr1,attr2,node2)})
+    node1,attr1,attr2,node2 = flip_edge_correctly(node1,attr1,attr2,node2)
+    return AddToken({'node1':node1,'attr1':attr1,'attr2':attr2,'node2':node2})
 
 def token_remove_edge(node1,attr1,attr2,node2):
-    return RemoveToken({'edge':(node1,attr1,attr2,node2)})
+    node1,attr1,attr2,node2 = flip_edge_correctly(node1,attr1,attr2,node2)
+    return RemoveToken({'node1':node1,'attr1':attr1,'attr2':attr2,'node2':node2})
