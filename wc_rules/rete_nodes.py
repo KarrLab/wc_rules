@@ -115,9 +115,7 @@ class checkTYPE(check):
         return isinstance(token['node'],self._class)
 
     def passthrough_fail_message(self):
-        return 'Evalutation failed!'
-
-
+        return 'Evaluation failed!'
 
 class checkATTR(check):
     operator_dict = {
@@ -218,6 +216,9 @@ class alias(SingleInputNode):
     def process_token(self,token,sender,verbose):
         transformed_token = self.transform_token(token)
         return super().process_token(transformed_token,sender,verbose)
+
+    def passthrough_fail_message(self):
+        return 'Somthing wrong with aliasing!'
 
 class checkEDGETYPE(check):
     def __init__(self,attrpair,id=None):
