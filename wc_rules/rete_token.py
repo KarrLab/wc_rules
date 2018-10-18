@@ -21,7 +21,7 @@ class Token(object):
 
     def __contains__(self,key):
         return key in self._dict
-
+    '''
     def update(self,tok):
         common_keys = set(tok.keys()) & set(self.keys())
         different_keys = set(tok.keys()) - common_keys
@@ -30,6 +30,18 @@ class Token(object):
         for key in different_keys:
             self.__setitem__(key,tok[key])
         return self
+    '''
+
+    def merge(self,token):
+        common_keys = set(self.keys()) & set(token.keys())
+        new_keys = set(token.keys()) - common_keys
+        for key in common_keys:
+            if self[key] != token[key]:
+                return None
+        newtoken = new_token(self)
+        for key in new_keys:
+            newtoken[key] = token[key]
+        return newtoken
 
     def items(self): return self._dict.items()
     def keys(self): return self._dict.keys()

@@ -211,7 +211,7 @@ class checkEDGETYPE(check):
     # It duplicates it and passes it along
 
     def evaluate_token(self,token):
-        return ([token[x] for x in ['attr1','attr2']]==list(self.attribute_pair))
+        return (token['attr1'],token['attr2'])==self.attribute_pair
 
     def passthrough_fail_message(self):
         return 'Evaluation failed! Token edge does not match type.'
@@ -283,6 +283,12 @@ class store(SingleInputNode):
             return 'Token not found in register. Cannot remove!'
         return ''
 
+    def filter(self,token):
+        return self._register.filter(token)
+
+    def filter_request(self,token):
+        return self.filter(token)
+
 class alias(SingleInputNode):
     def __init__(self,var_tuple,id=None):
         super().__init__(id)
@@ -313,6 +319,16 @@ class alias(SingleInputNode):
     def passthrough_fail_message(self):
         return 'Somthing wrong with aliasing!'
 
+    def filter(self,token):
+        predecessor = list(self.predecessors)[0]
+        return predecessor.filter_request(token)
+
+    def filter_request(self,token):
+        newtoken = new_token(token,keymap=self.reverse_keymap,subsetkeys=list(self.reverse_keymap.keys()))
+        results = self.filter(newtoken)
+        new_results = [new_token(x,keymap=self.keymap) for x in results]
+        return set(new_results)
+
 
 class merge(ReteNode):
     def __init__(self,var_tuple,id=None):
@@ -325,3 +341,68 @@ class merge(ReteNode):
 
     def __len__(self):
         return len(self._register)
+
+    def reduce_token(self,token):
+        return new_token(token,subsetkeys=list(self.variable_names))
+
+    def has(self,token):
+        return len(self.filter(token)) > 0
+
+    def filter(self,token):
+        return self._register.filter(token)
+
+    def filter_request(self,token):
+        newtoken = new_token(token,subsetkeys=list(self.variable_names))
+        return self.filter(newtoken)
+    ### Merge does not have passthrough functionality.
+    # depending on whether token is Add or Remove
+    # they update their register
+    # then pass out their updated register tokens
+    def other_predecessor(self,sender):
+        return list(self.predecessors.difference([sender]))[0]
+
+    def entry_check(self,token):
+        return all([x in self.variable_names for x in token.keys()])
+
+    def process_token(self,token,sender,verbose):
+        token_type = token.get_type()
+        other_predecessor = self.other_predecessor(sender)
+        tokens_to_pass = []
+        tokens_to_add = []
+        tokens_to_remove = []
+        passthrough_fail = ''
+
+        if token_type=='add' and not self.has(token):
+            # pull tokens from other predecessor
+            other_tokens = other_predecessor.filter_request(token)
+            # merge, add and pass
+            for tok in other_tokens:
+                x = token.merge(tok)
+                if x is not None:
+                    tokens_to_add.append(new_token(x))
+                    tokens_to_pass.append(new_token(x))
+        elif token_type=='remove' and self.has(token):
+            # remove existing tokens. invert and pass.
+            existing_tokens = self.filter(token)
+            tokens_to_remove = list(existing_tokens)
+            tokens_to_pass = [new_token(x,invert=True) for x in existing_tokens]
+        else:
+            # do nothing
+            passthrough_fail = self.passthrough_fail_message(token_type)
+
+        # implement changes
+        for token in tokens_to_add:
+            self._register.add_token(token)
+        for token in tokens_to_remove:
+            self._register.remove_token(token)
+
+        if verbose:
+            print(self.verbose_mode_message(token,tokens_to_pass,tokens_to_add,tokens_to_remove,passthrough_fail))
+        return tokens_to_pass
+
+    def passthrough_fail_message(self,msgtype='add'):
+        if msgtype=='add':
+            return 'Token already found in register. Cannot add again!'
+        if msgtype=='remove':
+            return 'Token not found in register. Cannot remove!'
+        return ''

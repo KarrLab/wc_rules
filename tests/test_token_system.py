@@ -23,12 +23,6 @@ class TestTokenSystem(unittest.TestCase):
         s = t1.subset(['A'])
         self.assertEqual(s['A'],a1)
 
-        x2 = X(id='x2')
-        t2 = Token({'A':a1,'X':x2})
-
-        with self.assertRaises(AssertionError):
-            t1.update(t2)
-
     def test_token_register(self):
         a1 = A(id='a1')
         x1 = X(id='x1')
@@ -163,3 +157,42 @@ class TestTokenSystem(unittest.TestCase):
         tok = token_add_node(X(ph=True,v=0))
         m.send_token(tok,verbose=True)
         self.assertEqual(len(n),2)
+
+    def test_token_passing_4(self):
+        a1 = A(id='a1')
+        x1 = X(id='x1',ph=True,v=0).set_molecule(a1)
+
+        p1 = Pattern('p1').add_node(a1)
+
+        m = Matcher()
+        m.add_pattern(p1)
+
+        n  = m.get_pattern('p1')
+        self.assertEqual(len(n),0)
+
+        a2 = A()
+        x2 = X(ph=True,v=0)
+
+        tok = token_add_node(a2)
+        m.send_token(tok)
+        self.assertEqual(len(n),0)
+
+        tok = token_add_node(x2)
+        m.send_token(tok)
+        self.assertEqual(len(n),0)
+
+        tok = token_add_edge(a2,'sites','molecule',x2)
+        m.send_token(tok,verbose=True)
+        self.assertEqual(len(n),1)
+
+        tok = token_add_edge(a2,'sites','molecule',x2)
+        m.send_token(tok,verbose=True)
+        self.assertEqual(len(n),1)
+
+        tok = token_remove_edge(a2,'sites','molecule',x2)
+        m.send_token(tok,verbose=True)
+        self.assertEqual(len(n),0)
+
+        tok = token_remove_edge(a2,'sites','molecule',x2)
+        m.send_token(tok,verbose=True)
+        self.assertEqual(len(n),0)
