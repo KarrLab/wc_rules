@@ -38,6 +38,9 @@ class Token(object):
         for key in common_keys:
             if self[key] != token[key]:
                 return None
+        for key in new_keys:
+            if token[key] in self.values():
+                return None
         newtoken = new_token(self)
         for key in new_keys:
             newtoken[key] = token[key]
@@ -45,6 +48,7 @@ class Token(object):
 
     def items(self): return self._dict.items()
     def keys(self): return self._dict.keys()
+    def values(self): return self._dict.values()
 
     def subset(self,keys):
         return {k:self[k] for k in keys if k in self._dict}
