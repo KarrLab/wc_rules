@@ -76,9 +76,9 @@ class TestTokenSystem(unittest.TestCase):
         m.send_token(tok)
         self.assertEqual(len(n),0)
 
-        tok = token_edit_attrs(a2,['a','b','c'])
-        m.send_token(tok)
-        self.assertEqual(len(n),1)
+        #tok = token_edit_attrs(a2,['a','b','c'])
+        #m.send_token(tok)
+        #self.assertEqual(len(n),1)
 
         tok = token_add_node(a2)
         m.send_token(tok)

@@ -130,10 +130,11 @@ class TokenRegister(object):
         return None
 
 def token_add_node(node):
-    attrs = node.get_nonempty_scalar_attributes(ignore_id=True)
-    return AddToken({'node':node,'modified_attrs':tuple(attrs)})
+    attrlist = node.get_nonempty_scalar_attributes(ignore_id=True)
+    return AddToken({'node':node,'modified_attrs':tuple(attrlist)})
 
 def token_edit_attrs(node,attrlist):
+    attrtuples = [(attr,getattr(node,attr)) for attr in attrlist]
     return AddToken({'node':node,'modified_attrs':tuple(attrlist)})
 
 def token_remove_node(node):
