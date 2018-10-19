@@ -1,4 +1,4 @@
-from .utils import generate_id
+from .utils import generate_id,listify
 from .rete_token import new_token,TokenRegister
 
 class ReteNode(object):
@@ -211,13 +211,21 @@ class checkEDGETYPE(check):
     # It duplicates it and passes it along
 
     def evaluate_token(self,token):
-        return (token['attr1'],token['attr2'])==self.attribute_pair
+        y = 'node1 attr1 node2 attr2'.split()
+        node1,attr1,node2,attr2 = [token[x] for x in y]
+        if token.get_type()=='add':
+            return node2 in listify(getattr(node1,attr1))
+        if token.get_type()=='remove':
+            return node2 not in listify(getattr(node1,attr1))
+        return True
 
     def passthrough_fail_message(self):
-        return 'Evaluation failed! Token edge does not match type.'
+        return 'Evaluation failed! Edge existence does not correspond to token itself.'
 
     def entry_check(self,token):
-        return 'attr1' in token.keys() and 'attr2' in token.keys()
+        if('attr1' in token.keys() and 'attr2' in token.keys()):
+            return (token['attr1'],token['attr2'])==self.attribute_pair
+        return False
 
 class store(SingleInputNode):
     def __init__(self,id=None,number_of_variables=1):

@@ -181,6 +181,7 @@ class TestTokenSystem(unittest.TestCase):
         m.send_token(tok)
         self.assertEqual(len(n),0)
 
+        x2.set_molecule(a2)
         tok = token_add_edge(a2,'sites','molecule',x2)
         m.send_token(tok,verbose=True)
         self.assertEqual(len(n),1)
@@ -189,6 +190,7 @@ class TestTokenSystem(unittest.TestCase):
         m.send_token(tok,verbose=True)
         self.assertEqual(len(n),1)
 
+        x2.unset_molecule()
         tok = token_remove_edge(a2,'sites','molecule',x2)
         m.send_token(tok,verbose=True)
         self.assertEqual(len(n),0)
