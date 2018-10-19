@@ -210,17 +210,8 @@ class checkEDGETYPE(check):
     # It simply evaluates token, and if it passes,
     # It duplicates it and passes it along
 
-    def evaluate_token(self,token):
-        y = 'node1 attr1 node2 attr2'.split()
-        node1,attr1,node2,attr2 = [token[x] for x in y]
-        if token.get_type()=='add':
-            return node2 in listify(getattr(node1,attr1))
-        if token.get_type()=='remove':
-            return node2 not in listify(getattr(node1,attr1))
-        return True
-
     def passthrough_fail_message(self):
-        return 'Evaluation failed! Edge existence does not correspond to token itself.'
+        return 'Evaluation failed!'
 
     def entry_check(self,token):
         if('attr1' in token.keys() and 'attr2' in token.keys()):
