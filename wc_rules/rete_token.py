@@ -33,6 +33,9 @@ class Token(object):
     '''
 
     def merge(self,token):
+        # merge if and only if
+        # shared keys have the same values
+        # non-shared keys all have unique values
         common_keys = set(self.keys()) & set(token.keys())
         new_keys = set(token.keys()) - common_keys
         for key in common_keys:
