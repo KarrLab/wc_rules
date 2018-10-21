@@ -1,5 +1,6 @@
 from .indexer import DictSet
 from .utils import listify,generate_id
+from .microDSL import is_empty_parser
 from operator import eq
 import random
 import pprint
@@ -7,6 +8,7 @@ import pprint
 class Pattern(DictSet):
     def __init__(self,idx,nodelist=None,recurse=True):
         self.id = idx
+        self._expressions = dict(is_empty=set())
         super().__init__()
         if nodelist:
             for node in nodelist:
@@ -21,6 +23,20 @@ class Pattern(DictSet):
                     for node2 in nodelist:
                         self.add_node(node2,recurse)
         return self
+
+    def add_expression(self,string_input):
+        expr = self.parse_isempty(string_input)
+        if expr is not None:
+            var,attr = expr.variable, expr.attribute
+            self._expressions['is_empty'].add(tuple([var,attr]))
+        return self
+
+    def parse_isempty(self,string_input):
+        try:
+            model = is_empty_parser.model_from_str(string_input)
+        except:
+            model = None
+        return model
 
     def remove_node(self,node):
         return self.remove(node)
