@@ -1,6 +1,6 @@
 from .indexer import DictSet
 from .utils import listify,generate_id
-from .microDSL import is_empty_parser
+from .microDSL import is_empty_parser, is_in_parser
 from operator import eq
 import random
 import pprint
@@ -8,7 +8,7 @@ import pprint
 class Pattern(DictSet):
     def __init__(self,idx,nodelist=None,recurse=True):
         self.id = idx
-        self._expressions = dict(is_empty=set())
+        self._expressions = dict(is_empty=set(),is_in=set(),is_not_in=set())
         super().__init__()
         if nodelist:
             for node in nodelist:
@@ -25,18 +25,31 @@ class Pattern(DictSet):
         return self
 
     def add_expression(self,string_input):
-        expr = self.parse_isempty(string_input)
+        expr = self.parse_expression(string_input,is_empty_parser)
         if expr is not None:
             var,attr = expr.variable, expr.attribute
             self._expressions['is_empty'].add(tuple([var,attr]))
+            return self
+        expr = self.parse_expression(string_input,is_in_parser)
+        if expr is not None:
+            var1 = expr.variable
+            tup1 = tuple([expr.varloc.pattern,expr.varloc.variable])
+            tup2 = (var1,tup1)
+            if expr.is_not:
+                self._expressions['is_not_in'].add(tup2)
+            else:
+                self._expressions['is_in'].add(tup2)
+            return self
         return self
 
-    def parse_isempty(self,string_input):
+
+    def parse_expression(self,string_input,parser):
         try:
-            model = is_empty_parser.model_from_str(string_input)
+            model = parser.model_from_str(string_input)
         except:
             model = None
         return model
+
 
     def remove_node(self,node):
         return self.remove(node)
