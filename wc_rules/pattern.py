@@ -1,7 +1,7 @@
 from .indexer import DictSet
 from .utils import listify,generate_id
 from .expr_parse import parse_expression
-from operator import eq
+from operator import lt,le,eq,ne,ge,gt
 import random
 import pprint
 
@@ -9,8 +9,6 @@ class Pattern(DictSet):
     def __init__(self,idx,nodelist=None,recurse=True):
         self.id = idx
         self._expressions = dict()
-        #for key in ['is_empty','is_in','is_not_in','cmp']:
-        #    self._expressions[key] = set()
         super().__init__()
         if nodelist:
             for node in nodelist:
@@ -80,6 +78,20 @@ class Pattern(DictSet):
                 if attr=='id': continue
                 v = ['attr',attr,eq,getattr(node,attr)]
                 attr_queries[idx].append(tuple(v))
+
+        op_str = ['<','<=','==','!=','>=','>']
+        ops = [lt,le,eq,ne,ge,gt]
+        op_dict = dict(zip(op_str,ops))
+        if 'bool_cmp' in self._expressions:
+            for entry in self._expressions['bool_cmp']:
+                var,attr,op,value = entry
+                v = ['attr',attr,op_dict[op],value]
+                attr_queries[var].append(tuple(v))
+        if 'num_cmp' in self._expressions:
+            for entry in self._expressions['num_cmp']:
+                var,attr,op,value = entry
+                v = ['attr',attr,op_dict[op],value]
+                attr_queries[var].append(tuple(v))
         return attr_queries
 
     def generate_queries_REL(self):
