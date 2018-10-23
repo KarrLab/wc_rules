@@ -1,4 +1,5 @@
 from textx import *
+from .utils import ParseExpressionError
 
 is_empty_grammar = '''
 Expression:
@@ -78,6 +79,7 @@ def parse_expression(string_input):
     if expr is not None:
         return 'num_cmp', (expr.variable,expr.attribute,expr.op,expr.value)
 
+    raise ParseExpressionError('Could not parse expression! ' + string_input)
     return None,None
 
 def use_parser(string_input,parser):

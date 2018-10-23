@@ -113,6 +113,17 @@ class Pattern(DictSet):
                         v = ['rel',node2.id,related_attr,attr,idx]
                     rel_queries.append(tuple(v))
             already_encountered.append(idx)
+
+        if 'is_empty' in self._expressions:
+            varlist = self._expressions['is_empty']
+            for (var,attr) in varlist:
+                node  = self[var]
+                related_attr = node.attribute_properties[attr]['related_attr']
+                if attr < related_attr:
+                    v = ['rel',var,attr,related_attr,None]
+                else:
+                    v = ['rel',None,related_attr,attr,var]
+                rel_queries.append(tuple(v))
         return rel_queries
 
     def generate_queries(self):

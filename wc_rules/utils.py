@@ -56,6 +56,8 @@ class FindError(GenericError):
 class SeqError(GenericError):
     pass
 
+class ParseExpressionError(GenericError):pass
+
 class AddObjectError(Exception):
 
     def __init__(self, parentobject, currentobject, allowedobjects, methodname='add()'):

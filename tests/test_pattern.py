@@ -1,5 +1,6 @@
 from obj_model import core
 from wc_rules import utils,chem
+from wc_rules.utils import ParseExpressionError
 from wc_rules import pattern
 import unittest
 
@@ -79,3 +80,27 @@ class TestPattern(unittest.TestCase):
             node2 = p[idx2]
             self.assertTrue(node1 in utils.listify(getattr(node2,attr2)))
             self.assertTrue(node2 in utils.listify(getattr(node1,attr1)))
+
+    def test_expressions(self):
+        x1 = X('x1')
+        p1 = pattern.Pattern('p1')  \
+        .add_expression('!x1.ph1')     \
+        .add_expression('x1.ph2 != False')
+
+        exprs1 = sorted(p1._expressions['bool_cmp'])
+        tup1 = ('x1','ph1','!=',True)
+        tup2 = ('x1','ph2','==',True)
+        exprs2 = [tup1,tup2]
+        self.assertEqual(exprs1,exprs2)
+
+        with self.assertRaises(ParseExpressionError):
+            p1.add_expression('x1')
+
+        y1 = Y('y1')
+        p2= pattern.Pattern('p2')   \
+        .add_expression('y1.v > 5')
+
+        exprs1 = sorted(p2._expressions['num_cmp'])
+        tup2 = ('y1','v','>',5)
+        exprs2 = [tup2]
+        self.assertEqual(exprs1,exprs2)
