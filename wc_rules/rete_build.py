@@ -59,6 +59,11 @@ def add_checkEDGETYPE(net,current_node,attr1,attr2):
     current_node = check_attribute_and_add_successor(net,current_node,rn.checkEDGETYPE,'attribute_pair',attrpair)
     return current_node
 
+def add_checkEMPTYEDGE(net,current_node,attr,which_node):
+    current_node = check_attribute_and_add_successor(net,current_node,rn.checkEMPTYEDGE,'attribute',attr)
+    current_node.set_which(which_node)
+    return current_node
+
 def add_aliasEDGE(net,current_node,var1,var2):
     varnames = (var1,var2)
     current_node = check_attribute_and_add_successor(net,current_node,rn.alias,'variable_names',varnames)
@@ -115,13 +120,32 @@ def increment_net_with_pattern(net,pattern):
 
     for rel in qdict['rel']:
         (kw,var1,attr1,attr2,var2) = rel
-        current_node = net.get_root()
-        current_node = add_checkEDGETYPE(net,current_node,attr1,attr2)
-        current_node = add_store(net,current_node,2)
-        var1_new = new_varnames[var1]
-        var2_new = new_varnames[var2]
-        current_node = add_aliasEDGE(net,current_node,var1_new,var2_new)
-        vartuple_nodes[(var1_new,var2_new)].add(current_node)
+        if var2 is not None and var1 is not None:
+            # processes complete edge checks
+            current_node = net.get_root()
+            current_node = add_checkEDGETYPE(net,current_node,attr1,attr2)
+            current_node = add_store(net,current_node,2)
+            var1_new = new_varnames[var1]
+            var2_new = new_varnames[var2]
+            current_node = add_aliasEDGE(net,current_node,var1_new,var2_new)
+            vartuple_nodes[(var1_new,var2_new)].add(current_node)
+        else:
+            # processes is_empty checks
+            current_node = net.get_root()
+            current_node = add_checkEDGETYPE(net,current_node,attr1,attr2)
+            current_node = add_store(net,current_node,2)
+            if var1 is None:
+                var = var2
+                attr = attr2
+                which_node = 'node2'
+            else:
+                var = var1
+                attr = attr1
+                which_node = 'node1'
+            current_node = add_checkEMPTYEDGE(net,current_node,attr,which_node)
+            new_varname = new_varnames[var]
+            current_node = add_aliasNODE(net,current_node,new_varname)
+            vartuple_nodes[(new_varname,)].add(current_node)
 
     vartuple_nodes2 = dict()
     for vartuple, nodeset in vartuple_nodes.items():
@@ -134,6 +158,9 @@ def increment_net_with_pattern(net,pattern):
     sorted_vartuples = sort_tuples(sorted(vartuple_nodes2))
     sorted_nodes = list(vartuple_nodes2[x] for x in sorted_vartuples)
     current_node = add_mergenode_path(net,sorted_nodes)
+
+
+
     #current_node = add_aliasPATTERN(net,current_node,pattern.id)
 
     return current_node

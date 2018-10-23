@@ -133,29 +133,29 @@ class TestTokenSystem(unittest.TestCase):
 
         x2 = X(ph=True,v=0)
         tok = token_add_node(x2)
-        m.send_token(tok,verbose=True)
+        m.send_token(tok)
         self.assertEqual(len(n),1)
 
         x2.v = 1
         tok = token_edit_attrs(x2,['v'])
-        m.send_token(tok,verbose=True)
+        m.send_token(tok)
         self.assertEqual(len(n),0)
 
         x2.v = 0
         tok = token_edit_attrs(x2,['v'])
-        m.send_token(tok,verbose=True)
+        m.send_token(tok)
         self.assertEqual(len(n),1)
 
         tok = token_add_node(X(ph=False,v=0))
-        m.send_token(tok,verbose=True)
+        m.send_token(tok)
         self.assertEqual(len(n),1)
 
         tok = token_add_node(X(ph=True,v=1))
-        m.send_token(tok,verbose=True)
+        m.send_token(tok)
         self.assertEqual(len(n),1)
 
         tok = token_add_node(X(ph=True,v=0))
-        m.send_token(tok,verbose=True)
+        m.send_token(tok)
         self.assertEqual(len(n),2)
 
     def test_token_passing_4(self):
@@ -183,18 +183,58 @@ class TestTokenSystem(unittest.TestCase):
 
         x2.set_molecule(a2)
         tok = token_add_edge(a2,'sites','molecule',x2)
-        m.send_token(tok,verbose=True)
+        m.send_token(tok)
         self.assertEqual(len(n),1)
 
         tok = token_add_edge(a2,'sites','molecule',x2)
-        m.send_token(tok,verbose=True)
+        m.send_token(tok)
         self.assertEqual(len(n),1)
 
         x2.unset_molecule()
         tok = token_remove_edge(a2,'sites','molecule',x2)
-        m.send_token(tok,verbose=True)
+        m.send_token(tok)
         self.assertEqual(len(n),0)
 
         tok = token_remove_edge(a2,'sites','molecule',x2)
-        m.send_token(tok,verbose=True)
+        m.send_token(tok)
         self.assertEqual(len(n),0)
+
+    def test_token_passing_5(self):
+        a2 = A('a')
+        p = Pattern('p').add_node(a2)
+        p.add_expression('a.sites empty')
+
+        m = Matcher()
+        m.add_pattern(p)
+
+        n  = m.get_pattern('p')
+        self.assertEqual(len(n),0)
+
+        a000 = A()
+        tok = token_add_node(a000)
+        m.send_token(tok)
+        self.assertEqual(len(n),0)
+        tok = token_null_edge(a000,'sites')
+        m.send_token(tok)
+        self.assertEqual(len(n),1)
+
+
+        a001 = A()
+        x001 = X().set_molecule(a001)
+
+        tok = token_add_node(a001)
+        m.send_token(tok)
+        self.assertEqual(len(n),1)
+
+        tok = token_add_node(x001)
+        m.send_token(tok)
+        self.assertEqual(len(n),1)
+
+        tok = token_add_edge(a001,'sites','molecule',x001)
+        m.send_token(tok)
+        self.assertEqual(len(n),1)
+
+        x001.unset_molecule()
+        tok = token_remove_edge(a001,'sites','molecule',x001)
+        m.send_token(tok,verbose=True)
+        self.assertEqual(len(n),2)

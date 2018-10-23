@@ -218,6 +218,65 @@ class checkEDGETYPE(check):
             return (token['attr1'],token['attr2'])==self.attribute_pair
         return False
 
+class checkEMPTYEDGE(check):
+    def __init__(self,attr,id=None):
+        super().__init__(id)
+        self.attribute = attr
+        self.which_node = ''
+
+    def __str__(self):
+        return '*.'+self.attribute+' empty'
+
+    def entry_check(self,token):
+        return True
+
+    def set_which(self,which_node):
+        self.which_node = which_node
+        return self
+
+    # checkEMPTYEDGE checks whether a related attribute is empty.
+
+    # checkEMPTYEDGE must be directly downstream of an edge store.
+    # edge store gives tokens of the form ('node1':node1,'node2':node2).
+    # during rete-net building, you must set which_node='node1'|'node2'
+    # indicating whether 'node1' or 'node2' is to be checked.
+
+    # token-passing behavior
+    # if it is an Add token, subset, invert and pass on.
+    # if it is a Remove token or a Null token,
+    # first check if predecessor still has any remaining edge tokens for which_node
+    # if not, invert and pass on.
+
+    # Null tokens are special tokens sent for newly created nodes that have
+    # empty related attributes.
+    # Why not just use Remove tokens?
+    # Because Remove token specifically stops at store nodes if Remove action fails
+
+    def process_token(self,token,sender,verbose=False):
+        tokens_to_pass = []
+        passthrough_fail = ''
+        which_node = self.which_node
+        keymap = {which_node:'node'}
+
+        if token.get_type()=='add':
+            tokens_to_pass = [new_token(token,invert=True,subsetkeys=[which_node],keymap=keymap)]
+        if token.get_type() in ['null','remove']:
+            tok = new_token(token,subsetkeys=[which_node])
+            existing_tokens = self.filter_request(tok)
+            if len(existing_tokens) == 0:
+                tokens_to_pass = [new_token(token,invert=True,subsetkeys=[which_node],keymap=keymap)]
+
+        if verbose:
+            print(self.verbose_mode_message(token,tokens_to_pass,passthrough_fail=passthrough_fail))
+        return tokens_to_pass
+
+    def filter(self,token):
+        predecessor = list(self.predecessors)[0]
+        return predecessor.filter_request(token)
+
+    def filter_request(self,token):
+        return self.filter(token)
+
 class store(SingleInputNode):
     def __init__(self,id=None,number_of_variables=1):
         super().__init__(id)
@@ -261,6 +320,8 @@ class store(SingleInputNode):
         elif token_type=='remove' and existing_token is not None:
             tokens_to_remove = [existing_token]
             tokens_to_pass = [new_token(existing_token,invert=True)]
+        elif token_type=='null' and existing_token is None:
+            tokens_to_pass = [new_token(token)]
         else:
             # do nothing
             passthrough_fail = self.passthrough_fail_message(token_type)
@@ -304,6 +365,14 @@ class alias(SingleInputNode):
 
     def __len__(self):
         return len(list(self.predecessors)[0])
+
+    def __lt__(self, other):
+        return self.variable_names < other.variable_names
+
+    def entry_check(self,token):
+        if any([x is None for x in token.values()]):
+            return False
+        return True
 
     def transform_token(self,token,keymap):
         return new_token(token,keymap=keymap,subsetkeys=keymap.keys())

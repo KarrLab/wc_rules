@@ -67,17 +67,23 @@ class AddToken(Token):
 class RemoveToken(Token):
     def get_type(self): return 'remove'
 
+class NullToken(Token):
+    def get_type(self): return 'null'
+
+
 def new_token(token,invert=False,keymap=None,subsetkeys=None):
     d = token._dict
     if subsetkeys is None:
         subsetkeys = token.keys()
     if keymap:
         d = {keymap[x]:y for x,y in token.items() if x in subsetkeys}
+    else:
+        d = {x:y for x,y in token.items() if x in subsetkeys}
     _class = None
     if not invert:
         _class = token.__class__
     else:
-        inv = {AddToken:RemoveToken,RemoveToken:AddToken}
+        inv = {AddToken:RemoveToken,RemoveToken:AddToken,NullToken:AddToken}
         _class = inv[token.__class__]
     return _class(d)
 
@@ -163,3 +169,9 @@ def token_add_edge(node1,attr1,attr2,node2):
 def token_remove_edge(node1,attr1,attr2,node2):
     node1,attr1,attr2,node2 = flip_edge_correctly(node1,attr1,attr2,node2)
     return RemoveToken({'node1':node1,'attr1':attr1,'attr2':attr2,'node2':node2})
+
+def token_null_edge(node1,attr1):
+    attr2 = node1.attribute_properties[attr1]['related_attr']
+    node2 = None
+    node1,attr1,attr2,node2 = flip_edge_correctly(node1,attr1,attr2,node2)
+    return NullToken({'node1':node1,'attr1':attr1,'attr2':attr2,'node2':node2})
