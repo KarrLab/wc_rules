@@ -36,11 +36,14 @@ class BaseClass(core.Model):
         outward_edges = tuple()
         semantic = tuple()
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(BaseClass, self).__init__(**kwargs)
         if 'id' not in kwargs.keys():
+            if args:
+                self.id = args[0]
+            else:
             #self.id = str(uuid.UUID(int=idgen.getrandbits(128)))
-            self.id = utils.generate_id()
+                self.id = utils.generate_id()
         self.attribute_properties = self.make_attribute_properties_dict()
 
     def make_attribute_properties_dict(self):

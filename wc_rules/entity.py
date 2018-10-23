@@ -9,8 +9,8 @@ from . import base
 
 class Entity(base.BaseClass):
 
-    def __init__(self, **kwargs):
-        super(Entity, self).__init__(**kwargs)
+    def __init__(self, *args, **kwargs):
+        super(Entity, self).__init__(*args,**kwargs)
         attrdict = self.attribute_properties
         self._tokens = set()
 
