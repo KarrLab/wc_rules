@@ -116,6 +116,7 @@ class checkTYPE(check):
     # checkTYPE has PASSTHROUGH functionality.
     # It simply evaluates token, and if it passes,
     # It duplicates it and passes it along
+
     def evaluate_token(self,token):
         return isinstance(token['node'],self._class)
 
@@ -202,13 +203,13 @@ class checkEDGETYPE(check):
         super().__init__(id)
         self.attribute_pair = attrpair
 
+    ### checkEDGETYPE has passthrough behavior
+    # It simply checks whether the token has a compatible attrpair
+    # Then duplicates and passes it on
+
     def __str__(self):
         v = ['*'+str(i)+'.'+x for i,x in enumerate(self.attribute_pair)]
         return '--'.join(v)
-
-    # checkEDGE has PASSTHROUGH functionality.
-    # It simply evaluates token, and if it passes,
-    # It duplicates it and passes it along
 
     def passthrough_fail_message(self):
         return 'Evaluation failed!'
@@ -235,36 +236,33 @@ class checkEMPTYEDGE(check):
         return self
 
     # checkEMPTYEDGE checks whether a related attribute is empty.
-
-    # checkEMPTYEDGE must be directly downstream of an edge store.
-    # edge store gives tokens of the form ('node1':node1,'node2':node2).
-    # during rete-net building, you must set which_node='node1'|'node2'
-    # indicating whether 'node1' or 'node2' is to be checked.
-
-    # token-passing behavior
-    # if it is an Add token, subset, invert and pass on.
-    # if it is a Remove token or a Null token,
-    # first check if predecessor still has any remaining edge tokens for which_node
-    # if not, invert and pass on.
-
-    # Null tokens are special tokens sent for newly created nodes that have
-    # empty related attributes.
-    # Why not just use Remove tokens?
-    # Because Remove token specifically stops at store nodes if Remove action fails
+    # it is ALWAYS downstream of a store node that stores existing edges.
+    # Null tokens are used to inform that a node with an empty related attribute
+    # is going to be added or removed.
+    # if null:
+    #   duplicate and pass it on
+    # if not null:
+    #   if 'add': invert, duplicate and pass it on
+    #   if 'remove': if no-more related entries exist at that attribute,
+    #                    then invert, duplicate and pass it on
 
     def process_token(self,token,sender,verbose=False):
         tokens_to_pass = []
         passthrough_fail = ''
         which_node = self.which_node
         keymap = {which_node:'node'}
+        tok = new_token(token,subsetkeys=[which_node])
+        existing_tokens = self.filter_request(tok)
 
-        if token.get_type()=='add':
-            tokens_to_pass = [new_token(token,invert=True,subsetkeys=[which_node],keymap=keymap)]
-        if token.get_type() in ['null','remove']:
-            tok = new_token(token,subsetkeys=[which_node])
-            existing_tokens = self.filter_request(tok)
-            if len(existing_tokens) == 0:
+        if token.is_null():
+            assert len(existing_tokens) ==0
+            tokens_to_pass = [new_token(token,subsetkeys=[which_node],keymap=keymap)]
+        else:
+            if token.get_type()=='add':
                 tokens_to_pass = [new_token(token,invert=True,subsetkeys=[which_node],keymap=keymap)]
+            if token.get_type()=='remove':
+                if len(existing_tokens) == 0:
+                    tokens_to_pass = [new_token(token,invert=True,subsetkeys=[which_node],keymap=keymap)]
 
         if verbose:
             print(self.verbose_mode_message(token,tokens_to_pass,passthrough_fail=passthrough_fail))
@@ -297,9 +295,12 @@ class store(SingleInputNode):
         return None
 
     ### Store does not have passthrough functionality.
-    # depending on whether token is Add or Remove
-    # they update their register
-    # then pass out their updated register tokens
+    # depending on whether token is Add or Remove,
+    # they update their register,
+    # then pass out their updated register tokens.
+    # if a token is null-add or null-remove, they don't update register
+    # they just convert it with keymap and pass it on
+
     def entry_check(self,token):
         return all([x in token for x in self.keys()])
 
@@ -312,19 +313,20 @@ class store(SingleInputNode):
         tokens_to_remove = []
         passthrough_fail = ''
 
+        if token.is_null():
+            assert(existing_token is None)
+            tokens_to_pass = [new_token(subtoken)]
         # Add token if existing_token is None and type is 'add'
-        if token_type=='add' and existing_token is None:
+        elif token_type=='add' and existing_token is None:
             tokens_to_add = [new_token(subtoken)]
             tokens_to_pass = [new_token(subtoken)]
         # Remove token if existing_token is not None and type is 'remove'
         elif token_type=='remove' and existing_token is not None:
             tokens_to_remove = [existing_token]
             tokens_to_pass = [new_token(existing_token,invert=True)]
-        elif token_type=='null' and existing_token is None:
-            tokens_to_pass = [new_token(token)]
         else:
             # do nothing
-            passthrough_fail = self.passthrough_fail_message(token_type)
+            passthrough_fail = self.passthrough_fail_message(token)
 
         # implement changes
         for token in tokens_to_add:
@@ -336,10 +338,10 @@ class store(SingleInputNode):
             print(self.verbose_mode_message(token,tokens_to_pass,tokens_to_add,tokens_to_remove,passthrough_fail))
         return tokens_to_pass
 
-    def passthrough_fail_message(self,msgtype='add'):
-        if msgtype=='add':
+    def passthrough_fail_message(self,token):
+        if token.get_type()=='add':
             return 'Token already found in register. Cannot add again!'
-        if msgtype=='remove':
+        if token.get_type()=='remove':
             return 'Token not found in register. Cannot remove!'
         return ''
 

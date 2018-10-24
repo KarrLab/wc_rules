@@ -63,15 +63,32 @@ class Token(object):
 
 class AddToken(Token):
     def get_type(self): return 'add'
+    def is_null(self): return False
 
 class RemoveToken(Token):
     def get_type(self): return 'remove'
+    def is_null(self): return False
 
-class NullToken(Token):
-    def get_type(self): return 'null'
+class AddNullToken(AddToken):
+    def is_null(self): return True
+class RemoveNullToken(RemoveToken):
+    def is_null(self): return True
 
+# Null Tokens are used for 'safely' adding/removing nodes from the system
+# while processing any 'is_empty' matches to their attributes.
+# To add a node to the system,
+#   pass AddToken(node), then pass AddNullToken(any null edges)
+# To remove a node from the system,
+#   pass RemoveNullToken(any null edges), then pass RemoveToken(node)
 
 def new_token(token,invert=False,keymap=None,subsetkeys=None):
+    inv = {
+        AddToken:RemoveToken,
+        RemoveToken:AddToken,
+        AddNullToken:RemoveToken,
+        RemoveNullToken:AddToken
+    }
+
     d = token._dict
     if subsetkeys is None:
         subsetkeys = token.keys()
@@ -83,7 +100,6 @@ def new_token(token,invert=False,keymap=None,subsetkeys=None):
     if not invert:
         _class = token.__class__
     else:
-        inv = {AddToken:RemoveToken,RemoveToken:AddToken,NullToken:AddToken}
         _class = inv[token.__class__]
     return _class(d)
 
@@ -170,8 +186,14 @@ def token_remove_edge(node1,attr1,attr2,node2):
     node1,attr1,attr2,node2 = flip_edge_correctly(node1,attr1,attr2,node2)
     return RemoveToken({'node1':node1,'attr1':attr1,'attr2':attr2,'node2':node2})
 
-def token_null_edge(node1,attr1):
+def token_add_null_edge(node1,attr1):
     attr2 = node1.attribute_properties[attr1]['related_attr']
     node2 = None
     node1,attr1,attr2,node2 = flip_edge_correctly(node1,attr1,attr2,node2)
-    return NullToken({'node1':node1,'attr1':attr1,'attr2':attr2,'node2':node2})
+    return AddNullToken({'node1':node1,'attr1':attr1,'attr2':attr2,'node2':node2})
+
+def token_remove_null_edge(node1,attr1):
+    attr2 = node1.attribute_properties[attr1]['related_attr']
+    node2 = None
+    node1,attr1,attr2,node2 = flip_edge_correctly(node1,attr1,attr2,node2)
+    return RemoveNullToken({'node1':node1,'attr1':attr1,'attr2':attr2,'node2':node2})
