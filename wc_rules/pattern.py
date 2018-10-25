@@ -126,11 +126,18 @@ class Pattern(DictSet):
                 rel_queries.append(tuple(v))
         return rel_queries
 
+    def generate_queries_ISIN(self):
+        is_in = []
+        if 'is_in' in self._expressions:
+            is_in = [('is_in',x) for x in self._expressions['is_in']]
+        return is_in
+
     def generate_queries(self):
         return {
             'type': self.generate_queries_TYPE(),
             'attr': self.generate_queries_ATTR(),
             'rel': self.generate_queries_REL(),
+            'is_in': self.generate_queries_ISIN(),
         }
 
 def main():

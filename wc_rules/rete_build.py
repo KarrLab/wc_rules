@@ -150,6 +150,12 @@ def increment_net_with_pattern(net,pattern):
             current_node = add_aliasNODE(net,current_node,new_varname)
             vartuple_nodes[(new_varname,)].add(current_node)
 
+    for item in qdict['is_in']:
+        # each item is of the form ('isin',(target_var,(source_pattern,source_var))
+        target_var = new_varnames[item[1][0]]
+        source_pattern = item[1][1][0]
+        source_variable =item[1][1][1]
+        
     vartuple_nodes2 = dict()
     for vartuple, nodeset in vartuple_nodes.items():
         if len(nodeset) > 1:
@@ -157,6 +163,8 @@ def increment_net_with_pattern(net,pattern):
             vartuple_nodes2[vartuple] = current_node
         if len(nodeset) == 1:
             vartuple_nodes2[vartuple] = list(nodeset)[0]
+
+
 
     sorted_vartuples = sort_tuples(sorted(vartuple_nodes2))
     sorted_nodes = list(vartuple_nodes2[x] for x in sorted_vartuples)
