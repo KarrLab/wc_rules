@@ -1,5 +1,5 @@
 from .utils import generate_id,listify
-from .rete_token import new_token,new_token2,TokenRegister
+from .rete_token import new_token,TokenRegister
 
 class ReteNode(object):
     def __init__(self,id=None):
@@ -262,11 +262,7 @@ class store(SingleInputNode):
         tokens_to_remove = []
         passthrough_fail = ''
 
-        if token.is_null():
-            assert(existing_token is None)
-            tokens_to_pass = [new_token(subtoken)]
-        # Add token if existing_token is None and type is 'add'
-        elif token_type=='add' and existing_token is None:
+        if token_type=='add' and existing_token is None:
             tokens_to_add = [new_token(subtoken)]
             tokens_to_pass = [new_token(subtoken)]
         # Remove token if existing_token is not None and type is 'remove'
