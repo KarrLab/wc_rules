@@ -275,8 +275,6 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(m.count('X'),1)
         self.assertEqual(m.count('Ax'),0)
 
-
-    #@unittest.skip('')
     def test_token_passing_7(self):
         p1 = Pattern('p1').add_node( A('a') )
         p1.add_expression('a.sites empty')
@@ -322,3 +320,20 @@ class TestTokenSystem(unittest.TestCase):
         m.send_token(tok)
         self.assertEqual(m.count('p1'),0)
         self.assertEqual(m.count('p2'),0)
+
+    def test_token_passing_8(self):
+        p_Ax = p_Ax = Pattern('Ax').add_node( A('a').add_sites(X('x') ) )
+        m = Matcher()
+        for p in [p_Ax]:
+            m.add_pattern(p)
+
+        a001 = A()
+        tokens = [token_add_node(a001)]
+        n = 100
+        for i in range(n):
+            x = X().set_molecule(a001)
+            tokens.append(token_add_node(x))
+            tokens.append(token_add_edge(x,'molecule','sites',a001))
+
+        m.send_tokens(tokens)
+        self.assertEqual(m.count('Ax'),n)
