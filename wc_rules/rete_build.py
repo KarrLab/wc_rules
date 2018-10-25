@@ -52,6 +52,7 @@ def add_store(net,current_node,number_of_variables):
 def add_aliasNODE(net,current_node,varname):
     var = (varname,)
     current_node = check_attribute_and_add_successor(net,current_node,rn.alias,'variable_names',var)
+    current_node.set_keymap('node',varname)
     return current_node
 
 def add_checkEDGETYPE(net,current_node,attr1,attr2):
@@ -67,6 +68,8 @@ def add_checkEMPTYEDGE(net,current_node,attr,which_node):
 def add_aliasEDGE(net,current_node,var1,var2):
     varnames = (var1,var2)
     current_node = check_attribute_and_add_successor(net,current_node,rn.alias,'variable_names',varnames)
+    current_node.set_keymap('node1',var1)
+    current_node.set_keymap('node2',var2)
     return current_node
 
 def add_mergenode_path(net,list_of_nodes):
