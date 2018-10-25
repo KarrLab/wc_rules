@@ -214,6 +214,7 @@ class TestTokenSystem(unittest.TestCase):
         for p in [p_X, p_Ax]:
             m.add_pattern(p)
 
+        #
         x001 = X(ph=True)
         a001 = A()
         x001.set_molecule(a001)
@@ -224,18 +225,20 @@ class TestTokenSystem(unittest.TestCase):
             token_add_edge(a001,'sites','molecule',x001)
         ]
 
-        m.send_tokens(tokens,verbose=True)
+        m.send_tokens(tokens)
+        self.assertEqual(m.count('X'),1)
+        self.assertEqual(m.count('Ax'),1)
 
+        #
         x001.ph = False
 
         tokens = [
             token_edit_attrs(x001,['ph'])
         ]
 
-        m.send_tokens(tokens,verbose=True)
-
-        print(m.count('X')==1)
-        print(m.count('Ax')==1)
+        m.send_tokens(tokens)
+        self.assertEqual(m.count('X'),0)
+        self.assertEqual(m.count('Ax'),0)
 
 
 
