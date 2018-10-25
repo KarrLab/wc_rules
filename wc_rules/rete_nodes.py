@@ -97,7 +97,6 @@ class ReteNode(object):
     def count(self):
         return None
 
-
 class SingleInputNode(ReteNode): pass
 
 class Root(SingleInputNode):
@@ -224,63 +223,6 @@ class checkEDGETYPE(check):
         if('attr1' in token.keys() and 'attr2' in token.keys()):
             return (token['attr1'],token['attr2'])==self.attribute_pair
         return False
-
-class checkEMPTYEDGE(check):
-    def __init__(self,attr,id=None):
-        super().__init__(id)
-        self.attribute = attr
-        self.which_node = ''
-
-    def __str__(self):
-        return '*.'+self.attribute+' empty'
-
-    def entry_check(self,token):
-        return True
-
-    def set_which(self,which_node):
-        self.which_node = which_node
-        return self
-
-    # checkEMPTYEDGE checks whether a related attribute is empty.
-    # it is ALWAYS downstream of a store node that stores existing edges.
-    # Null tokens are used to inform that a node with an empty related attribute
-    # is going to be added or removed.
-    # if null:
-    #   duplicate and pass it on
-    # if not null:
-    #   if 'add': invert, duplicate and pass it on
-    #   if 'remove': if no-more related entries exist at that attribute,
-    #                    then invert, duplicate and pass it on
-
-    def process_token(self,token,sender,verbose=False):
-        tokens_to_pass = []
-        passthrough_fail = ''
-        which_node = self.which_node
-        keymap = {which_node:'node'}
-        tok = new_token(token,subsetkeys=[which_node])
-        existing_tokens = self.filter_request(tok)
-
-        if token.is_null():
-            assert len(existing_tokens) ==0
-            tokens_to_pass = [new_token2(token,subsetkeys=[which_node],keymap=keymap)]
-        else:
-            if token.get_type()=='add':
-                tokens_to_pass = [new_token(token,invert=True,subsetkeys=[which_node],keymap=keymap)]
-            if token.get_type()=='remove':
-                if len(existing_tokens) == 0:
-                    tokens_to_pass = [new_token(token,invert=True,subsetkeys=[which_node],keymap=keymap)]
-
-        if verbose:
-            print(self.verbose_mode_message(token,tokens_to_pass,passthrough_fail=passthrough_fail))
-        return tokens_to_pass
-
-    def filter(self,token):
-        predecessor = list(self.predecessors)[0]
-        return predecessor.filter_request(token)
-
-    def filter_request(self,token):
-        return self.filter(token)
-
 
 class store(SingleInputNode):
     def __init__(self,id=None,number_of_variables=1):

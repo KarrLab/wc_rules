@@ -276,7 +276,7 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(m.count('Ax'),0)
 
 
-
+    #@unittest.skip('')
     def test_token_passing_7(self):
         p1 = Pattern('p1').add_node( A('a') )
         p1.add_expression('a.sites empty')
@@ -286,51 +286,39 @@ class TestTokenSystem(unittest.TestCase):
         for p in [p1,p2]:
             m.add_pattern(p)
 
-        n1 = m.get_pattern('p1')
-        n2 = m.get_pattern('p2')
-        self.assertEqual(len(n1),0)
-        self.assertEqual(len(n2),0)
+        self.assertEqual(m.count('p1'),0)
+        self.assertEqual(m.count('p2'),0)
 
-        # Add new A: first add A, then null-edges
+        # Add new A:
         a001 = A()
         tok = token_add_node(a001)
         m.send_token(tok)
-        self.assertEqual(len(n1),0)
-        self.assertEqual(len(n2),1)
-
-        tok = token_add_null_edge(a001,'sites')
-        m.send_token(tok)
-        self.assertEqual(len(n1),1)
-        self.assertEqual(len(n2),1)
+        self.assertEqual(m.count('p1'),1)
+        self.assertEqual(m.count('p2'),1)
 
         # Add new X
         x001 = X()
         tok = token_add_node(x001)
         m.send_token(tok)
-        self.assertEqual(len(n1),1)
-        self.assertEqual(len(n2),1)
+        self.assertEqual(m.count('p1'),1)
+        self.assertEqual(m.count('p2'),1)
 
         # X.set_molecule(A)
         x001.set_molecule(a001)
         tok = token_add_edge(a001,'sites','molecule',x001)
         m.send_token(tok)
-        self.assertEqual(len(n1),0)
-        self.assertEqual(len(n2),1)
+        self.assertEqual(m.count('p1'),0)
+        self.assertEqual(m.count('p2'),1)
 
         # X.unset_molecule()
         x001.unset_molecule()
         tok = token_remove_edge(a001,'sites','molecule',x001)
         m.send_token(tok)
-        self.assertEqual(len(n1),1)
-        self.assertEqual(len(n2),1)
+        self.assertEqual(m.count('p1'),1)
+        self.assertEqual(m.count('p2'),1)
 
-        # Remove A: first remove null-edges, then A
-        tok = token_remove_null_edge(a001,'sites')
-        m.send_token(tok)
-        self.assertEqual(len(n1),0)
-        self.assertEqual(len(n2),1)
-
+        # Remove A
         tok = token_remove_node(a001)
         m.send_token(tok)
-        self.assertEqual(len(n1),0)
-        self.assertEqual(len(n2),0)
+        self.assertEqual(m.count('p1'),0)
+        self.assertEqual(m.count('p2'),0)

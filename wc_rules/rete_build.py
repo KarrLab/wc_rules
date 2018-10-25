@@ -140,6 +140,7 @@ def increment_net_with_pattern(net,pattern,existing_patterns):
             vartuple_nodes[(var1_new,var2_new)].add(current_node)
         else:
             # processes is_empty checks
+            # adds an is_not_in node after the store
             current_node = net.get_root()
             current_node = add_checkEDGETYPE(net,current_node,attr1,attr2)
             current_node = add_store(net,current_node,2)
@@ -147,14 +148,14 @@ def increment_net_with_pattern(net,pattern,existing_patterns):
                 var = var2
                 attr = attr2
                 which_node = 'node2'
+                var_new = new_varnames[var2]
             else:
                 var = var1
                 attr = attr1
                 which_node = 'node1'
-            current_node = add_checkEMPTYEDGE(net,current_node,attr,which_node)
-            new_varname = new_varnames[var]
-            current_node = add_aliasNODE(net,current_node,new_varname)
-            vartuple_nodes[(new_varname,)].add(current_node)
+                var_new = new_varnames[var1]
+            current_node = add_aliasNODE(net,current_node,var_new,which_node,is_not_in=True)
+            vartuple_nodes[(var_new,)].add(current_node)
 
     for item in qdict['is_in']:
         # each item is of the form ('isin',(target_var,(source_pattern,source_var))
@@ -165,7 +166,7 @@ def increment_net_with_pattern(net,pattern,existing_patterns):
             raise BuildError('Pattern `'+source_pattern+'` referenced before adding.')
         current_node = existing_patterns[source_pattern]
         source_key = source_pattern + ':' + source_variable
-        current_node = add_aliasNODE(net,current_node,new_varname,source_key)
+        current_node = add_aliasNODE(net,current_node,target_var,source_key)
         vartuple_nodes[(target_var,)].add(current_node)
 
     for item in qdict['is_not_in']:
@@ -176,7 +177,7 @@ def increment_net_with_pattern(net,pattern,existing_patterns):
             raise BuildError('Pattern `'+source_pattern+'` referenced before adding.')
         current_node = existing_patterns[source_pattern]
         source_key = source_pattern + ':' + source_variable
-        current_node = add_aliasNODE(net,current_node,new_varname,source_key,is_not_in=True)
+        current_node = add_aliasNODE(net,current_node,target_var,source_key,is_not_in=True)
         vartuple_nodes[(target_var,)].add(current_node)
 
     vartuple_nodes2 = dict()
