@@ -92,14 +92,10 @@ class ReteNode(object):
         return '\n'.join(strs_processing + strs_adding + strs_removing + strs_fail + strs_passing)
 
     def select_random(self,n=1):
-        if hasattr(self,'_register'):
-            return self._register.select_random(n)
         return []
 
     def count(self):
-        if hasattr(self,'_register'):
-            return len(self._register)
-        return []
+        return None
 
 
 class SingleInputNode(ReteNode): pass
@@ -361,6 +357,12 @@ class store(SingleInputNode):
     def filter_request(self,token):
         return self.filter(token)
 
+    def select_random(self,n=1):
+        return self._register.select_random(n)
+
+    def count(self):
+        return len(self._register)
+
 class alias(SingleInputNode):
     def __init__(self,var_tuple,id=None):
         super().__init__(id)
@@ -410,6 +412,13 @@ class alias(SingleInputNode):
         new_results = [new_token(x,keymap=self.keymap) for x in results]
         return set(new_results)
 
+    def select_random(self,n=1):
+        predecessor = list(self.predecessors)[0]
+        return predecessor.select_random(n)
+
+    def count(self):
+        predecessor = list(self.predecessors)[0]
+        return predecessor.count()
 
 class merge(ReteNode):
     def __init__(self,var_tuple,id=None):
@@ -487,3 +496,9 @@ class merge(ReteNode):
         if msgtype=='remove':
             return 'Token not found in register. Cannot remove!'
         return ''
+
+    def select_random(self,n=1):
+        return self._register.select_random(n)
+
+    def count(self):
+        return len(self._register)

@@ -8,7 +8,8 @@ class Matcher(object):
 
     # Matcher-level operations
     def add_pattern(self,pattern):
-        current_node = increment_net_with_pattern(self.rete_net,pattern)
+        existing_patterns = self.pattern_nodes
+        current_node = increment_net_with_pattern(self.rete_net,pattern,existing_patterns)
         self.pattern_nodes[pattern.id] = current_node
         return self
 
@@ -22,7 +23,11 @@ class Matcher(object):
 
     def send_tokens(self,tokens,verbose=False):
         for token in tokens:
-            self.send_token(token)
+            if verbose:
+                print('Sending token '+str(token))
+            self.send_token(token,verbose)
+            if verbose:
+                print()
         return self
 
     def select_random(self,pattern_id,variable_name,n=1):

@@ -38,6 +38,9 @@ class SlicerError(GenericError):pass
 
 class ValidateError(GenericError):pass
 
+class BuildError(GenericError):
+    pass
+
 class AddError(GenericError):
     pass
 

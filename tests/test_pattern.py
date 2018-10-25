@@ -52,7 +52,7 @@ class TestPattern(unittest.TestCase):
 
         qdict = p.generate_queries()
 
-        self.assertEqual(sorted(list(qdict.keys())), ['attr','rel','type'])
+        self.assertEqual(sorted(list(qdict.keys())), sorted(['attr','rel','type','is_in']))
 
         for idx in qdict['type']:
             node = p[idx]
@@ -81,12 +81,18 @@ class TestPattern(unittest.TestCase):
             self.assertTrue(node1 in utils.listify(getattr(node2,attr2)))
             self.assertTrue(node2 in utils.listify(getattr(node1,attr1)))
 
+        for tup in qdict['is_in']:
+            target_var = tup[1][0]
+            source_pattern = tup[1][1][0]
+            source_var = tup[1][1][1]
+
     def test_expressions(self):
         x1 = X('x1')
         p1 = pattern.Pattern('p1')  \
         .add_expression('!x1.ph1')     \
         .add_expression('x1.ph2 != False')
 
+        #
         exprs1 = sorted(p1._expressions['bool_cmp'])
         tup1 = ('x1','ph1','!=',True)
         tup2 = ('x1','ph2','==',True)
@@ -96,11 +102,22 @@ class TestPattern(unittest.TestCase):
         with self.assertRaises(ParseExpressionError):
             p1.add_expression('x1')
 
+        #
         y1 = Y('y1')
         p2= pattern.Pattern('p2')   \
         .add_expression('y1.v > 5')
 
         exprs1 = sorted(p2._expressions['num_cmp'])
         tup2 = ('y1','v','>',5)
+        exprs2 = [tup2]
+        self.assertEqual(exprs1,exprs2)
+
+        #
+        y1 = Y('y1')
+        p2= pattern.Pattern('p2')   \
+        .add_expression('y1 in p1.x')
+
+        exprs1 = sorted(p2._expressions['is_in'])
+        tup2 = ('y1',('p1','x'))
         exprs2 = [tup2]
         self.assertEqual(exprs1,exprs2)
