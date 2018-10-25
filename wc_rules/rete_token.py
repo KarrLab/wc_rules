@@ -54,11 +54,9 @@ class Token(object):
 
 class AddToken(Token):
     def get_type(self): return 'add'
-    def is_null(self): return False
 
 class RemoveToken(Token):
     def get_type(self): return 'remove'
-    def is_null(self): return False
 
 def new_token(token,invert=False,keymap=None,subsetkeys=None):
     inv = { AddToken:RemoveToken, RemoveToken:AddToken }
