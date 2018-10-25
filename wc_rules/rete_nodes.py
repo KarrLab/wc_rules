@@ -367,11 +367,6 @@ class alias(SingleInputNode):
         self.variable_names = var_tuple
         self.keymap = dict()
         self.reverse_keymap = dict()
-        #if len(self.variable_names)==1:
-        #    self.keymap = dict(zip(['node'],self.variable_names))
-        #if len(self.variable_names)==2:
-        #    self.keymap = dict(zip(['node1','node2'],self.variable_names))
-        #self.reverse_keymap = {y:x for x,y in self.keymap.items()}
 
     def set_keymap(self,key,value):
         self.keymap[key] = value
