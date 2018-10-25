@@ -8,7 +8,8 @@ from numpy import argmax
 # if found, they return it
 # if not found, they create it, add it as a successor to current node and return it
 def check_attribute_and_add_successor(net,current_node,_class_to_init,attr,value):
-    existing_successors = [e for e in current_node.successors if getattr(e,attr,None)==value]
+    x = [e for e in current_node.successors if getattr(e,attr,None)==value]
+    existing_successors = [e for e in x if e.__class__.__name__==_class_to_init.__name__]
     if len(existing_successors)==0:
         new_node = _class_to_init(value)
         net.add_edge(current_node,new_node)
@@ -49,11 +50,14 @@ def add_store(net,current_node,number_of_variables):
         raise BuildError('Duplicates on the Rete net! Bad!')
     return current_node
 
-def add_aliasNODE(net,current_node,varname,source_key=None):
+def add_aliasNODE(net,current_node,varname,source_key=None,is_not_in=False):
     if source_key is None:
         source_key = 'node'
     var = (varname,)
-    current_node = check_attribute_and_add_successor(net,current_node,rn.alias,'variable_names',var)
+    _class = rn.alias
+    if is_not_in:
+        _class = rn.is_not_in
+    current_node = check_attribute_and_add_successor(net,current_node,_class,'variable_names',var)
     current_node.set_keymap(source_key,varname)
     return current_node
 
@@ -162,7 +166,18 @@ def increment_net_with_pattern(net,pattern,existing_patterns):
         current_node = existing_patterns[source_pattern]
         source_key = source_pattern + ':' + source_variable
         current_node = add_aliasNODE(net,current_node,new_varname,source_key)
-        vartuple_nodes[(new_varname,)].add(current_node)
+        vartuple_nodes[(target_var,)].add(current_node)
+
+    for item in qdict['is_not_in']:
+        target_var = new_varnames[item[1][0]]
+        source_pattern = item[1][1][0]
+        source_variable =item[1][1][1]
+        if source_pattern not in existing_patterns:
+            raise BuildError('Pattern `'+source_pattern+'` referenced before adding.')
+        current_node = existing_patterns[source_pattern]
+        source_key = source_pattern + ':' + source_variable
+        current_node = add_aliasNODE(net,current_node,new_varname,source_key,is_not_in=True)
+        vartuple_nodes[(target_var,)].add(current_node)
 
     vartuple_nodes2 = dict()
     for vartuple, nodeset in vartuple_nodes.items():

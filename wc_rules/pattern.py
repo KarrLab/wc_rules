@@ -132,12 +132,19 @@ class Pattern(DictSet):
             is_in = [('is_in',x) for x in self._expressions['is_in']]
         return is_in
 
+    def generate_queries_ISNOTIN(self):
+        is_not_in = []
+        if 'is_not_in' in self._expressions:
+            is_not_in = [('is_not_in',x) for x in self._expressions['is_not_in']]
+        return is_not_in
+
     def generate_queries(self):
         return {
             'type': self.generate_queries_TYPE(),
             'attr': self.generate_queries_ATTR(),
             'rel': self.generate_queries_REL(),
             'is_in': self.generate_queries_ISIN(),
+            'is_not_in': self.generate_queries_ISNOTIN(),
         }
 
 def main():

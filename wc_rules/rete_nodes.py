@@ -281,6 +281,7 @@ class checkEMPTYEDGE(check):
     def filter_request(self,token):
         return self.filter(token)
 
+
 class store(SingleInputNode):
     def __init__(self,id=None,number_of_variables=1):
         super().__init__(id)
@@ -389,8 +390,8 @@ class alias(SingleInputNode):
             return False
         return True
 
-    def transform_token(self,token,keymap):
-        return new_token(token,keymap=keymap,subsetkeys=keymap.keys())
+    def transform_token(self,token,keymap,invert=False):
+        return new_token(token,keymap=keymap,subsetkeys=keymap.keys(),invert=invert)
 
     ### alias is PASSTHROUGH with a twist
     # it has to use an internal keymap to transform the incoming token first
@@ -419,6 +420,48 @@ class alias(SingleInputNode):
     def count(self):
         predecessor = list(self.predecessors)[0]
         return predecessor.count()
+
+class is_not_in(alias):
+    def __str__(self):
+        return 'not '+ ','.join(list(self.variable_names))
+
+    def process_token(self,token,sender,verbose=False):
+        tokens_to_pass = []
+        passthrough_fail = ''
+        evaluate = self.evaluate_token(token)
+
+        transformed_token = self.transform_token(token,keymap=self.keymap,invert=True)
+
+        if evaluate:
+            if token.get_type()=='add':
+                # if incoming token is 'add', then the not-in condition fails
+                # invert, then pass
+                tokens_to_pass = [transformed_token]
+            if token.get_type()=='remove':
+                # if incoming token is 'remove', then we have to additionally check
+                # if no remaining matching subtoken exists.
+                # if so, then we can invert and pass
+                predecessor = list(self.predecessors)[0]
+                if len(self.filter_request(transformed_token)) > 0:
+                    tokens_to_pass = [transformed_token]
+        else:
+            passthrough_fail = self.passthrough_fail_message()
+        if verbose:
+            print(self.verbose_mode_message(token,tokens_to_pass,passthrough_fail=passthrough_fail))
+        return tokens_to_pass
+
+    def filter_request(self,token):
+        # filter request for is_not_in works differently
+        # it takes current token, transforms, filters and gets results like a regular alias node
+        # then it checks if results set is empty, which would satisfy not_in condition,
+        # if so it returns the same token.
+        # however, if the results set is non-empty, which breaks the not_in condition,
+        # it returns empty
+        newtoken = new_token(token,keymap=self.reverse_keymap,subsetkeys=list(self.reverse_keymap.keys()))
+        results = self.filter(newtoken)
+        if len(results)==0:
+            return set([token])
+        return set()
 
 class merge(ReteNode):
     def __init__(self,var_tuple,id=None):

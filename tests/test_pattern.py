@@ -52,7 +52,8 @@ class TestPattern(unittest.TestCase):
 
         qdict = p.generate_queries()
 
-        self.assertEqual(sorted(list(qdict.keys())), sorted(['attr','rel','type','is_in']))
+        x = ['attr','rel','type','is_in','is_not_in']
+        self.assertEqual(sorted(list(qdict.keys())), sorted(x))
 
         for idx in qdict['type']:
             node = p[idx]
@@ -82,6 +83,11 @@ class TestPattern(unittest.TestCase):
             self.assertTrue(node2 in utils.listify(getattr(node1,attr1)))
 
         for tup in qdict['is_in']:
+            target_var = tup[1][0]
+            source_pattern = tup[1][1][0]
+            source_var = tup[1][1][1]
+
+        for tup in qdict['is_not_in']:
             target_var = tup[1][0]
             source_pattern = tup[1][1][0]
             source_var = tup[1][1][1]
