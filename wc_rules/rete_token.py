@@ -22,16 +22,6 @@ class Token(object):
 
     def __contains__(self,key):
         return key in self._dict
-    '''
-    def update(self,tok):
-        common_keys = set(tok.keys()) & set(self.keys())
-        different_keys = set(tok.keys()) - common_keys
-        for key in common_keys:
-            assert(self[key]==tok[key])
-        for key in different_keys:
-            self.__setitem__(key,tok[key])
-        return self
-    '''
 
     def merge(self,token):
         # merge if and only if
@@ -70,18 +60,6 @@ class RemoveToken(Token):
     def get_type(self): return 'remove'
     def is_null(self): return False
 
-class AddNullToken(AddToken):
-    def is_null(self): return True
-class RemoveNullToken(RemoveToken):
-    def is_null(self): return True
-
-# Null Tokens are used for 'safely' adding/removing nodes from the system
-# while processing any 'is_empty' matches to their attributes.
-# To add a node to the system,
-#   pass AddToken(node), then pass AddNullToken(any null edges)
-# To remove a node from the system,
-#   pass RemoveNullToken(any null edges), then pass RemoveToken(node)
-
 def new_token(token,invert=False,keymap=None,subsetkeys=None):
     inv = {
         AddToken:RemoveToken,
@@ -102,22 +80,6 @@ def new_token(token,invert=False,keymap=None,subsetkeys=None):
         _class = token.__class__
     else:
         _class = inv[token.__class__]
-    return _class(d)
-
-def new_token2(token,keymap=None,subsetkeys=None):
-    x = {
-        AddNullToken:AddToken,
-        RemoveNullToken:RemoveToken
-    }
-
-    d = token._dict
-    if subsetkeys is None:
-        subsetkeys = token.keys()
-    if keymap:
-        d = {keymap[x]:y for x,y in token.items() if x in subsetkeys}
-    else:
-        d = {x:y for x,y in token.items() if x in subsetkeys}
-    _class = x[token.__class__]
     return _class(d)
 
 class TokenRegister(object):
