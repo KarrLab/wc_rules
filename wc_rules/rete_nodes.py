@@ -1,5 +1,5 @@
 from .utils import generate_id,listify
-from .rete_token import new_token,TokenRegister
+from .rete_token import new_token,new_token2,TokenRegister
 
 class ReteNode(object):
     def __init__(self,id=None):
@@ -90,6 +90,16 @@ class ReteNode(object):
             strs_fail = [self.failing_message(passthrough_fail)]
         strs_passing = [self.passing_message(x) for x in tokens_to_pass]
         return '\n'.join(strs_processing + strs_adding + strs_removing + strs_fail + strs_passing)
+
+    def select_random(self,n=1):
+        if hasattr(self,'_register'):
+            return self._register.select_random(n)
+        return []
+
+    def count(self):
+        if hasattr(self,'_register'):
+            return len(self._register)
+        return []
 
 
 class SingleInputNode(ReteNode): pass
@@ -256,7 +266,7 @@ class checkEMPTYEDGE(check):
 
         if token.is_null():
             assert len(existing_tokens) ==0
-            tokens_to_pass = [new_token(token,subsetkeys=[which_node],keymap=keymap)]
+            tokens_to_pass = [new_token2(token,subsetkeys=[which_node],keymap=keymap)]
         else:
             if token.get_type()=='add':
                 tokens_to_pass = [new_token(token,invert=True,subsetkeys=[which_node],keymap=keymap)]

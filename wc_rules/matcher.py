@@ -25,6 +25,15 @@ class Matcher(object):
             self.send_token(token)
         return self
 
+    def select_random(self,pattern_id,variable_name,n=1):
+        p = self.get_pattern(pattern_id)
+        toks = p.select_random(n)
+        new_var = pattern_id + ':' + variable_name
+        return [tok[new_var] for tok in toks]
+
+    def count(self,pattern_id):
+        return self.get_pattern(pattern_id).count()
+
 def main():
     pass
 

@@ -1,4 +1,5 @@
 from .utils import generate_id, iter_to_string
+import random
 
 class Token(object):
     def __init__(self,contents=None):
@@ -103,6 +104,22 @@ def new_token(token,invert=False,keymap=None,subsetkeys=None):
         _class = inv[token.__class__]
     return _class(d)
 
+def new_token2(token,keymap=None,subsetkeys=None):
+    x = {
+        AddNullToken:AddToken,
+        RemoveNullToken:RemoveToken
+    }
+
+    d = token._dict
+    if subsetkeys is None:
+        subsetkeys = token.keys()
+    if keymap:
+        d = {keymap[x]:y for x,y in token.items() if x in subsetkeys}
+    else:
+        d = {x:y for x,y in token.items() if x in subsetkeys}
+    _class = x[token.__class__]
+    return _class(d)
+
 class TokenRegister(object):
     def __init__(self):
         self._dict = dict()
@@ -157,6 +174,9 @@ class TokenRegister(object):
         if len(f)==1:
             return f.pop()
         return None
+
+    def select_random(self,n=1):
+        return random.sample(self._set,n)
 
 def token_add_node(node):
     attrlist = node.get_nonempty_scalar_attributes(ignore_id=True)
