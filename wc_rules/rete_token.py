@@ -61,13 +61,7 @@ class RemoveToken(Token):
     def is_null(self): return False
 
 def new_token(token,invert=False,keymap=None,subsetkeys=None):
-    inv = {
-        AddToken:RemoveToken,
-        RemoveToken:AddToken,
-        AddNullToken:RemoveToken,
-        RemoveNullToken:AddToken
-    }
-
+    inv = { AddToken:RemoveToken, RemoveToken:AddToken }
     d = token._dict
     if subsetkeys is None:
         subsetkeys = token.keys()
