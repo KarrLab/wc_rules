@@ -56,7 +56,7 @@ class TestTokenSystem(unittest.TestCase):
         f3 = R.filter({'a':x1})
         self.assertEqual(len(f3),0)
 
-    def test_token_passing_1(self):
+    def test_token_passing_01(self):
         m = Matcher()
 
         a1 = A(id='a1')
@@ -89,7 +89,7 @@ class TestTokenSystem(unittest.TestCase):
         m.send_token(tok)
         self.assertEqual(len(n),1)
 
-    def test_token_passing_2(self):
+    def test_token_passing_02(self):
         m = Matcher()
 
         x1 = X(id='x1',ph=True)
@@ -121,7 +121,7 @@ class TestTokenSystem(unittest.TestCase):
         m.send_token(tok)
         self.assertEqual(len(n),1)
 
-    def test_token_passing_3(self):
+    def test_token_passing_03(self):
         m = Matcher()
 
         x1 = X(id='x1',ph=True,v=0)
@@ -159,7 +159,7 @@ class TestTokenSystem(unittest.TestCase):
         m.send_token(tok)
         self.assertEqual(len(n),2)
 
-    def test_token_passing_4(self):
+    def test_token_passing_04(self):
         a1 = A(id='a1')
         x1 = X(id='x1',ph=True,v=0).set_molecule(a1)
 
@@ -200,7 +200,7 @@ class TestTokenSystem(unittest.TestCase):
         m.send_token(tok)
         self.assertEqual(len(n),0)
 
-    def test_token_passing_5(self):
+    def test_token_passing_05(self):
         p_X = Pattern('X').add_node( X('x',ph=True) )
         p_Ax = Pattern('Ax').add_node( A('a').add_sites(X('x') ) )   \
                 .add_expression('x in X.x')
@@ -240,7 +240,7 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(m.count('X'),0)
         self.assertEqual(m.count('Ax'),0)
 
-    def test_token_passing_6(self):
+    def test_token_passing_06(self):
         p_X = Pattern('X').add_node( X('x',ph=True) )
         p_Ax = Pattern('Ax').add_node( A('a').add_sites(X('x') ) )   \
                 .add_expression('x not in X.x')
@@ -275,7 +275,7 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(m.count('X'),1)
         self.assertEqual(m.count('Ax'),0)
 
-    def test_token_passing_7(self):
+    def test_token_passing_07(self):
         p1 = Pattern('p1').add_node( A('a') )
         p1.add_expression('a.sites empty')
         p2 = Pattern('p2').add_node( A('a') )
@@ -321,8 +321,8 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(m.count('p1'),0)
         self.assertEqual(m.count('p2'),0)
 
-    def test_token_passing_8(self):
-        p_Ax = p_Ax = Pattern('Ax').add_node( A('a').add_sites(X('x') ) )
+    def test_token_passing_08(self):
+        p_Ax = Pattern('Ax').add_node( A('a').add_sites(X('x') ) )
         m = Matcher()
         for p in [p_Ax]:
             m.add_pattern(p)
@@ -337,3 +337,20 @@ class TestTokenSystem(unittest.TestCase):
 
         m.send_tokens(tokens)
         self.assertEqual(m.count('Ax'),n)
+
+    def test_token_passing_09(self):
+        p_Axx = Pattern('Axx').add_node( A('a').add_sites( X('x1'),X('x2') ) )
+        m = Matcher()
+        for p in [p_Axx]:
+            m.add_pattern(p)
+
+        a001 = A()
+        tokens = [token_add_node(a001)]
+        n = 25
+        for i in range(n):
+            x = X().set_molecule(a001)
+            tokens.append(token_add_node(x))
+            tokens.append(token_add_edge(x,'molecule','sites',a001))
+
+        m.send_tokens(tokens)
+        self.assertEqual(m.count('Axx'),n*(n-1))
