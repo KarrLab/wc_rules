@@ -15,6 +15,7 @@ class TestReteNet(unittest.TestCase):
 
     maxDiff = None
 
+    @unittest.skip('')
     def test_rete_construction(self):
         bnd = Bond(id='bnd')
         a1 = A(id='A1').add_sites(X(id='x1',ph=True,v=0).set_bond(bnd))

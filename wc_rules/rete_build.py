@@ -50,7 +50,7 @@ def add_store(net,current_node,number_of_variables):
         raise BuildError('Duplicates on the Rete net! Bad!')
     return current_node
 
-def add_aliasNODE(net,current_node,keymap,is_not_in=False):
+def add_alias(net,current_node,keymap,is_not_in=False):
     # keymap = {source_var:target_var}
     _class = rn.alias
     if is_not_in:
@@ -66,30 +66,12 @@ def add_checkEDGETYPE(net,current_node,attr1,attr2):
     current_node = check_attribute_and_add_successor(net,current_node,rn.checkEDGETYPE,'attribute_pair',attrpair)
     return current_node
 
-def add_checkEMPTYEDGE(net,current_node,attr,which_node):
-    current_node = check_attribute_and_add_successor(net,current_node,rn.checkEMPTYEDGE,'attribute',attr)
-    current_node.set_which(which_node)
-    return current_node
-
-def add_aliasEDGE(net,current_node,var1,var2):
-    varnames = (var1,var2)
-    current_node = check_attribute_and_add_successor(net,current_node,rn.alias,'variable_names',varnames)
-    current_node.set_keymap('node1',var1)
-    current_node.set_keymap('node2',var2)
-    return current_node
-
 def add_mergenode_path(net,list_of_nodes):
     current_node = list_of_nodes.pop(0)
     for node in list_of_nodes:
         new_node = node
         merge_node = add_mergenode(net,current_node,new_node)
         current_node = merge_node
-    return current_node
-
-def add_aliasPATTERN(net,current_node,name):
-    alias_node = rn.alias((name,))
-    net.add_edge(current_node,alias_node)
-    current_node = alias_node
     return current_node
 
 def sort_tuples(vartuples):
@@ -125,33 +107,33 @@ def increment_net_with_pattern(net,pattern,existing_patterns):
         current_node = add_checkATTR_path(net,current_node,attr_vec)
         current_node = add_store(net,current_node,1)
         keymap = {'node':new_varname}
-        current_node = add_aliasNODE(net,current_node,keymap)
+        current_node = add_alias(net,current_node,keymap)
         vartuple_nodes[(new_varname,)].add(current_node)
 
     for rel in qdict['rel']:
+        # Processes both edges and is_empty relations
         (kw,var1,attr1,attr2,var2) = rel
-        if var2 is not None and var1 is not None:
-            # processes edge checks
-            current_node = net.get_root()
-            current_node = add_checkEDGETYPE(net,current_node,attr1,attr2)
-            current_node = add_store(net,current_node,2)
-            var1_new = new_varnames[var1]
-            var2_new = new_varnames[var2]
-            current_node = add_aliasEDGE(net,current_node,var1_new,var2_new)
-            vartuple_nodes[(var1_new,var2_new)].add(current_node)
-        else:
-            # processes is_empty checks
-            # adds an is_not_in node after the store
-            current_node = net.get_root()
-            current_node = add_checkEDGETYPE(net,current_node,attr1,attr2)
-            current_node = add_store(net,current_node,2)
-            var = var1 if var1 is not None else var2
-            which_node = 'node1' if var1 is not None else 'node2'
-            keymap = {which_node:new_varnames[var]}
-            current_node = add_aliasNODE(net,current_node,keymap,is_not_in=True)
-            vartuple_nodes[(new_varnames[var],)].add(current_node)
+        vars = [var1,var2]
+        keys = ['node1','node2']
+        is_empty = False
+        if var1 is None or var2 is None:
+            # simply delete var1,node1 or var2,node2 depending on which is None
+            i = 0 if var1 is None else 1
+            del vars[i],keys[i]
+            is_empty = True
+        new_vars = [new_varnames[var] for var in vars]
+        keymap = dict(zip(keys,new_vars))
+        vartuple = tuple(sorted(new_vars))
 
-    for item in qdict['is_in']:
+        current_node = net.get_root()
+        current_node = add_checkEDGETYPE(net,current_node,attr1,attr2)
+        current_node = add_store(net,current_node,2)
+        current_node = add_alias(net,current_node,keymap,is_empty)
+        vartuple_nodes[vartuple].add(current_node)
+
+    existence_checks = qdict['is_in'] + qdict['is_not_in']
+    for item in existence_checks:
+        is_not_in = False if item[0]=='is_in' else True
         target_varlist = [new_varnames[x] for x in item[1][0]]
         source_pattern = item[1][1]
         source_varlist = [source_pattern+':'+x for x in item[1][2]]
@@ -159,18 +141,7 @@ def increment_net_with_pattern(net,pattern,existing_patterns):
             raise BuildError('Pattern `'+source_pattern+'` referenced before adding.')
         current_node = existing_patterns[source_pattern]
         keymap = dict(zip(source_varlist,target_varlist))
-        current_node = add_aliasNODE(net,current_node,keymap)
-        vartuple_nodes[tuple(sorted(target_varlist))].add(current_node)
-
-    for item in qdict['is_not_in']:
-        target_varlist = [new_varnames[x] for x in item[1][0]]
-        source_pattern = item[1][1]
-        source_varlist = [source_pattern+':'+x for x in item[1][2]]
-        if source_pattern not in existing_patterns:
-            raise BuildError('Pattern `'+source_pattern+'` referenced before adding.')
-        current_node = existing_patterns[source_pattern]
-        keymap = dict(zip(source_varlist,target_varlist))
-        current_node = add_aliasNODE(net,current_node,keymap,is_not_in=True)
+        current_node = add_alias(net,current_node,keymap,is_not_in)
         vartuple_nodes[tuple(sorted(target_varlist))].add(current_node)
 
     vartuple_nodes2 = dict()
@@ -184,9 +155,4 @@ def increment_net_with_pattern(net,pattern,existing_patterns):
     sorted_vartuples = sort_tuples(sorted(vartuple_nodes2))
     sorted_nodes = list(vartuple_nodes2[x] for x in sorted_vartuples)
     current_node = add_mergenode_path(net,sorted_nodes)
-
-
-
-    #current_node = add_aliasPATTERN(net,current_node,pattern.id)
-
     return current_node
