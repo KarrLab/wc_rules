@@ -50,15 +50,15 @@ def add_store(net,current_node,number_of_variables):
         raise BuildError('Duplicates on the Rete net! Bad!')
     return current_node
 
-def add_aliasNODE(net,current_node,varname,source_key=None,is_not_in=False):
-    if source_key is None:
-        source_key = 'node'
-    var = (varname,)
+def add_aliasNODE(net,current_node,keymap,is_not_in=False):
+    # keymap = {source_var:target_var}
     _class = rn.alias
     if is_not_in:
         _class = rn.is_not_in
+    var = tuple(sorted(keymap.values()))
     current_node = check_attribute_and_add_successor(net,current_node,_class,'variable_names',var)
-    current_node.set_keymap(source_key,varname)
+    for key in keymap:
+        current_node.set_keymap(key,keymap[key])
     return current_node
 
 def add_checkEDGETYPE(net,current_node,attr1,attr2):
@@ -124,13 +124,14 @@ def increment_net_with_pattern(net,pattern,existing_patterns):
         current_node = add_checkTYPE_path(net,current_node,type_vec)
         current_node = add_checkATTR_path(net,current_node,attr_vec)
         current_node = add_store(net,current_node,1)
-        current_node = add_aliasNODE(net,current_node,new_varname)
+        keymap = {'node':new_varname}
+        current_node = add_aliasNODE(net,current_node,keymap)
         vartuple_nodes[(new_varname,)].add(current_node)
 
     for rel in qdict['rel']:
         (kw,var1,attr1,attr2,var2) = rel
         if var2 is not None and var1 is not None:
-            # processes complete edge checks
+            # processes edge checks
             current_node = net.get_root()
             current_node = add_checkEDGETYPE(net,current_node,attr1,attr2)
             current_node = add_store(net,current_node,2)
@@ -144,41 +145,33 @@ def increment_net_with_pattern(net,pattern,existing_patterns):
             current_node = net.get_root()
             current_node = add_checkEDGETYPE(net,current_node,attr1,attr2)
             current_node = add_store(net,current_node,2)
-            if var1 is None:
-                var = var2
-                attr = attr2
-                which_node = 'node2'
-                var_new = new_varnames[var2]
-            else:
-                var = var1
-                attr = attr1
-                which_node = 'node1'
-                var_new = new_varnames[var1]
-            current_node = add_aliasNODE(net,current_node,var_new,which_node,is_not_in=True)
-            vartuple_nodes[(var_new,)].add(current_node)
+            var = var1 if var1 is not None else var2
+            which_node = 'node1' if var1 is not None else 'node2'
+            keymap = {which_node:new_varnames[var]}
+            current_node = add_aliasNODE(net,current_node,keymap,is_not_in=True)
+            vartuple_nodes[(new_varnames[var],)].add(current_node)
 
     for item in qdict['is_in']:
-        # each item is of the form ('isin',(target_var,(source_pattern,source_var))
-        target_var = new_varnames[item[1][0]]
-        source_pattern = item[1][1][0]
-        source_variable =item[1][1][1]
+        target_varlist = [new_varnames[x] for x in item[1][0]]
+        source_pattern = item[1][1]
+        source_varlist = [source_pattern+':'+x for x in item[1][2]]
         if source_pattern not in existing_patterns:
             raise BuildError('Pattern `'+source_pattern+'` referenced before adding.')
         current_node = existing_patterns[source_pattern]
-        source_key = source_pattern + ':' + source_variable
-        current_node = add_aliasNODE(net,current_node,target_var,source_key)
-        vartuple_nodes[(target_var,)].add(current_node)
+        keymap = dict(zip(source_varlist,target_varlist))
+        current_node = add_aliasNODE(net,current_node,keymap)
+        vartuple_nodes[tuple(sorted(target_varlist))].add(current_node)
 
     for item in qdict['is_not_in']:
-        target_var = new_varnames[item[1][0]]
-        source_pattern = item[1][1][0]
-        source_variable =item[1][1][1]
+        target_varlist = [new_varnames[x] for x in item[1][0]]
+        source_pattern = item[1][1]
+        source_varlist = [source_pattern+':'+x for x in item[1][2]]
         if source_pattern not in existing_patterns:
             raise BuildError('Pattern `'+source_pattern+'` referenced before adding.')
         current_node = existing_patterns[source_pattern]
-        source_key = source_pattern + ':' + source_variable
-        current_node = add_aliasNODE(net,current_node,target_var,source_key,is_not_in=True)
-        vartuple_nodes[(target_var,)].add(current_node)
+        keymap = dict(zip(source_varlist,target_varlist))
+        current_node = add_aliasNODE(net,current_node,keymap,is_not_in=True)
+        vartuple_nodes[tuple(sorted(target_varlist))].add(current_node)
 
     vartuple_nodes2 = dict()
     for vartuple, nodeset in vartuple_nodes.items():

@@ -15,6 +15,15 @@ VariableLocation:
 '''
 is_in_parser = metamodel_from_str(is_in_grammar,autokwd=True)
 
+is_in_list_grammar = '''
+Expression:
+    lhs=VariableList is_not?='not' 'in' pattern=ID '.' rhs=VariableList;
+VariableList:
+    '[' variables+=ID[','] ']' | variables=ID ;
+'''
+is_in_list_parser = metamodel_from_str(is_in_list_grammar,autokwd=True)
+
+
 bool_cmp_simple_grammar = '''
 Expression:
     is_not?='!' variable=ID '.' attribute=ID ;
@@ -48,15 +57,16 @@ def parse_expression(string_input):
         return 'is_empty', tup
 
     # Step 2: is_in and is_not_in
-    expr = use_parser(string_input,is_in_parser)
+    expr = use_parser(string_input,is_in_list_parser)
     if expr is not None:
-        var1 = expr.variable
-        tup1 = tuple([expr.varloc.pattern,expr.varloc.variable])
-        tup2 = (var1,tup1)
+        var_lhs = tuple(expr.lhs.variables)
+        var_rhs = tuple(expr.rhs.variables)
+        pattern = expr.pattern
+        tup = (var_lhs,pattern,var_rhs)
         if expr.is_not:
-            return 'is_not_in',tup2
+            return 'is_not_in',tup
         else:
-            return 'is_in',tup2
+            return 'is_in',tup
 
     # Step 4: bool_cmp
     expr = use_parser(string_input,bool_cmp_simple_parser)

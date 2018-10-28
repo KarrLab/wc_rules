@@ -124,6 +124,6 @@ class TestPattern(unittest.TestCase):
         .add_expression('y1 in p1.x')
 
         exprs1 = sorted(p2._expressions['is_in'])
-        tup2 = ('y1',('p1','x'))
+        tup2 = (('y1',),'p1',('x',))
         exprs2 = [tup2]
         self.assertEqual(exprs1,exprs2)
