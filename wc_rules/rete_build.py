@@ -61,9 +61,9 @@ def add_alias(net,current_node,keymap,is_not_in=False):
         current_node.set_keymap(key,keymap[key])
     return current_node
 
-def add_checkEDGETYPE(net,current_node,attr1,attr2):
+def add_checkEDGE(net,current_node,attr1,attr2):
     attrpair = tuple([attr1,attr2])
-    current_node = check_attribute_and_add_successor(net,current_node,rn.checkEDGETYPE,'attribute_pair',attrpair)
+    current_node = check_attribute_and_add_successor(net,current_node,rn.checkEDGE,'attribute_pair',attrpair)
     return current_node
 
 def add_mergenode_path(net,list_of_nodes):
@@ -112,28 +112,25 @@ def increment_net_with_pattern(net,pattern,existing_patterns):
 
     for rel in qdict['rel']:
         # Processes both edges and is_empty relations
+        # in an is_empty relation, either var1 or var2 is None
         (kw,var1,attr1,attr2,var2) = rel
-        vars = [var1,var2]
-        keys = ['node1','node2']
-        is_empty = False
-        if var1 is None or var2 is None:
-            # simply delete var1,node1 or var2,node2 depending on which is None
-            i = 0 if var1 is None else 1
-            del vars[i],keys[i]
-            is_empty = True
-        new_vars = [new_varnames[var] for var in vars]
-        keymap = dict(zip(keys,new_vars))
-        vartuple = tuple(sorted(new_vars))
+        keymap = dict()
+        if var1 is not None:
+            keymap['node1'] = new_varnames[var1]
+        if var2 is not None:
+            keymap['node2'] = new_varnames[var2]
+        vartuple = tuple(sorted(keymap.values()))
+        is_empty = var1 is None or var2 is None
 
         current_node = net.get_root()
-        current_node = add_checkEDGETYPE(net,current_node,attr1,attr2)
+        current_node = add_checkEDGE(net,current_node,attr1,attr2)
         current_node = add_store(net,current_node,2)
         current_node = add_alias(net,current_node,keymap,is_empty)
         vartuple_nodes[vartuple].add(current_node)
 
     existence_checks = qdict['is_in'] + qdict['is_not_in']
     for item in existence_checks:
-        is_not_in = False if item[0]=='is_in' else True
+        is_not_in = item[0]=='is_not_in'
         target_varlist = [new_varnames[x] for x in item[1][0]]
         source_pattern = item[1][1]
         source_varlist = [source_pattern+':'+x for x in item[1][2]]

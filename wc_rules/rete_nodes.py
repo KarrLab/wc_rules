@@ -203,12 +203,12 @@ class checkATTR(check):
     def entry_check(self,token):
         return 'node' in token
 
-class checkEDGETYPE(check):
+class checkEDGE(check):
     def __init__(self,attrpair,id=None):
         super().__init__(id)
         self.attribute_pair = attrpair
 
-    ### checkEDGETYPE has passthrough behavior
+    ### checkEDGE has passthrough behavior
     # It simply checks whether the token has a compatible attrpair
     # Then duplicates and passes it on
 
