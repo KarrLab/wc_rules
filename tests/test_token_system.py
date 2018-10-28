@@ -372,3 +372,35 @@ class TestTokenSystem(unittest.TestCase):
 
         m.send_tokens(tokens)
         self.assertEqual(m.count('Axxx'),n*(n-1)*(n-2))
+
+    def test_token_passing_09(self):
+        # multiple var matching
+        p_AxT = Pattern('AxT').add_node( A('a').add_sites( X('x',ph=True) )  )
+        p_Ax = Pattern('Ax').add_node( A('a').add_sites(X('x')) )    \
+                    .add_expression('[a,x] in AxT.[a,x]')
+        m = Matcher()
+        for p in [p_AxT,p_Ax]:
+            m.add_pattern(p)
+
+        n=25
+        for i in range(n):
+            a001,x001 = A(),X(ph=True)
+            x001.set_molecule(a001)
+            tokens = [token_add_node(a001),token_add_node(x001),token_add_edge(a001,'sites','molecule',x001)]
+            m.send_tokens(tokens)
+        self.assertEqual(m.count('Ax'),n)
+
+        n=25
+        for i in range(n):
+            a001,x001 = A(),X(ph=False)
+            x001.set_molecule(a001)
+            tokens = [token_add_node(a001),token_add_node(x001),token_add_edge(a001,'sites','molecule',x001)]
+            m.send_tokens(tokens)
+        self.assertEqual(m.count('Ax'),n)
+
+        n=25
+        for i in range(n):
+            x001 = X(ph=True)
+            tokens = [token_add_node(x001)]
+            m.send_tokens(tokens)
+        self.assertEqual(m.count('Ax'),n)
