@@ -322,6 +322,7 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(m.count('p2'),0)
 
     def test_token_passing_08(self):
+        # One-edge
         p_Ax = Pattern('Ax').add_node( A('a').add_sites(X('x') ) )
         m = Matcher()
         for p in [p_Ax]:
@@ -338,7 +339,7 @@ class TestTokenSystem(unittest.TestCase):
         m.send_tokens(tokens)
         self.assertEqual(m.count('Ax'),n)
 
-    def test_token_passing_09(self):
+        # Two edges
         p_Axx = Pattern('Axx').add_node( A('a').add_sites( X('x1'),X('x2') ) )
         m = Matcher()
         for p in [p_Axx]:
@@ -354,3 +355,20 @@ class TestTokenSystem(unittest.TestCase):
 
         m.send_tokens(tokens)
         self.assertEqual(m.count('Axx'),n*(n-1))
+
+        # Three edges
+        p_Axxx = Pattern('Axxx').add_node( A('a').add_sites( X('x1'),X('x2'),X('x3') ) )
+        m = Matcher()
+        for p in [p_Axxx]:
+            m.add_pattern(p)
+
+        a001 = A()
+        tokens = [token_add_node(a001)]
+        n = 25
+        for i in range(n):
+            x = X().set_molecule(a001)
+            tokens.append(token_add_node(x))
+            tokens.append(token_add_edge(x,'molecule','sites',a001))
+
+        m.send_tokens(tokens)
+        self.assertEqual(m.count('Axxx'),n*(n-1)*(n-2))
