@@ -54,6 +54,22 @@ class Pattern(DictSet):
             node.duplicate_relations(new_node,nodemap)
         return new_pattern
 
+    def duplicate_with_keymap(self,idx,keymap=None):
+        if keymap is None:
+            keymap = {x.id:x.id for x in self}
+        new_pattern = self.__class__(idx)
+        nodemap = dict()
+        for node in self:
+            new_node = node.duplicate(id=keymap[node.id])
+            new_pattern.add_node(new_node,recurse=False)
+            nodemap[node.id] = new_node
+        for node in self:
+            new_node = nodemap[node.id]
+            node.duplicate_relations(new_node,nodemap)
+        return new_pattern
+
+
+
     def generate_queries_TYPE(self):
         ''' Generates tuples ('type',_class) '''
         type_queries = {}
