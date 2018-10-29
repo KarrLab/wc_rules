@@ -35,7 +35,7 @@ class ReteNet(DictSet):
             visited.add(current_node)
             yield current_node
 
-    def draw_as_gml(self,filename=None,as_string=False):
+    def draw_as_gml(self,filename=None):
         node_labels, node_categories, idx_dict = dict(),dict(),dict()
         edge_tuples = list()
         start_node = self.get_root()
@@ -48,13 +48,4 @@ class ReteNet(DictSet):
                 edge_tuple = ( idx_dict[node.id], idx_dict[node2.id] )
                 edge_tuples.append(edge_tuple)
         final_text = gml.generate_gml(node_labels,edge_tuples,node_categories)
-
-        if as_string:
-            return final_text
-        else:
-            if filename is None:
-                filename = 'rete.gml'
-
-            with open(filename,'w') as f:
-                f.write(final_text)
-        return None
+        return final_text
