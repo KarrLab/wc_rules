@@ -224,6 +224,22 @@ class checkEDGE(check):
             return (token['attr1'],token['attr2'])==self.attribute_pair
         return False
 
+    def process_token(self,token,sender,verbose=False):
+        tokens_to_pass = []
+        passthrough_fail = ''
+        evaluate = self.evaluate_token(token)
+        if evaluate:
+            if token['attr1']==token['attr2']:
+                kmap= {'node1':'node2','attr1':'attr2','node2':'node1','attr2':'attr1'}
+                tokens_to_pass = [new_token(token),new_token(token,keymap=kmap)]
+            else:
+                tokens_to_pass = [new_token(token)]
+        else:
+            passthrough_fail = self.passthrough_fail_message()
+        if verbose:
+            print(self.verbose_mode_message(token,tokens_to_pass,passthrough_fail=passthrough_fail))
+        return tokens_to_pass
+
 class store(SingleInputNode):
     def __init__(self,id=None,number_of_variables=1):
         super().__init__(id)
