@@ -56,14 +56,14 @@ class TestPattern(unittest.TestCase):
         self.assertEqual(sorted(list(qdict.keys())), sorted(x))
 
         for idx in qdict['type']:
-            node = p[idx]
+            node = p.get_node(idx)
             tuplist = qdict['type'][idx]
             for tup in tuplist:
                 _class = tup[1]
                 self.assertTrue(isinstance(node,_class))
 
         for idx in qdict['attr']:
-            node = p[idx]
+            node = p.get_node(idx)
             tuplist = qdict['attr'][idx]
             for tup in tuplist:
                 attr = tup[1]
@@ -77,8 +77,8 @@ class TestPattern(unittest.TestCase):
             attr2 = tup[3]
             idx2 = tup[4]
 
-            node1 = p[idx1]
-            node2 = p[idx2]
+            node1 = p.get_node(idx1)
+            node2 = p.get_node(idx2)
             self.assertTrue(node1 in utils.listify(getattr(node2,attr2)))
             self.assertTrue(node2 in utils.listify(getattr(node1,attr1)))
 

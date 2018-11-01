@@ -9,7 +9,8 @@ class ReteNet(object):
         self._root = R
 
     def add(self,item):
-        return self._set.add(item)
+        self._set.add(item)
+        return self
 
     def add_edge(self,node1,node2):
         self.add(node1)

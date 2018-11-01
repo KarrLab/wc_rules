@@ -18,7 +18,6 @@ class Token(object):
     def __str__(self):
         type1 =  self.get_type()
         return type1 + ':' + str(self._dict)
-        #return " ".join(['token',type1+":"+str(self._dict)])
 
     def __contains__(self,key):
         return key in self._dict
