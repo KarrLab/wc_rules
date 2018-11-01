@@ -1,8 +1,5 @@
-#from .indexer import DictSet
 from .rete_nodes import Root
-
 from . import gml
-
 from collections import deque
 
 class ReteNet(object):
