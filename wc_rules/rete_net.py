@@ -1,26 +1,28 @@
-from .indexer import DictSet
+#from .indexer import DictSet
 from .rete_nodes import Root
 
 from . import gml
 
 from collections import deque
 
-class ReteNet(DictSet):
+class ReteNet(object):
     def __init__(self):
-        super().__init__([Root()])
+        R = Root()
+        self._set = set([R])
+        self._root = R
 
-    def add_node(self,node):
-        return self.add(node)
+    def add(self,item):
+        return self._set.add(item)
 
     def add_edge(self,node1,node2):
-        self.add_node(node1)
-        self.add_node(node2)
+        self.add(node1)
+        self.add(node2)
         node1.successors.add(node2)
         node2.predecessors.add(node1)
         return self
 
     def get_root(self):
-        return self['root']
+        return self._root
 
     def depth_first_search(self,start_node):
         # return depth-first exploration of graph as an iter
