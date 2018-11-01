@@ -8,6 +8,35 @@ from . import utils
 import inspect
 import pprint
 
+class DictLike(object):
+    def __init__(self,iterable=None):
+        ''' Container of objects that enables referencing by id '''
+        if iterable is not None:
+            self._dict = dict(iterable)
+        else:
+            self._dict = dict()
+
+    def get(self,key):
+        return self._dict[key]
+
+    def add(self,item):
+        self._dict[item.id] = item
+        return self
+
+    def remove(self,item):
+        self._dict.pop(item.id)
+        return self
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __iter__(self):
+        return iter(self._dict.values())
+
+    def __contains__(self,item):
+        return item.id in self._dict and item is self._dict[item.id]
+
+
 class Slicer(dict):
     ''' A hashmap between keys (literals or namedtuples) and Boolean values.
     Slicers are dict-like and always return True or False when queried with [key].

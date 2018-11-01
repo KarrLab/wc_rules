@@ -1,37 +1,22 @@
+from .indexer import DictLike
 from .utils import listify,generate_id
 from .expr_parse import parse_expression
 from operator import lt,le,eq,ne,ge,gt
 import random
 import pprint
 
-class Pattern(object):
+class Pattern(DictLike):
     def __init__(self,idx,nodelist=None,recurse=True):
+        super().__init__()
         self.id = idx
         self._expressions = dict()
-        self._nodes = dict()
+        #self._nodes = dict()
         if nodelist:
             for node in nodelist:
                 self.add_node(node,recurse)
 
-    def add(self,node):
-        self._nodes[node.id] = node
-        return self
-
-    def remove(self,node):
-        self._nodes.pop(node.id)
-        return self
-
-    def __contains__(self,node):
-        return node.id in self._nodes
-
-    def __iter__(self):
-        return iter(self._nodes.values())
-
-    def __len__(self):
-        return len(self._nodes)
-
     def get_node(self,idx):
-        return self._nodes[idx]
+        return self.get(idx)
 
     def add_node(self,node,recurse=True):
         if node not in self:
