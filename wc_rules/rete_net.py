@@ -1,16 +1,14 @@
+from .indexer import SetLike
 from .rete_nodes import Root
 from . import gml
 from collections import deque
 
-class ReteNet(object):
+class ReteNet(SetLike):
     def __init__(self):
+        super().__init__()
         R = Root()
-        self._set = set([R])
+        self.add(R)
         self._root = R
-
-    def add(self,item):
-        self._set.add(item)
-        return self
 
     def add_edge(self,node1,node2):
         self.add(node1)

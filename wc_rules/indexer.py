@@ -20,7 +20,8 @@ class DictLike(object):
         return self._dict[key]
 
     def add(self,item):
-        self._dict[item.id] = item
+        if item not in self:
+            self._dict[item.id] = item
         return self
 
     def remove(self,item):
@@ -35,6 +36,31 @@ class DictLike(object):
 
     def __contains__(self,item):
         return item.id in self._dict and item is self._dict[item.id]
+
+class SetLike(object):
+    def __init__(self,iterable=None):
+        ''' Container of objects that behaves like a set'''
+        if iterable is not None:
+            self._set = set(iterable)
+        else:
+            self._set = set()
+
+    def add(self,item):
+        self._set.add(item)
+        return self
+
+    def remove(self,item):
+        self._set.remove(item)
+        return self
+
+    def __len__(self):
+        return len(self._set)
+
+    def __contains__(self,item):
+        return item in self._set
+
+    def __iter__(self):
+        return iter(self._set)
 
 
 class Slicer(dict):
