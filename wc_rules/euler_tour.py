@@ -2,7 +2,7 @@ from blist import blist
 from .utils import generate_id, AddError
 
 class EulerTour(object):
-    def __init__(self,idx=None,iterable=None,root=None):
+    def __init__(self,idx=None,iterable=None):
         if idx is None:
             idx = generate_id()
         if iterable is None:
