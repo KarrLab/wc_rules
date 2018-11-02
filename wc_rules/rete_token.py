@@ -146,12 +146,9 @@ def token_remove_node(node):
     return RemoveToken({'node':node})
 
 def flip_edge_correctly(node1,attr1,attr2,node2):
-    as_is = True
-    if attr1 > attr2 :
-        as_is = False
+    as_is = (attr1 <= attr2) or (attr1==attr2 and node1.id<=node2.id)
     if not as_is:
         return node2,attr2,attr1,node1
-    # TODO: Need to handle symmetric edges
     return node1,attr1,attr2,node2
 
 def token_add_edge(node1,attr1,attr2,node2):
