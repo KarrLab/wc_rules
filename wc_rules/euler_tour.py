@@ -1,5 +1,6 @@
 from blist import blist
 from .utils import generate_id, AddError
+import random
 
 class EulerTour(object):
     def __init__(self,id=None,iterable=None,edges=None,spares=None):
@@ -20,6 +21,11 @@ class EulerTour(object):
     def first_occurrence(self,node):
         if node in self:
             return self._tour.index(node)
+        return None
+
+    def last_occurrence(self,node):
+        if node in self:
+            return self._tour.index(node,-1,-1)
         return None
 
     @staticmethod
@@ -60,20 +66,4 @@ class EulerTour(object):
         A = self._tour[1:i] + [node]
         B = self._tour[i:len(self)]
         self._tour = B + A
-        return self
-
-    def is_spare(self,edge):
-        return self.canonize(edge) in self._spares
-
-    def link_spare(self,edge):
-        self._spares.add(canonize(edge))
-        return self
-
-    def link_bridge(self,edge,other):
-        node1,_,_,node2 = edge
-        self.reroot(node1)
-        other.reroot(node2)
-        self._tour = self._tour + other._tour + [node1]
-        self._spares = self._spares | other._spares
-        self._edges = self._edges | other._edges
         return self
