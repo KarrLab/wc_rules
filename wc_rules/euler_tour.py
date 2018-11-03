@@ -2,67 +2,78 @@ from blist import blist
 from .utils import generate_id, AddError
 
 class EulerTour(object):
-    def __init__(self,idx=None,iterable=None):
-        if idx is None:
-            idx = generate_id()
-        if iterable is None:
-            iterable = []
+    def __init__(self,id=None,iterable=None,edges=None,spares=None):
+        self.id = id if id is not None else generate_id()
+        self._tour = blist(iterable) if iterable is not None else blist()
+        self._edges = edges if edges is not None else set()
+        self._spares = spares if spares is not None else set()
 
-        self.id = idx
-        self._tour = blist(iterable)
+    def __contains__(self,node):
+        return node in self._tour
 
-    def __iter__(self):
-        return iter(self._tour)
     def __len__(self):
         return len(self._tour)
-    def __contains__(self,node):
-        return self.find_first_index(node) is not None
 
-    @classmethod
-    def init_with_root(cls,idx=None,root):
-        tup = (None,'','',root)
-        edges = [tup,cls.flip_edge(tup)]
-        return cls(idx,edges)
+    def __str__(self):
+        return ' '.join([x.id for x in self._tour]+['spares =',str(len(self._spares))])
+
+    def first_occurrence(self,node):
+        if node in self:
+            return self._tour.index(node)
+        return None
 
     @staticmethod
-    def flip_edge(edge):
-        return return tuple(reversed(edge))
+    def flip(edge):
+        return tuple(reversed(edge))
 
-    def insert_edge(self,edge):
-        node1,_,_,node2 = edge
-        edges = [edge,self.flip_edge(edge)]
-        x = self.find_first_index(node1)
-        y = self.find_first_index(node2)
-        if x is not None and y is not None:
-            raise AddError('Edge cannot be inserted as both nodes are already present on the tree.')
-        if x is not None:
-            self._tour.insert(x,edges)
-        elif y is not None:
-            self._tour.insert(x,list(reversed(edges)))
-        elif (x,y)==(None,None):
-            raise AddError('Edge cannot be inserted as it does not share a node on the tree.')
+    @staticmethod
+    def canonize(edge):
+        node1,attr1,attr2,node2 = edge
+        as_is = (attr1 <= attr2) or (attr1==attr2 and node1.id<node2.id)
+        if not as_is:
+            return self.flip(edge)
+        return edge
+
+    def insert_sequence(self,index,nodes):
+        for i in range(len(nodes)):
+            self._tour.insert(index+i,nodes[i])
         return self
 
-    def find_first_index(self,node):
-        if len(self._tour==0):
-            return None
-        for i in range(len(self)):
-            _,_,_,check_node = self[i]
-            if node is check_node:
-                return i
-        return None
+    def insert_edge(self,edge):
+        edge = self.canonize(edge)
+        node1,attr1,attr2,node2 = edge
 
-    def find_last_index(self,node):
-        if len(self._tour==0):
-            return None
-        for i in range(len(self),-1,-1):
-            check_node,_,_,_ = self[i]
-            if node is check_node:
-                return i
-        return None
+        x1 = self.first_occurrence(node1)
+        x2 = self.first_occurrence(node2)
+        if x1 is not None and x2 is not None:
+            self._spares.add(edge)
+        elif x2 is None:
+            self.insert_sequence(x1+1,[node2,node1])
+            self._edges.add(edge)
+        else:
+            self.insert_sequence(x2+1,[node1,node2])
+            self._edges.add(edge)
+        return self
 
-    def count_edges(self):
-        return len(self._tour) - 2
+    def reroot(self,node):
+        i = self.first_occurrence(node)
+        A = self._tour[1:i] + [node]
+        B = self._tour[i:len(self)]
+        self._tour = B + A
+        return self
 
-    def count_nodes(self):
-        return self.count_edges()/2 + 1
+    def is_spare(self,edge):
+        return self.canonize(edge) in self._spares
+
+    def link_spare(self,edge):
+        self._spares.add(canonize(edge))
+        return self
+
+    def link_bridge(self,edge,other):
+        node1,_,_,node2 = edge
+        self.reroot(node1)
+        other.reroot(node2)
+        self._tour = self._tour + other._tour + [node1]
+        self._spares = self._spares | other._spares
+        self._edges = self._edges | other._edges
+        return self
