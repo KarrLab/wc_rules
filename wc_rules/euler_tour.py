@@ -30,16 +30,6 @@ class EulerTour(object):
     def get_spares(self):
         return self._spares
 
-    # Static methods for handling edges
-    def flip(edge):
-        return tuple(reversed(edge))
-    def canonize(edge):
-        node1,attr1,attr2,node2 = edge
-        as_is = (attr1 <= attr2) or (attr1==attr2 and node1.id<node2.id)
-        if not as_is:
-            return self.flip(edge)
-        return edge
-
     # Search methods
     def first_occurrence(self,node):
         if node in self:
@@ -60,6 +50,22 @@ class EulerTour(object):
         i = self.first_occurrence(node)
         tour = self._tour
         self._tour = tour[i:] + tour[1:i] + [tour[i]]
+        return self
+
+    def add_spare(self,spare):
+        self._spares.add(spare)
+        return self
+
+    def add_edge(self,edge):
+        self._edges.add(edge)
+        return self
+
+    def remove_spare(self,spare):
+        self._spares.remove(spare)
+        return self
+
+    def remove_edge(self,edge):
+        self._edges.remove(edge)
         return self
 
     def insert_sequence(self,idx,nodes):
@@ -88,6 +94,21 @@ class EulerTour(object):
         self.delete_sequence(len(self)-length,length)
         return self
 
+    def find_sequence(self,sequence):
+        for i in range(len(self)-len(sequence)):
+            if self._tour[i:i+len(sequence)]==sequence:
+                return i
+        return None
+
+    def link(self,other,edge):
+        node1,_,_,node2 = edge
+        if node1 not in self:
+            node1,node2 = node2,node1
+        self.reroot(node1)
+        other.reroot(node2)
+        self.extend_right(node2._tour + [node1])
+        return self
+
 class EulerTourIndex(SetLike):
     def __init__(self):
         super().__init__()
@@ -98,7 +119,15 @@ class EulerTourIndex(SetLike):
         return self
 
     def unmap_node_tour(self,node):
-        del self._tourmap[node]
+        self._tourmap.pop(node)
+        return self
+
+    def remap_nodes(self,nodes,new_tour=None):
+        for node in nodes:
+            if new_tour is not None:
+                self.map_node_tour(node,new_tour)
+            else:
+                self.unmap_node_tour(node)
         return self
 
     def get_mapped_tour(self,node):
@@ -108,26 +137,29 @@ class EulerTourIndex(SetLike):
         tours = [self.get_mapped_tour(x) for x in nodelist]
         return None not in tours and tours[1:]==tours[:-1]
 
-    def add_tour(self,tour):
+    def add_tour(self,tour,remap=True):
         assert tour not in self
         self.add(tour)
-        for node in tour.get_nodes():
-            self.map_node_tour(node,tour)
+        if remap:
+            self.remap_nodes(tour.get_nodes(),tour)
         return self
 
-    def remove_tour(self,tour):
+    def remove_tour(self,tour,remap=True):
         assert tour in self
         self.remove(tour)
-        for node in tour.get_nodes():
-            self.unmap_node_tour(node)
+        if remap:
+            self.remap_nodes(tour.get_nodes())
         return self
 
-    def edit_tour(self,tour,removed_nodes=None,added_nodes=None):
-        assert tour in self
-        if removed_nodes is not None:
-            for node in removed_nodes:
-                self.unmap_node_tour(node)
-        if added_nodes is not None:
-            for node in added_nodes:
-                self.map_node_tour(node,tour)
+    # Static methods for handling edges
+    def flip(edge):
+        return tuple(reversed(edge))
+
+    def canonize(self,edge):
+        node1,attr1,attr2,node2 = edge
+        as_is = (attr1 <= attr2) or (attr1==attr2 and node1.id<node2.id)
+        if not as_is:
+            return self.flip(edge)
+        return edge
+
         return self

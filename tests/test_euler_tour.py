@@ -33,14 +33,15 @@ class TestEuler(unittest.TestCase):
         ind = EulerTourIndex()
 
         x = EulerTour('x',blist([1,2,3,4,5,4,3,2,1]))
-
-        ind.add_tour(x)
+        ind.add_tour(x,remap=True)
         self.assertEqual(sorted(ind._tourmap.keys()),[1,2,3,4,5])
         for key in [1,2,3,4,5]:
             self.assertEqual(ind.get_mapped_tour(key),x)
 
         x._tour = blist([1,2,3,2,1,6,7,6,1])
-        ind.edit_tour(x,removed_nodes=[4,5],added_nodes=[6,7])
+        ind.remap_nodes([6,7],x)
+        ind.remap_nodes([4,5])
+
         self.assertEqual(sorted(ind._tourmap.keys()),[1,2,3,6,7])
         for key in [1,2,3,6,7]:
             self.assertEqual(ind.get_mapped_tour(key),x)
@@ -48,6 +49,6 @@ class TestEuler(unittest.TestCase):
         for i,j in itertools.combinations([1,2,3,6,7],2):
             self.assertTrue(ind.is_connected([i,j]))
 
-        ind.remove_tour(x)
+        ind.remove_tour(x,remap=True)
         for key in range(10):
             self.assertEqual(ind.get_mapped_tour(key),None)
