@@ -1,5 +1,6 @@
 from blist import blist
 from .utils import generate_id, AddError
+from .indexer import SetLike, DictLike
 import random
 
 class EulerTour(object):
@@ -18,6 +19,16 @@ class EulerTour(object):
 
     def __str__(self):
         return ' '.join([x.id for x in self._tour]+['spares =',str(len(self._spares))])
+
+    # Access methods
+    def get_nodes(self):
+        return set(self._tour)
+
+    def get_edges(self):
+        return self._edges
+
+    def get_spares(self):
+        return self._spares
 
     # Static methods for handling edges
     def flip(edge):
@@ -75,4 +86,48 @@ class EulerTour(object):
 
     def shrink_right(self,length):
         self.delete_sequence(len(self)-length,length)
+        return self
+
+class EulerTourIndex(SetLike):
+    def __init__(self):
+        super().__init__()
+        self._tourmap = dict()
+
+    def map_node_tour(self,node,tour):
+        self._tourmap[node] = tour
+        return self
+
+    def unmap_node_tour(self,node):
+        del self._tourmap[node]
+        return self
+
+    def get_mapped_tour(self,node):
+        return self._tourmap.get(node,None)
+
+    def is_connected(self,nodelist):
+        tours = [self.get_mapped_tour(x) for x in nodelist]
+        return None not in tours and tours[1:]==tours[:-1]
+
+    def add_tour(self,tour):
+        assert tour not in self
+        self.add(tour)
+        for node in tour.get_nodes():
+            self.map_node_tour(node,tour)
+        return self
+
+    def remove_tour(self,tour):
+        assert tour in self
+        self.remove(tour)
+        for node in tour.get_nodes():
+            self.unmap_node_tour(node)
+        return self
+
+    def edit_tour(self,tour,removed_nodes=None,added_nodes=None):
+        assert tour in self
+        if removed_nodes is not None:
+            for node in removed_nodes:
+                self.unmap_node_tour(node)
+        if added_nodes is not None:
+            for node in added_nodes:
+                self.map_node_tour(node,tour)
         return self
