@@ -18,8 +18,6 @@ class EulerTour(object):
     def __str__(self):
         return ' '.join([x.id for x in self._tour]+['spares =',str(len(self._spares))])
 
-
-
     def last_occurrence(self,node):
         if node in self:
             for i in range(len(self),-1,-1):
@@ -41,11 +39,25 @@ class EulerTour(object):
         self._tour = tour[i:] + tour[1:i] + [tour[i]]
         return self
 
-    @staticmethod
+    def extend_right(self,nodes):
+        self.insert_sequence(len(self),nodes)
+        return self
+    def extend_left(self,nodes):
+        self.insert_sequence(0,nodes)
+        return self
+    def insert_sequence(self,idx,nodes):
+        assert 0 <= idx <= len(self)
+        self._tour = self._tour[:idx] + blist(nodes) + self._tour[idx:]
+        return self
+    def delete_sequence(self,idx,length):
+        assert 0 <= idx < idx+length <= len(self)
+        self._tour = self._tour[:idx] + self._tour[idx+length:]
+        return self
+
+
     def flip(edge):
         return tuple(reversed(edge))
 
-    @staticmethod
     def canonize(edge):
         node1,attr1,attr2,node2 = edge
         as_is = (attr1 <= attr2) or (attr1==attr2 and node1.id<node2.id)
