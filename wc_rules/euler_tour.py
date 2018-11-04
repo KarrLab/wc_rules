@@ -18,15 +18,28 @@ class EulerTour(object):
     def __str__(self):
         return ' '.join([x.id for x in self._tour]+['spares =',str(len(self._spares))])
 
+
+
+    def last_occurrence(self,node):
+        if node in self:
+            for i in range(len(self),-1,-1):
+                if self[i]==node:
+                    return i
+        return None
+
     def first_occurrence(self,node):
         if node in self:
             return self._tour.index(node)
         return None
 
-    def last_occurrence(self,node):
-        if node in self:
-            return self._tour.index(node,-1,-1)
-        return None
+    def reroot(self,node):
+        # tour is a blist
+        if self._tour[0]==node:
+            return tour
+        i = self.first_occurrence(node)
+        tour = self._tour
+        self._tour = tour[i:] + tour[1:i] + [tour[i]]
+        return self
 
     @staticmethod
     def flip(edge):
@@ -39,31 +52,3 @@ class EulerTour(object):
         if not as_is:
             return self.flip(edge)
         return edge
-
-    def insert_sequence(self,index,nodes):
-        for i in range(len(nodes)):
-            self._tour.insert(index+i,nodes[i])
-        return self
-
-    def insert_edge(self,edge):
-        edge = self.canonize(edge)
-        node1,attr1,attr2,node2 = edge
-
-        x1 = self.first_occurrence(node1)
-        x2 = self.first_occurrence(node2)
-        if x1 is not None and x2 is not None:
-            self._spares.add(edge)
-        elif x2 is None:
-            self.insert_sequence(x1+1,[node2,node1])
-            self._edges.add(edge)
-        else:
-            self.insert_sequence(x2+1,[node1,node2])
-            self._edges.add(edge)
-        return self
-
-    def reroot(self,node):
-        i = self.first_occurrence(node)
-        A = self._tour[1:i] + [node]
-        B = self._tour[i:len(self)]
-        self._tour = B + A
-        return self
