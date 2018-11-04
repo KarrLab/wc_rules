@@ -68,4 +68,11 @@ class EulerTour(object):
     def extend_right(self,nodes):
         self.insert_sequence(len(self),nodes)
         return self
-        
+
+    def shrink_left(self,length):
+        self.delete_sequence(0,length)
+        return self
+
+    def shrink_right(self,length):
+        self.delete_sequence(len(self)-length,length)
+        return self
