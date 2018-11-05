@@ -37,8 +37,8 @@ class EulerTour(object):
         return None
     def last_occurrence(self,node):
         if node in self:
-            for i in range(len(self)-1,-1,-1):
-                if self._tour[i]==node:
+            for i,x in reversed(list(enumerate(self._tour))):
+                if x==node:
                     return i
         return None
 
@@ -152,3 +152,19 @@ class EulerTourIndex(SetLike):
         if not as_is:
             return self.flip(edge)
         return edge
+
+    def bigger(self,t1,t2):
+        return len(t1) >= len(t2)
+
+    # Link/Cut methods
+    def link(self,t1,t2,u,v):
+        assert t1 in self and t2 in self
+        assert u in t1 and v in t2
+        t1.reroot(u)
+        t2.reroot(v)
+        t1._tour = t1._tour + t2._tour + [u]
+        t1._edges = t1._edges | t2._edges
+        t1._spares = t1._spares | t2._spares
+        self.remap_nodes(t2.get_nodes(),t1)
+        self.remove(t2)
+        return self

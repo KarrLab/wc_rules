@@ -29,3 +29,16 @@ class TestEuler(unittest.TestCase):
         self.assertEqual(x._tour,[1,2,3,4,5,4,3,2,1,0,1])
         x.shrink_right(2)
         self.assertEqual(x._tour,[1,2,3,4,5,4,3,2,1])
+
+    def test_first_last(self):
+        x = EulerTour(None,blist([1,2,3,7,3,4,5,4,3,2,1]))
+        self.assertEqual(x.first_occurrence(1),0)
+        self.assertEqual(x.last_occurrence(1),10)
+        self.assertEqual(x.first_occurrence(7),3)
+        self.assertEqual(x.last_occurrence(7),3)
+        self.assertEqual(x.first_occurrence(5),6)
+        self.assertEqual(x.last_occurrence(5),6)
+        self.assertEqual(x.first_occurrence(3),2)
+        self.assertEqual(x.last_occurrence(3),8)
+        self.assertEqual(x.first_occurrence(8),None)
+        self.assertEqual(x.last_occurrence(8),None)
