@@ -29,6 +29,44 @@ class TestEuler(unittest.TestCase):
         x.shrink_right(2)
         self.assertEqual(x._tour,[1,2,3,4,5,4,3,2,1])
 
+    def test_link(self):
+        x1 = EulerTour('x1',blist([1]))
+        x2 = EulerTour('x2',blist([2]))
+        edge = tuple([1,'a','b',2])
+        x1.link(x2,edge)
+        self.assertEqual(x1._tour,[1,2,1])
+        self.assertTrue(edge in x1._edges)
+        edge = tuple([1,'c','d',2])
+        x1.add_spare(edge)
+        self.assertEqual(x1._tour,[1,2,1])
+        self.assertTrue(edge in x1._spares)
+
+        x3 = EulerTour('x3',blist([3]))
+        edge = tuple([1,'a','b',3])
+        x1.link(x3,edge)
+        self.assertEqual(x1._tour,[1,2,1,3,1])
+        self.assertTrue(edge in x1._edges)
+
+        x4 = EulerTour('x4',blist([4]))
+        x5 = EulerTour('x5',blist([5]))
+        edge = tuple([4,'a','b',5])
+        x4.link(x5,edge)
+        self.assertEqual(x4._tour,[4,5,4])
+        self.assertTrue(edge in x4._edges)
+        edge = tuple([4,'c','d',5])
+        x4.add_spare(edge)
+        self.assertEqual(x4._tour,[4,5,4])
+        self.assertTrue(edge in x4._spares)
+
+        edge = tuple([2,'a','b',4])
+        x1.link(x4,edge)
+        self.assertEqual(x1._tour,[2,1,3,1,2,4,5,4,2])
+        self.assertTrue(edge in x1._edges)
+        edge = tuple([1,'c','d',2])
+        self.assertTrue(edge in x1._spares)
+        edge = tuple([4,'c','d',5])
+        self.assertTrue(edge in x1._spares)
+
     def test_eulertourindex(self):
         ind = EulerTourIndex()
 
@@ -52,3 +90,8 @@ class TestEuler(unittest.TestCase):
         ind.remove_tour(x,remap=True)
         for key in range(10):
             self.assertEqual(ind.get_mapped_tour(key),None)
+
+    def test_add_node(self):
+        ind = EulerTourIndex()
+        ind.insert_node(5)
+        self.assertEqual(list(ind._tourmap.keys()),[5])
