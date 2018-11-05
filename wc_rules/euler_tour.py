@@ -100,19 +100,6 @@ class EulerTour(object):
                 return i
         return None
 
-    def link(self,other,edge):
-        node1,_,_,node2 = edge
-        if node1 not in self:
-            node1,node2 = node2,node1
-        print(node1,self._tour,node2,other._tour)
-        self.reroot(node1)
-        other.reroot(node2)
-        self.extend_right(other._tour + [node1])
-        self.add_edge(edge)
-        self._spares |= other._spares
-        self._edges |= other._edges
-        return self
-
 class EulerTourIndex(SetLike):
     def __init__(self):
         super().__init__()
@@ -165,25 +152,3 @@ class EulerTourIndex(SetLike):
         if not as_is:
             return self.flip(edge)
         return edge
-
-    # Insertion
-    def insert_node(self,node):
-        new_tour = EulerTour(None,[node])
-        self.add_tour(new_tour)
-        return self
-
-    def insert_edge(self,edge):
-        edge = self.canonize(edge)
-        node1,attr1,attr2,node2 = edge
-        t1 = self.get_mapped_tour(node1)
-        t2 = self.get_mapped_tour(node2)
-        if t1==t2:
-            t1.add_spare(edge)
-        else:
-            t1,t2 = sorted([t1,t2],key=len)
-            t1.link(t2,edge)
-            self.remove_tour(t2)
-            self.remap_nodes(t2.get_nodes(),t1)
-        return self
-
-    
