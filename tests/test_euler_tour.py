@@ -118,12 +118,70 @@ class TestEuler(unittest.TestCase):
         for key in range(10):
             self.assertEqual(ind.get_mapped_tour(key),None)
 
-    def test_add_node(self):
+    def test_insert_delete(self):
+        # sequentially build a tree 1,2,3,2,1
+        # with two spare edges 1,2 and 2,3
         ind = EulerTourIndex()
         ind.insert_node(1)
         keys = sorted(list(ind._tourmap.keys()))
         self.assertEqual(keys,[1])
+        values = set(ind._tourmap.values())
+        self.assertEqual(len(values),1)
 
         ind.insert_node(2)
         keys = sorted(list(ind._tourmap.keys()))
         self.assertEqual(keys,[1,2])
+        values = set(ind._tourmap.values())
+        self.assertEqual(len(values),2)
+
+        edge = tuple([1,'x','y',2])
+        ind.insert_edge(edge)
+        values = set(ind._tourmap.values())
+        self.assertEqual(len(values),1)
+        x = list(values)[0]
+        x.reroot(1)
+        self.assertEqual(x._tour,[1,2,1])
+
+        ind.insert_node(3)
+        keys = sorted(list(ind._tourmap.keys()))
+        self.assertEqual(keys,[1,2,3])
+        values = set(ind._tourmap.values())
+        self.assertEqual(len(values),2)
+
+        edge = tuple([2,'x','y',3])
+        ind.insert_edge(edge)
+        values = set(ind._tourmap.values())
+        self.assertEqual(len(values),1)
+        x = list(values)[0]
+        x.reroot(1)
+        self.assertEqual(x._tour,[1,2,3,2,1])
+
+        # spare edges
+        edge = tuple([1,'a','b',2])
+        ind.insert_edge(edge)
+        values = set(ind._tourmap.values())
+        self.assertEqual(len(values),1)
+        x = list(values)[0]
+        self.assertTrue(edge in x._spares)
+
+        edge = tuple([2,'a','b',3])
+        ind.insert_edge(edge)
+        values = set(ind._tourmap.values())
+        self.assertEqual(len(values),1)
+        x = list(values)[0]
+        self.assertTrue(edge in x._spares)
+
+        # deletion sequence
+        # delete 1,2 main edge
+        # should rework the tree using spare edge
+        # delete 2,3 spare edge
+        # should not change the tree
+        # delete 1,2 formerly spare edge
+        # 1 is now a singleton
+        # delete 1
+        # delete 2,3 main edge
+        # should rework the tree using spare edge
+        # delete 2,3 formerly spare edge
+        # 2,3 are now singletons
+        # delete 2
+        # delete 3
