@@ -37,8 +37,8 @@ class EulerTour(object):
         return None
     def last_occurrence(self,node):
         if node in self:
-            for i in range(len(self),-1,-1):
-                if self[i]==node:
+            for i in range(len(self)-1,-1,-1):
+                if self._tour[i]==node:
                     return i
         return None
 
@@ -61,6 +61,7 @@ class EulerTour(object):
         return self
 
     def remove_spare(self,spare):
+        print(self._spares,spare)
         self._spares.remove(spare)
         return self
 
@@ -111,6 +112,55 @@ class EulerTour(object):
         self._spares |= other._spares
         self._edges |= other._edges
         return self
+
+    def cut(self,edge):
+        node1,_,_,node2 = edge
+        self.reroot(node1)
+        x1 = self.first_occurrence(node2)
+        x2 = self.last_occurrence(node2)+1
+        inner_tour = self._tour[x1:x2]
+        outer_tour = self._tour[:x1] + self._tour[x2+1:]
+        print(self._tour,inner_tour,outer_tour)
+        big_tour,small_tour = sorted([inner_tour,outer_tour],key=len,reverse=True)
+        print(self._tour,big_tour,small_tour)
+        big_nodes = set(big_tour)
+        small_nodes = set(small_tour)
+        print(self._tour,big_nodes,small_nodes)
+
+        # is there a spare edge that can fuse them again?
+        mergeable = False
+        merge_edge = None
+        for e in self._spares:
+            n = set([e[0],e[3]])
+            print(n<=big_nodes and n<=small_nodes)
+            if not (n<=big_nodes and n<=small_nodes):
+                mergeable=True
+                merge_edge = e
+                break
+
+        print(mergeable)
+        print(merge_edge)
+
+        if not mergeable:
+            # make two tour objects and return them
+            self.remove_edge(edge)
+            small_edges = set([x for x in self._edges if x[0] in small_nodes])
+            big_edges = self._edges - small_edges
+            small_spares = set([x for x in self._spares if x[0] in small_nodes])
+            big_spares = self._spares - small_spares
+            t1 = EulerTour(id=self.id,iterable=big_tour,edges=big_edges,spares=big_spares)
+            t2 = EulerTour(id=None,iterable=small_tour,edges=small_edges,spares=small_spares)
+            return [t1,t2]
+
+        # make two tour objects, merge them and return them
+        self.remove_edge(edge)
+        self.remove_spare(merge_edge)
+        t1 = EulerTour(id=None,iterable=big_tour)
+        t2 = EulerTour(id=None,iterable=small_tour)
+        t1.link(t2,merge_edge)
+        self._tour = t1._tour
+        return [self]
+
 
 class EulerTourIndex(SetLike):
     def __init__(self):
