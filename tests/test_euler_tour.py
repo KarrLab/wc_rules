@@ -58,10 +58,11 @@ class TestEuler(unittest.TestCase):
 
     def test_create_delete_new_tour(self):
         ind = EulerTourIndex()
-        ind.create_new_tour_from_node(1)
-        self.assertTrue(ind.get_mapped_tour(1) is not None)
-        ind.delete_existing_tour_from_node(1)
-        self.assertTrue(ind.get_mapped_tour(1) is None)
+        a = A()
+        ind.create_new_tour_from_node(a)
+        self.assertTrue(ind.get_mapped_tour(a) is not None)
+        ind.delete_existing_tour_from_node(a)
+        self.assertTrue(ind.get_mapped_tour(a) is None)
 
     def test_link(self):
         t1 = EulerTour('t1',[9,8,5,6,7,6,5,8,9])
@@ -87,3 +88,77 @@ class TestEuler(unittest.TestCase):
         x1,x2 = ind.cut(t1,1,5)
         self.assertEqual(x1._tour,[5,6,7,6,5,8,9,8,5])
         self.assertEqual(x2._tour,[1,2,3,2,4,2,1])
+
+    def test_auglink(self):
+        ind = EulerTourIndex()
+
+        a1,x1,x2,a2 = A(),X(),X(),A()
+        for n in [a1,x1,a2,x2]:
+            ind.create_new_tour_from_node(n)
+        self.assertEqual(len(ind),4)
+
+        for a,x in [[a1,x1],[a2,x2]]:
+            x.set_molecule(a)
+            e = tuple([x,'molecule','sites',a])
+            ind.auglink(e)
+        self.assertEqual(len(ind),2)
+
+        bnd = Bond()
+        ind.create_new_tour_from_node(bnd)
+        self.assertEqual(len(ind),3)
+
+        for x in [x1,x2]:
+            bnd.add_sites(x)
+            e = tuple([x,'bond','sites',bnd])
+            ind.auglink(e)
+        self.assertEqual(len(ind),1)
+
+        # Complex is now A-X-bnd-X-A
+        # lets add another A-X-bnd-X-A with the same A's to test add-spaare
+        x3,x4 = X(),X()
+        for a,x in [[a1,x3],[a2,x4]]:
+            ind.create_new_tour_from_node(x)
+            x.set_molecule(a)
+            e = tuple([x,'molecule','sites',a])
+            ind.auglink(e)
+        self.assertEqual(len(ind),1)
+
+        bnd = Bond()
+        ind.create_new_tour_from_node(bnd)
+        for x in [x3,x4]:
+            bnd.add_sites(x)
+            e = tuple([x,'bond','sites',bnd])
+            ind.auglink(e)
+        self.assertEqual(len(ind),1)
+        self.assertEqual(len(list(ind)[0]._spares),1)
+
+    def test_augcut(self):
+        # Create A-X-bnd-X-A-X-bnd-X-A loop, where first & last A's are same
+        ind = EulerTourIndex()
+        a1,a2,x1,x2,x3,x4 = A('a1'), A('a2'), X('x1'), X('x2'), X('x3'), X('x4')
+        for n in [a1,a2,x1,x2,x3,x4]:
+            ind.create_new_tour_from_node(n)
+        for a,x in [[a1,x1],[a2,x2],[a1,x3],[a2,x4]]:
+            x.set_molecule(a)
+            e = tuple([x,'molecule','sites',a])
+            ind.auglink(e)
+        bnd1,bnd2 = Bond('bnd1'),Bond('bnd2')
+        for i,j,bnd in [[x1,x2,bnd1],[x3,x4,bnd2]]:
+            ind.create_new_tour_from_node(bnd)
+            for k in [i,j]:
+                bnd.add_sites(k)
+                e = tuple([k,'bond','sites',bnd])
+                ind.auglink(e)
+        self.assertEqual(len(ind),1)
+        self.assertEqual(len(list(ind)[0]._spares),1)
+
+        # test cutting a bridge when there is a spare
+        # i.e., cutting x1,bnd,x2 and x3,bnd,x4 should compensate
+        bnd = x1.bond
+        for x in [x1,x2]:
+            x.unset_bond()
+            e = tuple([x,'bond','sites',bnd])
+            ind.augcut(e)
+        ind.delete_existing_tour_from_node(bnd)
+        self.assertEqual(len(ind),1)
+        self.assertEqual(len(list(ind)[0]._spares),0)

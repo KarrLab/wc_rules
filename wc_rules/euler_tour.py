@@ -81,8 +81,8 @@ class EulerTour(object):
             self._edges.add(edge)
         return self
 
-    def remove_spare(self,spares):
-        for spare in spars:
+    def remove_spares(self,spares):
+        for spare in spares:
             self._spares.remove(spare)
         return self
 
@@ -168,19 +168,17 @@ class EulerTourIndex(SetLike):
             return self.flip(edge)
         return edge
 
-    def partition_edge_set(self,edges,lhs_nodes,rhs_nodes):
-        lhs = set()
-        rhs = set()
-        m = set()
-        for edge in edges:
-            node1,_,_node2 = edge
-            if lhs_nodes.issuperset([node1,node2]):
-                lhs.add(edge)
-            elif rhs_nodes.issuperset([node1,node2]):
-                rhs.add(edge)
-            else:
-                m.add(edge)
-        return lhs,m,rhs
+    # Sorting tours
+    def sort_tours(self,tours):
+        return sorted(tours,key=self.sortkeygen,reverse=True)
+
+    @staticmethod
+    def sortkeygen(x):
+        first = len(x)
+        second = x[0]
+        if hasattr(x[0],'id'):
+            second = x[0].id
+        return [first,second]
 
     # Creating new tours from singleton nodes
     def create_new_tour_from_node(self,node):
@@ -211,16 +209,12 @@ class EulerTourIndex(SetLike):
 
     # Basic link: t1,t2 --> t
     def link(self,t1,t2,u,v):
-        assert t1 in self and t2 in self
-        assert u in t1 and v in t2
         t1.reroot(u)
         t2.reroot(v)
         return EulerTour(None,t1._tour + t2._tour + [u])
 
     #Basic cut: t-->t1,t2
     def cut(self,t,u,v):
-        assert t in self
-        assert u in t and v in t
         t.reroot(u,v)
         v2 = t.last_occurrence(v)
         inner = t._tour[1:v2+1]
@@ -229,11 +223,29 @@ class EulerTourIndex(SetLike):
         assert outer[0] == outer[-1] == u
         sorted_tours = [EulerTour(None,x) for x in self.sort_tours([inner,outer])]
         return sorted_tours
-    # updating EulerTourIndex
-    def update_link(self,t1,t2,t,edge):
-        # t1, t2 are the initial tours
-        # t is the linked tour
-        big,small = self.sort_tours([t1,t2])
+
+    def find_edge(self,node1,node2):
+        x1 = self.get_mapped_tour(node1)
+        x2 = self.get_mapped_tour(node2)
+        assert None not in [x1,x2]
+        if x1==x2:
+            return [x1]
+        return [x1,x2]
+
+    # Augmented link
+    # if edge in t, add edge to t._spares
+    # if edge
+    def auglink(self,edge):
+        node1,attr1,attr2,node2 = edge
+        tours = self.find_edge(node1,node2)
+        if len(tours)==1:
+            tours[0].add_spares([edge])
+            return self
+        big,small = self.sort_tours(tours)
+        if big !=tours[0]:
+            node1,node2 = node2,node1
+
+        t = self.link(big,small,node1,node2)
         big._tour = t._tour
         big.add_edges(small._edges | set([edge]))
         big.add_spares(small._spares)
@@ -241,14 +253,56 @@ class EulerTourIndex(SetLike):
         self.remove_tour(small)
         return self
 
+    # Augmented cut
+    # if edge in t._spares, simply remove
+    # if edge in t._edges, do cut--> t1,t2
+    #      if exists spanning edge in t._spares, remerge t1,t2
+    #      else return t1,t2
+    def augcut(self,edge):
+        node1,attr1,attr2,node2 = edge
+        tour = self.find_edge(node1,node2)[0]
+        if edge in tour._spares:
+            tour.remove_spares([edge])
+            return self
+        big,small = self.cut(tour,node1,node2)
+        if len(tour._spares)!=0:
+            # pop a spare, remerge
+            for spare in tour._spares:
+                if spare[0] in big and spare[3] in small:
+                    new_tour = self.link(big,small,spare[0],spare[3])
+                    tour._tour = new_tour._tour
+                    tour.remove_spares([spare])
+                    tour.remove_edges([edge])
+                    tour.add_edges([spare])
+                    # no remapping required
+                    return self
+                if spare[3] in big and spare[0] in small:
+                    new_tour = self.link(big,small,spare[3],spare[0])
+                    tour._tour = new_tour._tour
+                    tour.remove_spares([spare])
+                    tour.remove_edges([edge])
+                    tour.add_edges([spare])
+                    # no remapping required
+                    return self
+                # if you're here, then no available spare to remerge
 
-    def sort_tours(self,tours):
-        return sorted(tours,key=self.sortkeygen,reverse=True)
+        # populate edges and spares
+        b,s = big._tour, small._tour
+        edges1 = [x for x in tour._edges if x[0] in b and x[3] in b]
+        edges2 = [x for x in tour._edges if x[0] in s and x[3] in s]
+        assert len(edges1) + len(edges2) + 1 == len(tour._edges)
 
-    @staticmethod
-    def sortkeygen(x):
-        first = len(x)
-        second = x[0]
-        if hasattr(x[0],'id'):
-            second = x[0].id
-        return [first,second]
+        b,s = big._tour, small._tour
+        spares1 = [x for x in tour._spares if x[0] in b and x[3] in b]
+        spares2 = [x for x in tour._spares if x[0] in s and x[3] in s]
+        assert len(spares1) + len(spares2) == len(tour._spares)
+
+        # Finalize cut
+        tour._tour = big._tour
+        tour._edges = edges1
+        tour._spares = spares1
+        small._edges = edges2
+        small._spares = spares2
+        self.remap_nodes(small.get_nodes(),small)
+        self.add_tour(small)
+        return self
