@@ -133,22 +133,33 @@ class TestEuler(unittest.TestCase):
         self.assertEqual(len(list(ind)[0]._spares),1)
 
     def test_augcut(self):
-        # Create A-X-bnd-X-A-X-bnd-X-A loop, where first & last A's are same
+        # Create A-X-bnd-X-A 3 times, with the same pair of A's but different X-bnd-X
+
         ind = EulerTourIndex()
-        a1,a2,x1,x2,x3,x4 = A('a1'), A('a2'), X('x1'), X('x2'), X('x3'), X('x4')
-        for n in [a1,a2,x1,x2,x3,x4]:
+        a1,a2,x1,x2,x3,x4,x5,x6 = A('a1'), A('a2'), X('x1'), X('x2'), X('x3'), X('x4'), X('x5'), X('x6')
+        for n in [a1,a2,x1,x2,x3,x4,x5,x6]:
             ind.create_new_tour_from_node(n)
-        for a,x in [[a1,x1],[a2,x2],[a1,x3],[a2,x4]]:
+        for a,x in [[a1,x1],[a2,x2],[a1,x3],[a2,x4],[a1,x5],[a2,x6]]:
             x.set_molecule(a)
             e = tuple([x,'molecule','sites',a])
             ind.auglink(e)
-        bnd1,bnd2 = Bond('bnd1'),Bond('bnd2')
-        for i,j,bnd in [[x1,x2,bnd1],[x3,x4,bnd2]]:
+        bnd1,bnd2,bnd3 = Bond('bnd1'),Bond('bnd2'),Bond('bnd3')
+        for i,j,bnd in [[x1,x2,bnd1],[x3,x4,bnd2],[x5,x6,bnd3]]:
             ind.create_new_tour_from_node(bnd)
             for k in [i,j]:
                 bnd.add_sites(k)
                 e = tuple([k,'bond','sites',bnd])
                 ind.auglink(e)
+        self.assertEqual(len(ind),1)
+        self.assertEqual(len(list(ind)[0]._spares),2)
+
+        # test cutting spares
+        bnd = x5.bond
+        for x in [x5,x6]:
+            x.unset_bond()
+            e = tuple([x,'bond','sites',bnd])
+            ind.augcut(e)
+        ind.delete_existing_tour_from_node(bnd)
         self.assertEqual(len(ind),1)
         self.assertEqual(len(list(ind)[0]._spares),1)
 
@@ -162,3 +173,13 @@ class TestEuler(unittest.TestCase):
         ind.delete_existing_tour_from_node(bnd)
         self.assertEqual(len(ind),1)
         self.assertEqual(len(list(ind)[0]._spares),0)
+
+        # test cutting a bridge when there is no spare
+        bnd = x3.bond
+        for x in [x3,x4]:
+            x.unset_bond()
+            e = tuple([x,'bond','sites',bnd])
+            ind.augcut(e)
+        ind.delete_existing_tour_from_node(bnd)
+        self.assertEqual(len(ind),2)
+        

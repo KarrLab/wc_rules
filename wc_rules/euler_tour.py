@@ -7,8 +7,8 @@ class EulerTour(object):
     def __init__(self,id=None,iterable=None,edges=None,spares=None):
         self.id = id if id is not None else generate_id()
         self._tour = blist(iterable) if iterable is not None else blist()
-        self._edges = edges if edges is not None else set()
-        self._spares = spares if spares is not None else set()
+        self._edges = set(edges) if edges is not None else set()
+        self._spares = set(spares) if spares is not None else set()
 
     # Magic methods
     def __contains__(self,node):
@@ -46,7 +46,7 @@ class EulerTour(object):
         return None
 
     def find_sequence(self,sequence):
-        for i in range(len(self)-len(sequence)):
+        for i in range(len(self)-len(sequence)+1):
             if self._tour[i:i+len(sequence)]==sequence:
                 return i
         return None
@@ -116,8 +116,6 @@ class EulerTour(object):
     def shrink_right(self,length):
         self.delete_sequence(len(self)-length,length)
         return self
-
-
 
 class EulerTourIndex(SetLike):
     def __init__(self):
@@ -216,6 +214,7 @@ class EulerTourIndex(SetLike):
     #Basic cut: t-->t1,t2
     def cut(self,t,u,v):
         t.reroot(u,v)
+        assert u in t and v in t
         v2 = t.last_occurrence(v)
         inner = t._tour[1:v2+1]
         outer = t._tour[v2+1:]
@@ -288,21 +287,21 @@ class EulerTourIndex(SetLike):
 
         # populate edges and spares
         b,s = big._tour, small._tour
+
         edges1 = [x for x in tour._edges if x[0] in b and x[3] in b]
         edges2 = [x for x in tour._edges if x[0] in s and x[3] in s]
         assert len(edges1) + len(edges2) + 1 == len(tour._edges)
 
-        b,s = big._tour, small._tour
         spares1 = [x for x in tour._spares if x[0] in b and x[3] in b]
         spares2 = [x for x in tour._spares if x[0] in s and x[3] in s]
         assert len(spares1) + len(spares2) == len(tour._spares)
 
         # Finalize cut
         tour._tour = big._tour
-        tour._edges = edges1
-        tour._spares = spares1
-        small._edges = edges2
-        small._spares = spares2
+        tour._edges = set(edges1)
+        tour._spares = set(spares1)
+        small._edges = set(edges2)
+        small._spares = set(spares2)
         self.remap_nodes(small.get_nodes(),small)
         self.add_tour(small)
         return self
