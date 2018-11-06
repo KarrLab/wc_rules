@@ -20,6 +20,9 @@ class EulerTour(object):
     def __str__(self):
         return ' '.join([x.id for x in self._tour]+['spares =',str(len(self._spares))])
 
+    def __getitem__(self,key):
+        return self._tour[key]
+
     # Access methods
     def get_nodes(self):
         return set(self._tour)
@@ -144,18 +147,14 @@ class EulerTourIndex(SetLike):
         tours = [self.get_mapped_tour(x) for x in nodelist]
         return None not in tours and tours[1:]==tours[:-1]
 
-    def add_tour(self,tour,remap=True):
+    def add_tour(self,tour):
         assert tour not in self
         self.add(tour)
-        if remap:
-            self.remap_nodes(tour.get_nodes(),tour)
         return self
 
-    def remove_tour(self,tour,remap=True):
+    def remove_tour(self,tour):
         assert tour in self
         self.remove(tour)
-        if remap:
-            self.remap_nodes(tour.get_nodes())
         return self
 
     # Static methods for handling edges
@@ -183,26 +182,65 @@ class EulerTourIndex(SetLike):
                 m.add(edge)
         return lhs,m,rhs
 
-    # Link/Cut methods
-    # these operate on tours in the indexes and return
-    # either a single blist or a sorted list of blists
+    # Creating new tours from singleton nodes
+    def create_new_tour_from_node(self,node):
+        if type(node) not in [int,float,str]:
+            assert len(node.get_nonempty_related_attributes())==0
+        assert self.get_mapped_tour(node) is None
+        t = EulerTour(None,[node])
+        self.add_new_tour(t)
+        return self
+
+    def delete_existing_tour_from_node(self,node):
+        if type(node) not in [int,float,str]:
+            assert len(node.get_nonempty_related_attributes())==0
+        t = self.get_mapped_tour(node)
+        self.delete_existing_tour(t)
+        return self
+
+    # Shortcut add and delete (to use for testing)
+    def add_new_tour(self,tour):
+        self.add_tour(tour)
+        self.remap_nodes(tour.get_nodes(),tour)
+        return self
+
+    def delete_existing_tour(self,tour):
+        self.remove_tour(tour)
+        self.remap_nodes(tour.get_nodes())
+        return self
+
+    # Basic link: t1,t2 --> t
     def link(self,t1,t2,u,v):
         assert t1 in self and t2 in self
         assert u in t1 and v in t2
         t1.reroot(u)
         t2.reroot(v)
-        return t1._tour + t2._tour + [u]
+        return EulerTour(None,t1._tour + t2._tour + [u])
 
-    def cut(self,t1,u,v):
-        assert t1 in self
-        assert u in t1 and v in t1
-        t1.reroot(u,v)
-        v2 = t1.last_occurrence(v)
-        inner = t1._tour[1:v2+1]
-        outer = t1._tour[v2+1:]
+    #Basic cut: t-->t1,t2
+    def cut(self,t,u,v):
+        assert t in self
+        assert u in t and v in t
+        t.reroot(u,v)
+        v2 = t.last_occurrence(v)
+        inner = t._tour[1:v2+1]
+        outer = t._tour[v2+1:]
         assert inner[0] == inner[-1] == v
         assert outer[0] == outer[-1] == u
-        return self.sort_tours([inner,outer])
+        sorted_tours = [EulerTour(None,x) for x in self.sort_tours([inner,outer])]
+        return sorted_tours
+    # updating EulerTourIndex
+    def update_link(self,t1,t2,t,edge):
+        # t1, t2 are the initial tours
+        # t is the linked tour
+        big,small = self.sort_tours([t1,t2])
+        big._tour = t._tour
+        big.add_edges(small._edges | set([edge]))
+        big.add_spares(small._spares)
+        self.remap_nodes(small.get_nodes(),big)
+        self.remove_tour(small)
+        return self
+
 
     def sort_tours(self,tours):
         return sorted(tours,key=self.sortkeygen,reverse=True)
@@ -210,7 +248,7 @@ class EulerTourIndex(SetLike):
     @staticmethod
     def sortkeygen(x):
         first = len(x)
-        second = x
-        if hasattr(x,'id'):
-            second = x.id
+        second = x[0]
+        if hasattr(x[0],'id'):
+            second = x[0].id
         return [first,second]
