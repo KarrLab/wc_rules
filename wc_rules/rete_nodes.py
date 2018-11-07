@@ -1,5 +1,7 @@
 from .utils import generate_id,listify
 from .rete_token import new_token,TokenRegister
+from sortedcontainers import SortedSet
+from operator import attrgetter
 
 class ReteNode(object):
     def __init__(self,id=None):
@@ -7,7 +9,7 @@ class ReteNode(object):
             id = generate_id()
         self.id = id
         self.predecessors = set()
-        self.successors = set()
+        self.successors = SortedSet(key=attrgetter('priority'))
 
     # Rules for token-passing.
     # On receiving a token, do NOT modify it.
@@ -114,6 +116,7 @@ class checkTYPE(check):
     def __init__(self,_class,id=None):
         super().__init__(id)
         self._class = _class
+        self.priority=4
 
     def __str__(self):
         return 'isinstance(*,'+self._class.__name__+')'
@@ -141,6 +144,7 @@ class checkATTR(check):
         super().__init__(id)
         self.tuple_of_attr_tuples = tuple_of_attr_tuples
         self.attrs = [tup[0] for tup in tuple_of_attr_tuples]
+        self.priority=4
         # tuple of attrtuple is a tuple of (attr,op,value)
         # attr is a string, op is an operator object
 
@@ -207,7 +211,7 @@ class checkEDGE(check):
     def __init__(self,attrpair,id=None):
         super().__init__(id)
         self.attribute_pair = attrpair
-
+        self.priority=3
     ### checkEDGE has passthrough behavior
     # It simply checks whether the token has a compatible attrpair
     # Then duplicates and passes it on
@@ -245,6 +249,7 @@ class store(SingleInputNode):
         super().__init__(id)
         self._register = TokenRegister()
         self._number_of_variables = number_of_variables
+        self.priority = 2
 
     def __str__(self):
         return 'store'
@@ -324,6 +329,7 @@ class alias(SingleInputNode):
         self.variable_names = var_tuple
         self.keymap = dict()
         self.reverse_keymap = dict()
+        self.priority=1
 
     def set_keymap(self,key,value):
         self.keymap[key] = value
@@ -422,6 +428,7 @@ class merge(ReteNode):
         super().__init__(id)
         self.variable_names = var_tuple
         self._register = TokenRegister()
+        self.priority = 4
 
     def __str__(self):
         return ','.join(self.variable_names)
