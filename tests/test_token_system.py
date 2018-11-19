@@ -1,4 +1,4 @@
-from wc_rules.chem import Molecule, Site
+from wc_rules.chem import Molecule, Site,Bond
 from wc_rules.rete_token import *
 from wc_rules.matcher import Matcher
 from wc_rules.pattern import Pattern
@@ -57,6 +57,7 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(len(f3),0)
 
     def test_token_passing_01(self):
+        # Tests pattern with a single node
         m = Matcher()
 
         a1 = A(id='a1')
@@ -90,6 +91,7 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(len(n),1)
 
     def test_token_passing_02(self):
+        # Test single-node pattern with non-matching attributes
         m = Matcher()
 
         x1 = X(id='x1',ph=True)
@@ -122,6 +124,7 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(len(n),1)
 
     def test_token_passing_03(self):
+        # Test single-node pattern with matching attributes
         m = Matcher()
 
         x1 = X(id='x1',ph=True,v=0)
@@ -160,6 +163,7 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(len(n),2)
 
     def test_token_passing_04(self):
+        # Test pattern A-X[ph=True,v=0]
         a1 = A(id='a1')
         x1 = X(id='x1',ph=True,v=0).set_molecule(a1)
 
@@ -201,6 +205,7 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(len(n),0)
 
     def test_token_passing_05(self):
+        # Test pattern Ax:A(x[id=x]), X:X[id=x] with condition Ax.x in X.x
         p_X = Pattern('X').add_node( X('x',ph=True) )
         p_Ax = Pattern('Ax').add_node( A('a').add_sites(X('x') ) )   \
                 .add_expression('x in X.x')
@@ -241,6 +246,7 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(m.count('Ax'),0)
 
     def test_token_passing_06(self):
+        # Test Ax:A(X[id=x]), X:X[id=x,ph=True] with condition A.x not in X.x
         p_X = Pattern('X').add_node( X('x',ph=True) )
         p_Ax = Pattern('Ax').add_node( A('a').add_sites(X('x') ) )   \
                 .add_expression('x not in X.x')
@@ -276,6 +282,7 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(m.count('Ax'),0)
 
     def test_token_passing_07(self):
+        # Test A(<empty>)
         p1 = Pattern('p1').add_node( A('a') )
         p1.add_expression('a.sites empty')
         p2 = Pattern('p2').add_node( A('a') )
@@ -322,6 +329,7 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(m.count('p2'),0)
 
     def test_token_passing_08(self):
+        # Test A(x)
         # One-edge
         p_Ax = Pattern('Ax').add_node( A('a').add_sites(X('x') ) )
         m = Matcher()
@@ -339,6 +347,7 @@ class TestTokenSystem(unittest.TestCase):
         m.send_tokens(tokens)
         self.assertEqual(m.count('Ax'),n)
 
+        # Test A(x,x)
         # Two edges
         p_Axx = Pattern('Axx').add_node( A('a').add_sites( X('x1'),X('x2') ) )
         m = Matcher()
@@ -357,12 +366,14 @@ class TestTokenSystem(unittest.TestCase):
         self.assertEqual(m.count('Axx'),n*(n-1))
 
         # Three edges
+        # Test A(x,x,x)
         p_Axxx = Pattern('Axxx').add_node( A('a').add_sites( X('x1'),X('x2'),X('x3') ) )
         m = Matcher()
         for p in [p_Axxx]:
             m.add_pattern(p)
 
         a001 = A()
+        # Test A(x*n)
         tokens = [token_add_node(a001)]
         n = 25
         for i in range(n):
@@ -375,6 +386,9 @@ class TestTokenSystem(unittest.TestCase):
 
     def test_token_passing_09(self):
         # multiple var matching
+        # Test AxT:A[id=a](X[id=X,ph=True])
+        # Ax:A[id=a](X[id=x])
+        # with joint condition Ax.[a,x] in AxT.[a,x]
         p_AxT = Pattern('AxT').add_node( A('a').add_sites( X('x',ph=True) )  )
         p_Ax = Pattern('Ax').add_node( A('a').add_sites(X('x')) )    \
                     .add_expression('[a,x] in AxT.[a,x]')
@@ -404,3 +418,52 @@ class TestTokenSystem(unittest.TestCase):
             tokens = [token_add_node(x001)]
             m.send_tokens(tokens)
         self.assertEqual(m.count('Ax'),n)
+
+    def test_token_passing_10(self):
+        # testing loops formed by A(x!0,x!1)
+        n=10
+        A_list = []
+        x_right_list = []
+        x_left_list = []
+        for i in range(n):
+            a1,xL,xR = A(),X(),X()
+            a1.add_sites(xL,xR)
+            A_list.append(a1)
+            x_left_list.append(xL)
+            x_right_list.append(xR)
+
+        for i in range(n):
+            bnd = Bond()
+            x1 = x_left_list[i]
+            x2 = x_right_list[i-1]
+            bnd.add_sites(x1,x2)
+
+        #pattern
+        p = Pattern('loop').add_node(A_list[0])
+        self.assertEqual(len(p),4*n)
+        m = Matcher()
+        m.add_pattern(p)
+
+        # tokens
+        tokens = []
+        left = []
+        right = []
+        for i in range(n):
+            a,xL,xR = A(),X(),X()
+            left.append(xL)
+            right.append(xR)
+            for nd in [a,xL,xR]:
+                tokens.append(token_add_node(nd))
+            a.add_sites(xL,xR)
+            for x in [xL,xR]:
+                tokens.append(token_add_edge(a,'sites','molecule',x))
+
+        for i in range(n):
+            bnd = Bond()
+            tokens.append(token_add_node(bnd))
+            bnd.add_sites(left[i],right[i-1])
+            for x in [left[i],right[i-1]]:
+                tokens.append(token_add_edge(bnd,'sites','bond',x))
+
+        m.send_tokens(tokens)
+        self.assertEqual(m.count('loop'),2*n)
