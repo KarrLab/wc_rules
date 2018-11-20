@@ -98,6 +98,9 @@ class EulerTourIndex(SetLike):
     def get_mapped_tour(self,node):
         return self._tourmap.get(node,None)
 
+    def get_list_of_complexes(self):
+        return [str(x) for x in self]
+
     def is_connected(self,nodelist):
         tours = [self.get_mapped_tour(x) for x in nodelist]
         return None not in tours and tours[1:]==tours[:-1]

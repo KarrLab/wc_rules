@@ -31,7 +31,7 @@ class Matcher(object):
         return self.pattern_nodes[pattern_id]
 
     def get_complexes(self):
-        return self.rete_net.get_complexes()
+        return self.rete_net._complex_bookkeeper.get_list_of_complexes()
 
     def send_token(self,token,verbose=False):
         root = self.rete_net.get_root()

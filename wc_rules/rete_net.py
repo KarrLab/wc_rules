@@ -10,7 +10,7 @@ class ReteNet(SetLike):
         self.add(R)
         self._root = R
         C = Complex()
-        self._complexes = C
+        self._complex_bookkeeper = C
         self.add_edge(R,C)
 
     def add_edge(self,node1,node2):
@@ -22,9 +22,6 @@ class ReteNet(SetLike):
 
     def get_root(self):
         return self._root
-
-    def get_complexes(self):
-        return self._complexes._index
 
     def depth_first_search(self,start_node):
         # return depth-first exploration of graph as an iter
