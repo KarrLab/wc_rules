@@ -5,16 +5,33 @@ class Matcher(object):
     def __init__(self):
         self.rete_net = ReteNet()
         self.pattern_nodes = dict()
+        self.bad_keywords = set(['complex','root','node','edge',
+        'node1','node2','edge1','edge2',
+        'add','remove','edit',
+        'molecule','molecules',
+        'site','sites',
+        'bond','bonds',
+        'overlap','overlaps',
+        ])
 
     # Matcher-level operations
     def add_pattern(self,pattern):
+        idxlist = [pattern.id] + [x.id for x in pattern]
+        for idx in idxlist:
+            assert idx not in self.bad_keywords
+
         existing_patterns = self.pattern_nodes
+        assert pattern.id not in self.pattern_nodes
+
         current_node = increment_net_with_pattern(self.rete_net,pattern,existing_patterns)
         self.pattern_nodes[pattern.id] = current_node
         return self
 
     def get_pattern(self,pattern_id):
         return self.pattern_nodes[pattern_id]
+
+    def get_complexes(self):
+        return self.rete_net.get_complexes()
 
     def send_token(self,token,verbose=False):
         root = self.rete_net.get_root()

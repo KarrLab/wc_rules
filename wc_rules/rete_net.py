@@ -1,5 +1,5 @@
 from .indexer import SetLike
-from .rete_nodes import Root
+from .rete_nodes import Root, Complex
 from . import gml
 from collections import deque
 
@@ -9,6 +9,9 @@ class ReteNet(SetLike):
         R = Root()
         self.add(R)
         self._root = R
+        C = Complex()
+        self._complexes = C
+        self.add_edge(R,C)
 
     def add_edge(self,node1,node2):
         self.add(node1)
@@ -19,6 +22,9 @@ class ReteNet(SetLike):
 
     def get_root(self):
         return self._root
+
+    def get_complexes(self):
+        return self._complexes._index
 
     def depth_first_search(self,start_node):
         # return depth-first exploration of graph as an iter

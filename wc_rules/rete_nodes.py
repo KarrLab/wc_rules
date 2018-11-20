@@ -2,6 +2,7 @@ from .utils import generate_id,listify
 from .rete_token import new_token,TokenRegister
 from sortedcontainers import SortedSet
 from operator import attrgetter
+from .euler_tour import EulerTour, EulerTourIndex
 
 class ReteNode(object):
     def __init__(self,id=None):
@@ -506,3 +507,52 @@ class merge(ReteNode):
 
     def count(self):
         return len(self._register)
+
+class Complex(ReteNode):
+    def __init__(self,id=None):
+        super().__init__(id)
+        self._index = EulerTourIndex()
+        self.priority = 1
+
+    def node_exists(self,node):
+        return self._index.get_mapped_tour(node) is not None
+    def node_is_singleton(self,node):
+        return len(self._index.get_mapped_tour(node).get_nodes())==1
+    def add_node(self,node):
+        self._index.create_new_tour_from_node(node)
+        return self
+    def remove_node(self,node):
+        self._index.delete_existing_tour_from_node(node)
+        return self
+    def add_edge(self,edge):
+        self._index.auglink(edge)
+        return self
+    def remove_edge(self,edge):
+        self._index.augcut(edge)
+        return self
+
+    def process_token(self,token,sender,verbose):
+        token_type = token.get_type()
+        tokens_to_pass = []
+        passthrough_fail = ''
+
+        # Adding and removing singletons of nodes
+        if 'node' in token:
+            node = token['node']
+            if token_type=='add' and not self.node_exists(node):
+                self.add_node(node)
+            if token_type=='remove':
+                assert self.node_is_singleton(node)
+                self.remove_node(node)
+
+        # Adding and removing edges
+        if 'node1' in token and 'node2' in token:
+            edge = tuple([token[x] for x in ['node1','attr1','attr2','node2']])
+            if token_type=='add':
+                self.add_edge(edge)
+            if token_type=='remove':
+                self.remove_edge(edge)
+
+        if verbose:
+            print(self.verbose_mode_message(token,tokens_to_pass,passthrough_fail))
+        return tokens_to_pass

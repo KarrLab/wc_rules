@@ -78,15 +78,7 @@ class TestTokenSystem(unittest.TestCase):
         m.send_token(tok)
         self.assertEqual(len(n),0)
 
-        #tok = token_edit_attrs(a2,['a','b','c'])
-        #m.send_token(tok)
-        #self.assertEqual(len(n),1)
-
         tok = token_add_node(a2)
-        m.send_token(tok)
-        self.assertEqual(len(n),1)
-
-        tok = token_remove_node(A())
         m.send_token(tok)
         self.assertEqual(len(n),1)
 
@@ -222,15 +214,14 @@ class TestTokenSystem(unittest.TestCase):
         #
         x001 = X(ph=True)
         a001 = A()
-        x001.set_molecule(a001)
 
-        tokens = [
-            token_add_node(a001),
-            token_add_node(x001),
-            token_add_edge(a001,'sites','molecule',x001)
-        ]
-
+        tokens = [token_add_node(a001),token_add_node(x001)]
         m.send_tokens(tokens)
+
+        x001.set_molecule(a001)
+        tokens = [token_add_edge(a001,'sites','molecule',x001)]
+        m.send_tokens(tokens)
+
         self.assertEqual(m.count('X'),1)
         self.assertEqual(m.count('Ax'),1)
 
@@ -257,13 +248,14 @@ class TestTokenSystem(unittest.TestCase):
 
         #
         a001 = A()
-        x001 = X(ph=True).set_molecule(a001)
-        tokens = [
-            token_add_node(a001),
-            token_add_node(x001),
-            token_add_edge(a001,'sites','molecule',x001),
-        ]
+        x001 = X(ph=True)
+        tokens = [token_add_node(a001),token_add_node(x001)]
         m.send_tokens(tokens)
+
+        x001.set_molecule(a001)
+        tokens = [token_add_edge(a001,'sites','molecule',x001),]
+        m.send_tokens(tokens)
+
         self.assertEqual(m.count('X'),1)
         self.assertEqual(m.count('Ax'),0)
 
@@ -338,13 +330,17 @@ class TestTokenSystem(unittest.TestCase):
 
         a001 = A()
         tokens = [token_add_node(a001)]
+        m.send_tokens(tokens)
         n = 100
         for i in range(n):
-            x = X().set_molecule(a001)
-            tokens.append(token_add_node(x))
-            tokens.append(token_add_edge(x,'molecule','sites',a001))
+            x = X()
+            tokens = [token_add_node(x)]
+            m.send_tokens(tokens)
 
-        m.send_tokens(tokens)
+            x.set_molecule(a001)
+            tokens = [token_add_edge(x,'molecule','sites',a001)]
+            m.send_tokens(tokens)
+
         self.assertEqual(m.count('Ax'),n)
 
         # Test A(x,x)
@@ -356,13 +352,17 @@ class TestTokenSystem(unittest.TestCase):
 
         a001 = A()
         tokens = [token_add_node(a001)]
+        m.send_tokens(tokens)
         n = 25
         for i in range(n):
-            x = X().set_molecule(a001)
-            tokens.append(token_add_node(x))
-            tokens.append(token_add_edge(x,'molecule','sites',a001))
+            x = X()
+            tokens = [token_add_node(x)]
+            m.send_tokens(tokens)
 
-        m.send_tokens(tokens)
+            x.set_molecule(a001)
+            tokens = [token_add_edge(x,'molecule','sites',a001)]
+            m.send_tokens(tokens)
+
         self.assertEqual(m.count('Axx'),n*(n-1))
 
         # Three edges
@@ -373,15 +373,18 @@ class TestTokenSystem(unittest.TestCase):
             m.add_pattern(p)
 
         a001 = A()
-        # Test A(x*n)
         tokens = [token_add_node(a001)]
+        m.send_tokens(tokens)
         n = 25
         for i in range(n):
-            x = X().set_molecule(a001)
-            tokens.append(token_add_node(x))
-            tokens.append(token_add_edge(x,'molecule','sites',a001))
+            x = X()
+            tokens = [token_add_node(x)]
+            m.send_tokens(tokens)
 
-        m.send_tokens(tokens)
+            x.set_molecule(a001)
+            tokens = [token_add_edge(x,'molecule','sites',a001)]
+            m.send_tokens(tokens)
+
         self.assertEqual(m.count('Axxx'),n*(n-1)*(n-2))
 
     def test_token_passing_09(self):
@@ -399,16 +402,20 @@ class TestTokenSystem(unittest.TestCase):
         n=25
         for i in range(n):
             a001,x001 = A(),X(ph=True)
+            tokens = [token_add_node(a001),token_add_node(x001)]
+            m.send_tokens(tokens)
             x001.set_molecule(a001)
-            tokens = [token_add_node(a001),token_add_node(x001),token_add_edge(a001,'sites','molecule',x001)]
+            tokens = [token_add_edge(a001,'sites','molecule',x001)]
             m.send_tokens(tokens)
         self.assertEqual(m.count('Ax'),n)
 
         n=25
         for i in range(n):
             a001,x001 = A(),X(ph=False)
+            tokens = [token_add_node(a001),token_add_node(x001)]
+            m.send_tokens(tokens)
             x001.set_molecule(a001)
-            tokens = [token_add_node(a001),token_add_node(x001),token_add_edge(a001,'sites','molecule',x001)]
+            tokens = [token_add_edge(a001,'sites','molecule',x001)]
             m.send_tokens(tokens)
         self.assertEqual(m.count('Ax'),n)
 
@@ -452,18 +459,20 @@ class TestTokenSystem(unittest.TestCase):
             a,xL,xR = A(),X(),X()
             left.append(xL)
             right.append(xR)
-            for nd in [a,xL,xR]:
-                tokens.append(token_add_node(nd))
+            tokens = [token_add_node(x) for x in [a,xL,xR]]
+            m.send_tokens(tokens)
+
             a.add_sites(xL,xR)
-            for x in [xL,xR]:
-                tokens.append(token_add_edge(a,'sites','molecule',x))
+            tokens = [token_add_edge(a,'sites','molecule',x) for x in [xL,xR]]
+            m.send_tokens(tokens)
 
         for i in range(n):
             bnd = Bond()
-            tokens.append(token_add_node(bnd))
-            bnd.add_sites(left[i],right[i-1])
-            for x in [left[i],right[i-1]]:
-                tokens.append(token_add_edge(bnd,'sites','bond',x))
+            tokens = [token_add_node(bnd)]
+            m.send_tokens(tokens)
 
-        m.send_tokens(tokens)
+            bnd.add_sites(left[i],right[i-1])
+            tokens = [token_add_edge(bnd,'sites','bond',x) for x in [left[i],right[i-1]] ]
+            m.send_tokens(tokens)
+
         self.assertEqual(m.count('loop'),2*n)
