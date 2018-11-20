@@ -33,6 +33,9 @@ class Matcher(object):
     def get_complexes(self):
         return self.rete_net._complex_bookkeeper.get_list_of_complexes()
 
+    def count_complexes(self):
+        return len(self.rete_net._complex_bookkeeper._index)
+
     def send_token(self,token,verbose=False):
         root = self.rete_net.get_root()
         root.receive_token(token,self,verbose)

@@ -476,3 +476,63 @@ class TestTokenSystem(unittest.TestCase):
             m.send_tokens(tokens)
 
         self.assertEqual(m.count('loop'),2*n)
+
+    def test_complex_bookkeeping(self):
+        # n1 molecules of A-X
+        # n2 molecules of A-X2
+        # n3 molecules of A-X3
+        # n4 molecules of A-X-bnd-X-A
+        # number of complexes = n1 + n2 + n3 + n4
+        # number matches to pattern A-X = n1 + 2*n2 + 3*n3 + 2*n4
+
+        pAx = Pattern('pAx').add_node(A(id='a').add_sites(X(id='x')))
+        m = Matcher()
+        m.add_pattern(pAx)
+        n1,n2,n3,n4 = 0,0,0,0
+        # n1 molecules of A-X
+        n1 = 100
+        for i in range(n1):
+            a,x = A(),X()
+            m.send_tokens([token_add_node(a),token_add_node(x)])
+            x.molecule = a
+            m.send_tokens([token_add_edge(a,'sites','molecule',x)])
+
+        # n2 molecules of A-X2
+        n2 = 50
+        for i in range(n2):
+            a,x1,x2 = A(), X(), X()
+            m.send_tokens([token_add_node(a),token_add_node(x1),token_add_node(x2)])
+            x1.molecule = a
+            x2.molecule = a
+            m.send_tokens([token_add_edge(a,'sites','molecule',x1),token_add_edge(a,'sites','molecule',x2)])
+
+        # n3 molecules of A-X3
+        n3 = 25
+        for i in range(n3):
+            a,x1,x2,x3 = A(), X(), X(), X()
+            m.send_tokens([token_add_node(a),token_add_node(x1),token_add_node(x2),token_add_node(x3)])
+            x1.molecule = a
+            x2.molecule = a
+            x3.molecule = a
+            m.send_tokens([token_add_edge(a,'sites','molecule',x1),token_add_edge(a,'sites','molecule',x2),token_add_edge(a,'sites','molecule',x3)])
+
+        # n4 molecules of A-X-bnd-X-A
+        n4 = 10
+        for i in range(n4):
+            a1,a2,x1,x2 = A(), A(), X(), X()
+            m.send_tokens([token_add_node(a1),token_add_node(x1)])
+            m.send_tokens([token_add_node(a2),token_add_node(x2)])
+            x1.molecule = a1
+            x2.molecule = a2
+            m.send_tokens([token_add_edge(a1,'sites','molecule',x1)])
+            m.send_tokens([token_add_edge(a2,'sites','molecule',x2)])
+            bnd = Bond()
+            m.send_tokens([token_add_node(bnd)])
+            bnd.add_sites(x1,x2)
+            m.send_tokens([token_add_edge(bnd,'sites','bond',x1)])
+            m.send_tokens([token_add_edge(bnd,'sites','bond',x2)])
+        
+        c1 = m.count_complexes()
+        c2 = m.count('pAx')
+        self.assertEqual(c1,n1 + n2 + n3 + n4)
+        self.assertEqual(c2,n1 + 2*n2 + 3*n3 + 2*n4)
