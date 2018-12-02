@@ -44,60 +44,15 @@ class BaseClass(core.Model):
             else:
             #self.id = str(uuid.UUID(int=idgen.getrandbits(128)))
                 self.id = utils.generate_id()
-        self.attribute_properties = self.make_attribute_properties_dict()
-
-    def make_attribute_properties_dict(self):
-        attrdict = dict()
-        cls = self.__class__
-
-        def populate_attribute(attrname, attr, check='related_class'):
-            x = {'related': False, 'append': False, 'related_class': None}
-            if check == 'related_class' and hasattr(attr, 'related_class'):
-                x['related'] = True
-                x['related_class'] = attr.related_class
-                if isinstance(attr, (OneToManyAttribute, ManyToManyAttribute,)):
-                    x['append'] = True
-                x['related_attr'] = attr.related_name
-            elif check == 'primary_class' and hasattr(attr, 'primary_class'):
-                x['related'] = True
-                x['related_class'] = attr.primary_class
-                if isinstance(attr, (ManyToManyAttribute, ManyToOneAttribute,)):
-                    x['append'] = True
-                x['related_attr'] = attr.name
-            return x
-
-        for attrname, attr in cls.Meta.attributes.items():
-            attrdict[attrname] = dict()
-            attrdict[attrname].update(populate_attribute(attrname, attr, 'related_class'))
-        for attrname, attr in cls.Meta.related_attributes.items():
-            if attrname not in attrdict:
-                attrdict[attrname] = dict()
-            attrdict[attrname].update(populate_attribute(attrname, attr, 'primary_class'))
-        return attrdict
-
-    def get_related_attributes(self):
-        attrdict = self.attribute_properties
-        return [x for x in attrdict if attrdict[x]['related']]
-
-    def get_scalar_attributes(self):
-        attrdict = self.attribute_properties
-        return [x for x in attrdict if not attrdict[x]['related']]
+    
+    def get_nonempty_related_attributes(self):
+        return list(self.get_non_empty_related_attrs().keys())
 
     def get_nonempty_scalar_attributes(self,ignore_id=True):
-        attrs = self.get_scalar_attributes()
-        if ignore_id:
-            attrs = [x for x in attrs if x!='id']
-        return [x for x in attrs if getattr(self,x,None) is not None]
-
-    def get_nonempty_related_attributes(self):
-        attrs = self.get_related_attributes()
-        final_attrs = []
-        for attr in attrs:
-            if self.attribute_properties[attr]['append']:
-                if getattr(self,attr,[])!=[]: final_attrs.append(attr)
-            else:
-                if getattr(self,attr,None) is not None: final_attrs.append(attr)
-        return final_attrs
+        x = list(self.get_non_empty_literal_attrs().keys())
+        if 'id' in x and ignore_id:
+            x.remove('id')
+        return x
 
     def duplicate(self,id=None,preserve_id=False,attrlist=None):
         ''' duplicates node up to scalar attributes '''
@@ -131,7 +86,8 @@ class BaseClass(core.Model):
             new_relations = utils.listify(getattr(target,attr))
             to_add = set(converted_old_relations) - set(new_relations)
             if len(to_add) > 0:
-                if self.attribute_properties[attr]['append']:
+                if self.__class__.Meta.local_attributes[attr].is_related_to_many:
+                #if self.attribute_properties[attr]['append']:
                     getattr(target,attr).extend(list(to_add))
                 else:
                     setattr(target,attr,to_add.pop())

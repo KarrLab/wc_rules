@@ -56,32 +56,6 @@ class TestBase(unittest.TestCase):
         # works only when utils.idgen.seed(0) in setUp()
         self.assertEqual(id_arr, check_str)
 
-    def test_attribute_properties(self):
-        attrprops = self.John.attribute_properties
-        keylist = 'id name parents pets children'.split()
-        for x in keylist:
-            self.assertTrue(list(attrprops.keys()))
-        check_dict = {
-            'id': {'related': False, 'append': False},
-            'name': {'related': False, 'append': False},
-            'parents': {'related': True, 'append': True},
-            'pets': {'related': True, 'append': True},
-            'children': {'related': True, 'append': True},
-        }
-        for x in check_dict:
-            for y in ['related', 'append']:
-                self.assertEqual(attrprops[x][y], check_dict[x][y])
-
-        self.assertEqual(attrprops['id']['related_class'], None)
-        self.assertEqual(attrprops['name']['related_class'], None)
-        self.assertEqual(attrprops['parents']['related_class'], type(self.John))
-        self.assertEqual(attrprops['pets']['related_class'], type(self.Dog001))
-        self.assertEqual(attrprops['children']['related_class'], type(self.Kid001))
-
-        self.assertEqual(attrprops['parents']['related_attr'],'children')
-        self.assertEqual(attrprops['children']['related_attr'],'parents')
-        self.assertEqual(attrprops['pets']['related_attr'],'owner')
-
     def test_duplicate(self):
         John2 = self.John.duplicate()
         self.assertEqual(John2.name,self.John.name)
