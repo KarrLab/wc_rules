@@ -14,11 +14,6 @@ idgen = random.Random()
 idgen.seed(0)
 
 ###### Methods ######
-def listify(value):
-    if not isinstance(value, list):
-        return [value]
-    return value
-
 def iter_to_string(iterable):
     return '\n'.join([str(x) for x in list(iterable)])
 

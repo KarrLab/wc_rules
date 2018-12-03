@@ -1,5 +1,5 @@
 from .indexer import DictLike
-from .utils import listify,generate_id
+from .utils import generate_id
 from .expr_parse import parse_expression
 from operator import lt,le,eq,ne,ge,gt
 import random
@@ -22,10 +22,8 @@ class Pattern(DictLike):
         if node not in self:
             self.add(node)
             if recurse:
-                for attr in node.get_nonempty_related_attributes():
-                    nodelist = listify(getattr(node,attr))
-                    for node2 in nodelist:
-                        self.add_node(node2,recurse)
+                for node2 in node.listget_all_related():
+                    self.add_node(node2,recurse)
         return self
 
     def add_expression(self,string_input):
@@ -119,8 +117,7 @@ class Pattern(DictLike):
         for node in self:
             idx = node.id
             for attr in node.get_nonempty_related_attributes():
-                nodelist = listify(getattr(node,attr))
-                for node2 in nodelist:
+                for node2 in node.listget(attr):
                     if node2.id in already_encountered:
                         continue
                     related_attr = node.__class__.Meta.local_attributes[attr].related_name

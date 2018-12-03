@@ -1,4 +1,4 @@
-from .utils import generate_id,listify
+from .utils import generate_id
 from .rete_token import new_token,TokenRegister
 from sortedcontainers import SortedSet
 from operator import attrgetter

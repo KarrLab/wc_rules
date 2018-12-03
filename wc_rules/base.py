@@ -44,7 +44,7 @@ class BaseClass(core.Model):
             else:
             #self.id = str(uuid.UUID(int=idgen.getrandbits(128)))
                 self.id = utils.generate_id()
-    
+
     def get_nonempty_related_attributes(self):
         return list(self.get_non_empty_related_attrs().keys())
 
@@ -53,6 +53,18 @@ class BaseClass(core.Model):
         if 'id' in x and ignore_id:
             x.remove('id')
         return x
+
+    def listget(self,attr):
+        x = getattr(self,attr)
+        if not isinstance(x,list):
+            x = [x]
+        return x
+
+    def listget_all_related(self):
+        x = set()
+        for attr in self.get_nonempty_related_attributes():
+            x.update(self.listget(attr))
+        return list(x)
 
     def duplicate(self,id=None,preserve_id=False,attrlist=None):
         ''' duplicates node up to scalar attributes '''
@@ -81,13 +93,12 @@ class BaseClass(core.Model):
         else:
             attrlist = set(self.get_nonempty_related_attributes()) - set(attrlist)
         for attr in attrlist:
-            old_relations = utils.listify(getattr(self,attr))
+            old_relations = self.listget(attr)
             converted_old_relations = [nodemap[x.id] for x in old_relations]
-            new_relations = utils.listify(getattr(target,attr))
+            new_relations = target.listget(attr)
             to_add = set(converted_old_relations) - set(new_relations)
             if len(to_add) > 0:
                 if self.__class__.Meta.local_attributes[attr].is_related_to_many:
-                #if self.attribute_properties[attr]['append']:
                     getattr(target,attr).extend(list(to_add))
                 else:
                     setattr(target,attr,to_add.pop())

@@ -79,8 +79,8 @@ class TestPattern(unittest.TestCase):
 
             node1 = p.get_node(idx1)
             node2 = p.get_node(idx2)
-            self.assertTrue(node1 in utils.listify(getattr(node2,attr2)))
-            self.assertTrue(node2 in utils.listify(getattr(node1,attr1)))
+            self.assertTrue(node1 in node2.listget(attr2))
+            self.assertTrue(node2 in node1.listget(attr1))
 
         for tup in qdict['is_in']:
             target_var = tup[1][0]
