@@ -27,6 +27,9 @@ grammarparts.append("""
     positive_match_expression: variable_pairs "in" pattern
     negative_match_expression: variable_pairs "not in" pattern
     count_match_expression: "count(" + positive_match_expression + ")"
+    ?match_expression: positive_match_expression
+        | negative_match_expression
+        | count_match_expression
 """)
 
 # variable function call
@@ -60,9 +63,7 @@ grammarparts.append("""
     ?basic_expression_unit:
         | variable
         | variable_attrget
-        | positive_match_expression
-        | negative_match_expression
-        | count_match_expression
+        | match_expression
         | variable_function_call
         | bracketed_expression
         | negated_expression
