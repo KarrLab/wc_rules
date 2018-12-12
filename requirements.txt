@@ -3,6 +3,7 @@ blist
 sortedcontainers
 networkx
 textx
+lark-parser
 numpy
 git+https://github.com/KarrLab/obj_model.git#egg=obj_model-0.0.5
 palettable
