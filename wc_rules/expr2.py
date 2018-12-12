@@ -1,10 +1,25 @@
 from lark import Lark, tree, Transformer
 # DO NOT USE CAPS
-grammar = """
+grammarparts = []
+
+#  directives
+grammarparts.append("""
+%import common.WS
+%import common.CNAME
+%import common.SIGNED_NUMBER
+%import common.ESCAPED_STRING
+%ignore WS
+""")
+
+# variable_attrget
+grammarparts.append("""
     variable: CNAME
     attribute: CNAME
     variable_attrget: variable "." attribute
+""")
 
+# pattern matching
+grammarparts.append("""
     pattern: CNAME
     pattern_variable: CNAME
     variable_pair: pattern_variable ":" variable
@@ -12,70 +27,60 @@ grammar = """
     positive_match_expression: variable_pairs "in" pattern
     negative_match_expression: variable_pairs "not in" pattern
     count_match_expression: "count(" + positive_match_expression + ")"
+""")
 
-    boolean_literal: "True" | "False"
-    numeric_literal: SIGNED_NUMBER | boolean_literal | constant
-    constant: "pi"->constant_pi | "e"->constant_e
-    literal: numeric_literal | ESCAPED_STRING
-
-    argument: variable|literal
-    function_variable: CNAME
-    argument_pair: function_variable "=" argument
-    argument_pairs: "(" [ argument_pair ("," argument_pair)* ] ")"
+# variable function call
+grammarparts.append("""
     function_name: CNAME
-    variable_function_call: variable "." function_name argument_pairs
+    function_variable: CNAME
+    ?function_argument: basic_expression_unit
+    function_argv: function_variable "=" function_argument
+    function_argvlist: function_argv ("," function_argv)*
+    variable_function_call: variable "." function_name "(" [function_argvlist] ")"
+""")
 
-    math_argument: variable|numeric_literal
-    math_arguments:  "(" [ math_argument ("," math_argument)* ] ")"
-    math_function_name: CNAME
-    math_function_call: math_function_name math_arguments | numeric_literal
+# negation and bracketing
+grammarparts.append("""
+    ?bracketed_expression: "(" basic_expression_unit ")"
+    negated_expression: "-" basic_expression_unit -> neg
+""")
 
-    ?basic_expression_unit: positive_match_expression
-        | count_match_expression
-        | negative_match_expression
-        | variable_function_call
+# literals
+grammarparts.append("""
+    BOOLEAN: "True" | "False"
+    literal:
+    | BOOLEAN -> bool
+    | SIGNED_NUMBER -> num
+    | ESCAPED_STRING -> string
+
+""")
+
+# expressions entry point
+grammarparts.append("""
+    ?basic_expression_unit:
+        | variable
         | variable_attrget
-        | math_function_call
-        | "(" basic_expression_unit ")"
+        | positive_match_expression
+        | negative_match_expression
+        | count_match_expression
+        | variable_function_call
+        | bracketed_expression
+        | negated_expression
+        | literal
+    expressions: basic_expression_unit*
+""")
 
-    ?numeric_expression_unit: basic_expression_unit | numeric_literal
-
-    compare_op: ">=" -> geq
-        | ">" -> ge
-        | "<=" -> leq
-        | "<" -> le
-        | "==" -> eq
-        | "!=" -> neq
-    ?boolean_expression: numeric_expression_unit compare_op numeric_expression_unit
-        | boolean_function_call
-        | numeric_expression_unit
-
-    boolean_expression_list: "(" boolean_expression [ ("," boolean_expression)* ] ")"
-    boolean_funcname: "not" -> not| "any" ->any | "all" -> all
-    boolean_function_call: boolean_funcname boolean_expression_list
-
-    ?expression: basic_expression_unit | boolean_expression
-    expressions: expression*
-
-    %import common.WS
-    %import common.CNAME
-    %import common.SIGNED_NUMBER
-    %import common.ESCAPED_STRING
-    %ignore WS
-"""
+grammar = "\n".join(grammarparts)
 
 parser = Lark(grammar, start='expressions')
 
-text = '''
+text1 = '''
 {site:x} not in bonded
 {site:x} not in overlapped
 count({site:x} in phosphorylated)
-a.get_sequence(start=0,end=end)
-a.get_sequence()
-a.x > 2
-a.x == pi
-not(a.x > pi, b.y < pi, any(c.z, d.p == False))
-
 '''
-
-print(parser.parse(text).pretty())
+text = '''
+x.get_sequence(a=0,b=v)
+x.get_sequence()
+x.get_sequence(reverse= - {site:x} not in phosphorylated)
+'''
