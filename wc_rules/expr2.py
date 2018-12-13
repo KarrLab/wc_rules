@@ -9,79 +9,99 @@ grammarparts.append("""
 %import common.SIGNED_NUMBER
 %import common.ESCAPED_STRING
 %ignore WS
+
+COMMENT: /#.*/
+%ignore COMMENT
 """)
 
-# variable_attrget
+# defining an atom
 grammarparts.append("""
+    literal: "True" -> true 
+        | "False" -> false 
+        | SIGNED_NUMBER -> number 
+        | ESCAPED_STRING -> string
+
     variable: CNAME
+    ?atom:
+        | boolean_function_call 
+        | variable_function_call
+        | math_function_call
+        | variable_attrget
+        | variable
+        | literal
+        | "(" arithmetic_expression ")"
+
+""")
+
+# variable attrget
+grammarparts.append("""
     attribute: CNAME
     variable_attrget: variable "." attribute
 """)
 
-# pattern matching
+# variable functioncall
 grammarparts.append("""
-    pattern: CNAME
-    pattern_variable: CNAME
-    variable_pair: pattern_variable ":" variable
-    variable_pairs: "{" variable_pair ("," variable_pair)* "}"
-    positive_match_expression: variable_pairs "in" pattern
-    negative_match_expression: variable_pairs "not in" pattern
-    count_match_expression: "count(" + positive_match_expression + ")"
-    ?match_expression: positive_match_expression
-        | negative_match_expression
-        | count_match_expression
-""")
-
-# variable function call
-grammarparts.append("""
-    function_name: CNAME
+    variable_funcname: CNAME
     function_variable: CNAME
-    ?function_argument: basic_expression_unit
-    function_argv: function_variable "=" function_argument
-    function_argvlist: function_argv ("," function_argv)*
-    variable_function_call: variable "." function_name "(" [function_argvlist] ")"
+    ?kwargpair: function_variable "=" atom 
+    ?kwargs: "(" [kwargpair ("," kwargpair)* ] ")"
+    variable_function_call: variable "." variable_funcname kwargs
 """)
 
-# negation and bracketing
+# math functioncall
 grammarparts.append("""
-    ?bracketed_expression: "(" basic_expression_unit ")"
-    negated_expression: "-" basic_expression_unit -> neg
+    math_funcname: CNAME
+    ?args: atom ("," atom)*
+    math_function_call: math_funcname "(" [args] ")"
 """)
 
-# literals
-grammarparts.append("""
-    BOOLEAN: "True" | "False"
-    literal:
-    | BOOLEAN -> bool
-    | SIGNED_NUMBER -> num
-    | ESCAPED_STRING -> string
 
+# arithmetic expression
+# adapted from https://github.com/lark-parser/lark/blob/master/examples/python3.lark
+grammarparts.append("""
+    arithmetic_expression: term (add_op term)*
+    ?term: factor (mul_op factor)*
+    ?factor: factor_op factor | atom
+    
+    add_op: "+" -> add | "-" -> subtract
+    mul_op: "*" -> multiply | "/" -> divide
+    factor_op: "+" | "-" -> flipsign
 """)
 
-# expressions entry point
+# boolean expression
 grammarparts.append("""
-    ?basic_expression_unit:
-        | variable
-        | variable_attrget
-        | match_expression
-        | variable_function_call
-        | bracketed_expression
-        | negated_expression
-        | literal
-    expressions: basic_expression_unit*
+    compare_op: ">=" -> geq 
+        | ">" -> ge
+        | "<=" -> leq
+        | "<" -> le
+        | "==" -> eq
+        | "!=" -> ne
+    boolean_expression: arithmetic_expression compare_op arithmetic_expression -> comparebool
+        | arithmetic_expression -> defaultbool
+        | boolean_function_call
+
+    ?boolean_expression_list: boolean_expression ("," boolean_expression)*
+    boolean_function_call: "any(" boolean_expression_list ")" -> any
+        | "all(" boolean_expression_list ")" -> all
+        | "not(" boolean_expression ")" -> not
+""")
+
+# defining entry point
+grammarparts.append("""
+    ?expression: boolean_expression
+    expressions: expression*
 """)
 
 grammar = "\n".join(grammarparts)
 
 parser = Lark(grammar, start='expressions')
 
-text1 = '''
-{site:x} not in bonded
-{site:x} not in overlapped
-count({site:x} in phosphorylated)
+dummytext = '''
+any(-(--a + b*4/5*-6) + "Strsdf", baba>0)
+a.x  
+a.get_sequence(a=b,x=c)
+a.get_sequence()== any(x.a, y.b)
+pow(a,x.y)
 '''
-text = '''
-x.get_sequence(a=0,b=v)
-x.get_sequence()
-x.get_sequence(reverse= - {site:x} not in phosphorylated)
-'''
+
+#print(parser.parse(dummytext).pretty())
