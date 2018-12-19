@@ -6,15 +6,16 @@
 """
 from . import rete_nodes as rn
 from . import chem, utils
-from obj_model import core,extra_attributes
+from obj_model import core
 import Bio.Seq
 import Bio.Alphabet
+import obj_model.bio
 
 
 class SequenceMolecule(chem.Molecule):
     """ Generic SequenceMolecule (template for DNA, RNA, protein sequence objects) """
 
-    sequence = extra_attributes.BioSeqAttribute()
+    sequence = obj_model.bio.BioSeqAttribute()
     alphabet_dict = { 'strict': None, 'permissive': None }
     use_permissive_alphabet = True
     alphabet = None
