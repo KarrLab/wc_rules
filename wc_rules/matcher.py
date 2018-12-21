@@ -1,5 +1,5 @@
 from .rete_net import ReteNet
-from .rete_build import increment_net_with_pattern
+#from .rete_build import increment_net_with_pattern
 
 class Matcher(object):
     def __init__(self):
@@ -22,9 +22,10 @@ class Matcher(object):
 
         existing_patterns = self.pattern_nodes
         assert pattern.id not in self.pattern_nodes
-
+        '''
         current_node = increment_net_with_pattern(self.rete_net,pattern,existing_patterns)
         self.pattern_nodes[pattern.id] = current_node
+        '''
         return self
 
     def get_pattern(self,pattern_id):

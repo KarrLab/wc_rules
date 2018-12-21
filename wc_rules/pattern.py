@@ -1,6 +1,7 @@
 from .indexer import DictLike
 from .utils import generate_id
 from .expr_parse import parse_expression
+from .expr2 import parser
 from operator import lt,le,eq,ne,ge,gt
 import random
 import pprint
@@ -25,7 +26,7 @@ class Pattern(DictLike):
                 for node2 in node.listget_all_related():
                     self.add_node(node2,recurse)
         return self
-
+    '''
     def add_expression(self,string_input):
         which_dict,tupl = parse_expression(string_input)
         if tupl is not None:
@@ -33,7 +34,7 @@ class Pattern(DictLike):
                 self._expressions[which_dict] = set()
             self._expressions[which_dict].add(tupl)
         return self
-
+    '''
     def remove_node(self,node):
         return self.remove(node)
 
@@ -69,7 +70,7 @@ class Pattern(DictLike):
             new_node = nodemap[node.id]
             node.duplicate_relations(new_node,nodemap)
         return new_pattern
-
+    """
     def generate_queries_TYPE(self):
         ''' Generates tuples ('type',_class) '''
         type_queries = {}
@@ -161,7 +162,7 @@ class Pattern(DictLike):
             'is_in': self.generate_queries_ISIN(),
             'is_not_in': self.generate_queries_ISNOTIN(),
         }
-
+    """
 def main():
     pass
 

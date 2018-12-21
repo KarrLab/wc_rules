@@ -26,7 +26,7 @@ class ReteNet(SetLike):
     def depth_first_search(self,start_node):
         # return depth-first exploration of graph as an iter
         visited = set()
-        next_nodes = deque()
+        next_nodes = deque()  
         next_nodes.appendleft(start_node)
         while len(next_nodes) > 0:
             current_node = next_nodes.popleft()
