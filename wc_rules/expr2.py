@@ -1,4 +1,5 @@
-from lark import Lark, tree, Transformer
+from lark import Lark, tree, Transformer,Visitor, v_args
+from pprint import pformat, pprint
 # DO NOT USE CAPS
 grammarparts = []
 
@@ -16,21 +17,25 @@ COMMENT: /#.*/
 
 # defining an atom
 grammarparts.append("""
-    literal: "True" -> true 
-        | "False" -> false 
-        | SIGNED_NUMBER -> number 
-        | ESCAPED_STRING -> string
+    ?true: /True/
+    ?false: /False/
+    ?number: SIGNED_NUMBER
+    ?string: ESCAPED_STRING
+
+    ?literal: true|false|number|string
 
     variable: CNAME
     ?atom:
+        | literal
+        | match_expression
+        | match_function_call
         | boolean_function_call 
         | variable_function_call
         | math_function_call
         | variable_attrget
         | variable
-        | literal
         | "(" arithmetic_expression ")"
-
+        
 """)
 
 # variable attrget
@@ -54,12 +59,23 @@ grammarparts.append("""
     ?args: atom ("," atom)*
     math_function_call: math_funcname "(" [args] ")"
 """)
-
+# pattern matching
+grammarparts.append("""
+    pattern: CNAME
+    pattern_variable: CNAME
+    varpair: pattern_variable ":" variable
+    varpairs: "{" varpair ("," varpair)* "}"
+    positive_match_statement:  varpairs "in" pattern
+    negative_match_statement:  varpairs "not" "in" pattern
+    ?match_expression: positive_match_statement
+        | negative_match_statement
+    match_function_call: "count(" positive_match_statement ")" -> count
+""")
 
 # arithmetic expression
 # adapted from https://github.com/lark-parser/lark/blob/master/examples/python3.lark
 grammarparts.append("""
-    arithmetic_expression: term (add_op term)*
+    ?arithmetic_expression: term (add_op term)*
     ?term: factor (mul_op factor)*
     ?factor: factor_op factor | atom
     
@@ -68,9 +84,14 @@ grammarparts.append("""
     factor_op: "+" | "-" -> flipsign
 """)
 
+# assignment
+grammarparts.append("""
+    assignment: variable "=" atom
+""")
+
 # boolean expression
 grammarparts.append("""
-    compare_op: ">=" -> geq 
+    ?compare_op: ">=" -> geq 
         | ">" -> ge
         | "<=" -> leq
         | "<" -> le
@@ -88,20 +109,10 @@ grammarparts.append("""
 
 # defining entry point
 grammarparts.append("""
-    ?expression: boolean_expression
+    expression: assignment | boolean_expression
     expressions: expression*
+    start:expressions
 """)
 
 grammar = "\n".join(grammarparts)
-
-parser = Lark(grammar, start='expressions')
-
-dummytext = '''
-any(-(--a + b*4/5*-6) + "Strsdf", baba>0)
-a.x  
-a.get_sequence(a=b,x=c)
-a.get_sequence()== any(x.a, y.b)
-pow(a,x.y)
-'''
-
-#print(parser.parse(dummytext).pretty())
+parser = Lark(grammar, start='start')
