@@ -1,4 +1,5 @@
-from obj_model import core, extra_attributes
+from obj_model import core
+from obj_model import bio
 
 # scalar attributes
 class IdAttribute(core.StringAttribute):
@@ -41,6 +42,6 @@ class OneToManyAttribute(core.OneToManyAttribute):pass
 class ManyToManyAttribute(core.ManyToManyAttribute):pass
 
 # extra_attributes
-class BioSeqAttribute(extra_attributes.BioSeqAttribute):
+class BioSeqAttribute(bio.BioSeqAttribute):
     def __init__(self):
         super().__init__(default=None)
