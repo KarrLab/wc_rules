@@ -4,13 +4,15 @@ from pprint import pformat, pprint
 # DO NOT USE CAPS
 grammar = """
 %import common.CNAME
-%import common.WS
+%import common.WS_INLINE
 %import common.NUMBER
-%ignore WS
+%ignore WS_INLINE
 %import common.ESCAPED_STRING
+%import common.NEWLINE
 
 COMMENT: /#.*/
 %ignore COMMENT
+%ignore NEWLINE
 
     ?literal.1: NUMBER -> number | "True"-> true | "False" -> false | ESCAPED_STRING -> string
     ?atom: literal | function_call | "(" expression ")" 
@@ -19,7 +21,7 @@ COMMENT: /#.*/
     variable: CNAME
     attribute: CNAME
 
-    arg: expression | boolean_expression
+    arg: expression 
     kw: CNAME
     kwarg: kw "=" arg
     args: arg ("," arg )*
@@ -40,10 +42,10 @@ COMMENT: /#.*/
 
     ?expression: sum
 
-    ?boolean_expression: expression bool_op expression -> comparebool
+    ?boolean_expression: expression bool_op expression
         | match_expression 
-        | expression 
-
+        | expression
+    
     ?bool_op: ">=" -> geq | "<=" -> leq | ">" -> ge | "<" -> le | "==" -> eq | "!=" -> ne
     
     pattern: CNAME
@@ -56,8 +58,8 @@ COMMENT: /#.*/
     assignment: declared_variable "=" (expression|boolean_expression)
     declared_variable: CNAME
 
-    expressions:  (assignment|boolean_expression)* 
-    ?start: expressions
+    expressions: (assignment|boolean_expression) (NEWLINE (assignment|boolean_expression))* 
+    ?start: [NEWLINE] expressions [NEWLINE]
 """
 
 parser = Lark(grammar, start='start')
@@ -68,6 +70,9 @@ def node_to_str(node):
 def get_dependencies(tree):
     deplist = []
     for expr in tree.children:
+        if not hasattr(expr,'data'):
+            # this is to ignore NEWLINE tokens at the top level
+            continue
         deps = defaultdict(set)
         # first get all function call nodes
         if expr.data=='assignment':
