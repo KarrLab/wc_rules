@@ -21,7 +21,7 @@ COMMENT: /#.*/
     variable: CNAME
     attribute: CNAME
 
-    arg: expression 
+    arg: expression|boolean_expression
     kw: CNAME
     kwarg: kw "=" arg
     args: arg ("," arg )*
