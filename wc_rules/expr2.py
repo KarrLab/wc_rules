@@ -1,5 +1,6 @@
 from lark import Lark, tree, Transformer,Visitor, v_args
 from collections import defaultdict
+import builtins,math
 from pprint import pformat, pprint
 # DO NOT USE CAPS
 grammar = """
@@ -113,3 +114,43 @@ def get_dependencies(tree):
             deps['patternvars'].add( tuple([pattern,tuple(pvars)]))
         deplist.append(deps)
     return deplist
+
+class Hook(object):
+    
+    abs = math.fabs
+    ceil = math.ceil
+    factorial = math.factorial
+    floor = math.floor
+    exp = math.exp
+    expm1 = math.expm1
+    log = math.log
+    log1p = math.log1p
+    log2 = math.log2
+    log10 = math.log10
+    pow = math.pow
+    sqrt = math.sqrt
+    acos = math.acos
+    asin = math.asin
+    atan = math.atan
+    atan2 = math.atan2
+    cos = math.cos
+    hypot = math.hypot
+    sin = math.sin
+    tan = math.tan
+    pi = math.pi
+    e = math.e
+    tau = math.tau
+    degrees = math.degrees
+    radians = math.radians
+
+    max = builtins.max
+    min = builtins.min
+
+    @staticmethod
+    def sum(*args): return math.fsum(args)
+    @staticmethod
+    def any(*args): return builtins.any(args)
+    @staticmethod
+    def all(*args): return builtins.all(args)
+    @staticmethod
+    def notf(arg): return not arg
