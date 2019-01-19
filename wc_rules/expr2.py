@@ -1,6 +1,7 @@
 from lark import Lark, tree, Transformer,Visitor, v_args
 from collections import defaultdict
 import builtins,math
+from attrdict import AttrDict
 from pprint import pformat, pprint
 # DO NOT USE CAPS
 grammar = """
@@ -43,7 +44,7 @@ COMMENT: /#.*/
 
     ?expression: sum
 
-    ?boolean_expression: expression bool_op expression
+    boolean_expression: expression bool_op expression
         | match_expression 
         | expression
     
@@ -54,7 +55,6 @@ COMMENT: /#.*/
     varpair: pattern_variable ":" variable
     varpairs: varpair ("," varpair)*
     match_expression: "{" varpairs "}" "in" pattern
-    match_count: "count" "(" match_expression ")"
 
     assignment: declared_variable "=" (expression|boolean_expression)
     declared_variable: CNAME
@@ -67,6 +67,8 @@ parser = Lark(grammar, start='start')
 
 def node_to_str(node):
     return node.children[0].__str__()
+
+def preprocess_tree(tree): return tree
 
 def get_dependencies(tree):
     deplist = []
@@ -115,8 +117,19 @@ def get_dependencies(tree):
         deplist.append(deps)
     return deplist
 
-class Hook(object):
-    
+class BuiltinHook(object):
+    # this class holds the builtin functions accessible to expressions constraining patterns
+
+    allowed_functions =  [
+    'abs', 'ceil', 'factorial', 'floor', 'exp', 'expm1', 'log', 'log1p', 'log2', 'log10',
+    'pow', 'sqrt', 'acos', 'asin', 'atan', 'atan2', 'cos', 'hypot', 'sin', 'tan', 'degrees', 'radians', 
+    'max', 'min', 'sum', 'any', 'all', 'not',
+    ]
+
+    allowed_constants = [
+    'pi','tau','avo',
+    ]
+
     abs = math.fabs
     ceil = math.ceil
     factorial = math.factorial
@@ -138,8 +151,8 @@ class Hook(object):
     sin = math.sin
     tan = math.tan
     pi = math.pi
-    e = math.e
     tau = math.tau
+    avo = 6.02214076e23 
     degrees = math.degrees
     radians = math.radians
 
@@ -154,3 +167,89 @@ class Hook(object):
     def all(*args): return builtins.all(args)
     @staticmethod
     def notf(arg): return not arg
+
+class PatternHook(object):
+    # this class handles match expressions and match counts
+    
+    def count(pattern=None,varpairs=None):
+        # this method should access the filter method on ReteNet pattern nodes
+        assert pattern is not None and varpairs is not None
+        return 10
+
+    def exists(pattern=None,varpairs=None):
+        assert pattern is not None and varpairs is not None
+        return True
+
+
+class MatchLocal(AttrDict):
+    # dict holding match variables and additional declared variables
+    def __init__(self,match={}):
+        super().__init__(match)
+
+    def __getattr__(self,key):
+        if key in self:
+            return self[key]
+        return None
+
+class Serializer(Transformer):
+    # m for match, h for expressionhook, p for patternhook
+
+    def __init__(self,h,p):
+        self.expression_hook = h
+        self.pattern_hook = p
+
+    def join_strings(self,args): return " ".join(args)
+    def constant(s): return lambda x,y: s
+    def n2s(self,arg): return arg[0].__str__()
+
+    
+    def expressions(self,args):
+        return [x for x in args if x.__class__.__name__ != 'Token']
+    
+
+    def function_call(self,args):
+        names = []
+        arglist = []
+        is_a_function = False
+        if args[0].data == 'variable':
+            names.append('m')
+            names.append(self.n2s(args[0].children)) 
+            if len(args) > 1:
+                if args[1].data == 'attribute':
+                    names.append(self.n2s(args[1].children))
+                elif args[1].data == 'function_name':
+                    is_a_function = True
+                    names.append(self.n2s(args[1].children))
+                    if len(args)>2:
+                        arglist = args[2]
+        elif args[0].data == 'function_name':
+            is_a_function = True
+            names.append(self.n2s(args[0].children))
+            if len(args) > 1:
+                arglist = args[1]
+        if not is_a_function:
+            return ".".join(names)
+        return ".".join(names) + "(" + ",".join(arglist) + ")"
+
+
+    geq = constant('>=')
+    leq = constant('<=')
+    ge = constant('>')
+    le = constant('<')
+    eq = constant('==')
+    ne = constant('!=')
+    true = constant('True')
+    false = constant('False')
+    number = n2s
+    string = n2s
+    kw = n2s
+    arg = join_strings   
+    args = list
+    kwarg = lambda self,args: "=".join(args)
+    kwargs = list
+    
+    
+    boolean_expression = list
+    
+
+

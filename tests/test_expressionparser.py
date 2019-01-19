@@ -1,5 +1,6 @@
 
-from wc_rules.expr2 import parser, get_dependencies, Hook
+from wc_rules.expr2 import parser, get_dependencies, BuiltinHook
+import math
 import unittest
 
 
@@ -22,7 +23,7 @@ class TestExpressionParser(unittest.TestCase):
 		deplist = get_dependencies(tree)
 
 	def test_builtinhook(self):
-		h = Hook()
+		h = BuiltinHook()
 
 		tuplist = [
 			(h.abs(-1),1),
@@ -30,11 +31,11 @@ class TestExpressionParser(unittest.TestCase):
 			(h.factorial(4),24),
 			(h.floor(2.1),2),
 			(h.sum(.1,.1,.1,.1),.4),
-			(h.exp(1),h.e),
-			(h.expm1(1),h.e-1),
-			(h.log(h.e),1),
+			(h.exp(1),math.e),
+			(h.expm1(1),math.e-1),
+			(h.log(math.e),1),
 			(h.log(100,10),2),
-			(h.log1p(h.e-1),1),
+			(h.log1p(math.e-1),1),
 			(h.log2(4),2),
 			(h.log10(100),2),
 			(h.pow(2,3),8),

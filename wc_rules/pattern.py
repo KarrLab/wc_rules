@@ -1,7 +1,7 @@
 from .indexer import DictLike
 from .utils import generate_id
 from .expr_parse import parse_expression
-from .expr2 import parser
+from .expr2 import parser, Serializer, preprocess_tree, BuiltinHook, PatternHook
 from operator import lt,le,eq,ne,ge,gt
 import random
 import pprint
@@ -35,6 +35,15 @@ class Pattern(DictLike):
             self._expressions[which_dict].add(tupl)
         return self
     '''
+
+    def add_expressions(self,string_input): 
+        tree = parser.parse(string_input)
+        tree = preprocess_tree(tree)
+        print(tree.pretty())
+        evaluators = Serializer(h=BuiltinHook(),p=PatternHook()).transform(tree)
+        print(evaluators)
+        return self
+
     def remove_node(self,node):
         return self.remove(node)
 
