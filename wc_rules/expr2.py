@@ -1,4 +1,4 @@
-from lark import Lark, tree, Transformer,Visitor, v_args
+from lark import Lark, tree, Transformer,Visitor, v_args, Tree,Token
 from collections import defaultdict
 import builtins,math
 from attrdict import AttrDict
@@ -31,6 +31,7 @@ COMMENT: /#.*/
     
     function_call: variable "." function_name "(" [kwargs] ")"
         | function_name "(" [args] ")"
+        | function_name "(" match_expression ")"
         | variable "." attribute 
         | variable
         
@@ -45,7 +46,6 @@ COMMENT: /#.*/
     ?expression: sum
 
     boolean_expression: expression bool_op expression
-        | match_expression 
         | expression
     
     ?bool_op: ">=" -> geq | "<=" -> leq | ">" -> ge | "<" -> le | "==" -> eq | "!=" -> ne
@@ -68,7 +68,21 @@ parser = Lark(grammar, start='start')
 def node_to_str(node):
     return node.children[0].__str__()
 
-def preprocess_tree(tree): return tree
+def preprocess_tree(tree): 
+    # here, we reshape and simplify the tree
+    return tree
+
+def detect_edge(tree,data1,data2):
+    # returns tuplist of [(node,nodelist), (node,nodelist)]
+    # where nodelist is a sublist of node.children
+    nodes = tree.find_data(data1)
+    tuplist = []
+    for node in nodes:
+        nodelist = list(node.find_data(data2))
+        if len(nodelist) > 0:
+            tuplist.append( (node,nodelist) )
+    return tuplist
+
 
 def get_dependencies(tree):
     deplist = []
@@ -206,25 +220,45 @@ class Serializer(Transformer):
     def expressions(self,args):
         return [x for x in args if x.__class__.__name__ != 'Token']
     
+    def varpair(self,args):
+        patternvar = self.n2s(args[0].children)
+        var = self.n2s(args[1].children)
+        return patternvar+":"+var
+
+    def varpairs(self,args):
+        return "{" + ",".join(args) + "}"
+
+    def match_expression(self,args):
+        varpairs = args[0]
+        pattern = args[1]
+        s1,s2 = ['varpairs',"=",varpairs],['pattern',"=",pattern]
+        return [",".join([" ".join(x) for x in [s1,s2]])]
 
     def function_call(self,args):
         names = []
         arglist = []
         is_a_function = False
         if args[0].data == 'variable':
-            names.append('m')
-            names.append(self.n2s(args[0].children)) 
-            if len(args) > 1:
-                if args[1].data == 'attribute':
-                    names.append(self.n2s(args[1].children))
-                elif args[1].data == 'function_name':
-                    is_a_function = True
-                    names.append(self.n2s(args[1].children))
-                    if len(args)>2:
-                        arglist = args[2]
+            s = self.n2s(args[0].children)
+            if s in ['pi','avo','tau']:
+                assert len(args)==1
+                names.extend(['h',s])
+            else:
+                names.extend(['m',s])
+                if len(args) > 1:
+                    if args[1].data == 'attribute':
+                        names.append(self.n2s(args[1].children))
+                    elif args[1].data == 'function_name':
+                        is_a_function = True
+                        names.append(self.n2s(args[1].children))
+                        if len(args)>2:
+                            arglist = args[2]
         elif args[0].data == 'function_name':
             is_a_function = True
-            names.append(self.n2s(args[0].children))
+            s = self.n2s(args[0].children)
+            if s in ['count','exists']:
+                names.append('p')
+            names.append(s)
             if len(args) > 1:
                 arglist = args[1]
         if not is_a_function:
@@ -247,7 +281,7 @@ class Serializer(Transformer):
     args = list
     kwarg = lambda self,args: "=".join(args)
     kwargs = list
-    
+    pattern = n2s
     
     boolean_expression = list
     
