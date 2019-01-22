@@ -39,7 +39,7 @@ COMMENT: /#.*/
     ?term: factor (mul_op factor)* 
     ?factor: factor_op factor | atom
 
-    ?factor_op: "+" | "-" -> flipsign
+    ?factor_op: "+" -> noflip | "-" -> flipsign
     ?add_op: "+" -> add | "-" -> subtract
     ?mul_op: "*" -> multiply | "/" -> divide    
 
@@ -68,9 +68,117 @@ parser = Lark(grammar, start='start')
 def node_to_str(node):
     return node.children[0].__str__()
 
-def preprocess_tree(tree): 
-    # here, we reshape and simplify the tree
+def prune_tree(tree):
+    # remove newline tokens
+    nodes = list(filter(lambda x:x.__class__.__name__=='Token',tree.children))
+    for node in list(nodes):
+        tree.children.remove(node)
     return tree
+
+def simplify_tree(tree): 
+    # here, we reshape and simplify the tree
+    modified = False
+    
+    # find parent->factor->noflip,item
+    # replace with parent->item
+    # e.g., +x to x
+    nodes = find_parents_of(tree,'factor')
+    for node in nodes:
+        # get their factor children that have noflip children
+        factors = [x for x in node.children 
+            if getattr(x,'data','')=='factor'
+            and x.children[0].data=='noflip'
+            ]
+        modified = modified or len(factors)>0
+        for factor in factors:
+            ind = node.children.index(factor)
+            node.children[ind] = factor.children[1]
+
+    # find parent->factor1->flipsign,factor2->flipsign,item
+    # replace with parent->item
+    # e.g., --x to x
+    nodes = find_parents_of(tree,'factor')
+    ignored = []
+    for node in nodes:
+        if node in ignored:
+            continue
+        factors = [x for x in node.children 
+            if getattr(x,'data','')=='factor'
+            and x.children[0].data=='flipsign'
+            and x.children[1].data=='factor'
+            and x.children[1].children[0].data =='flipsign'
+            ]
+        modified = modified or len(factors)>0
+        for factor in factors:
+            ignored.append(factor.children[1])
+            ind = node.children.index(factor)
+            node.children[ind] = factor.children[1].children[1]
+
+    # TODO
+    # insert 'multiply' as first item in all data=='term'
+    # identify parent -> multiply, term -> items 
+    # replace with parent -> items
+    # identify parent -> divide,term -> items
+    # replace with parent -> flipped(items)
+
+    #first insert 'add' as first token of sums
+    nodes = list(tree.find_data('sum'))
+    for node in nodes:
+        if getattr(node.children[0],'data','') not in ['add','subtract']:
+            node.children.insert(0,Tree(data='add',children=[]))
+    # find sum -> add, sum -> items
+    # replace with sum -> items
+    # e.g., x + (y+z) to x + y + z
+    # find sum -> subtract, sum -> items
+    # replace with sum -> flipped(items)
+    # e.g., x - (y+z) to x - y - z
+    collapsible = False
+    for node in nodes:
+        for i in range(len(node.children)-1):
+            if getattr(node.children[i],'data','')=='add' and getattr(node.children[i+1],'data','')=='sum':
+                collapsible = True
+                insert_this = node.children[i+1].children
+            if getattr(node.children[i],'data','')=='subtract' and getattr(node.children[i+1],'data','')=='sum':
+                collapsible = True
+                insert_this = []
+                for term in node.children[i+1].children:
+                    if getattr(term,'data','')=='add':
+                        insert_this.append(Tree(data='subtract',children=[]))
+                    elif getattr(term,'data','')=='subtract':
+                        insert_this.append(Tree(data='add',children=[]))
+                    else:
+                        insert_this.append(term)
+            if collapsible:
+                del node.children[i:i+2]
+                node.children[i:i] = insert_this
+                break
+        if collapsible:
+            break
+    modified = modified or collapsible
+
+    # find sum -> subtract,factor->flipsign,item
+    # replace with sum -> add, item
+    # e.g., x - (-y) + z to x + y + z
+    nodes = list(tree.find_data('sum'))
+    for node in nodes:
+        subtract_index = [
+        i for i,x in enumerate(node.children)
+            if getattr(x,'data','')=='subtract'
+            and getattr(node.children[i+1],'data','')=='factor'
+            and getattr(node.children[i+1].children[0],'data','')=='flipsign'
+            ]
+
+        modified = modified or len(subtract_index)>0
+        for i in subtract_index:
+            item = node.children[i+1].children[1]
+            node.children[i] = Tree(data='add',children=[])
+            node.children[i+1] = item
+
+    return (tree,modified)
+
+def find_parents_of(tree,data):
+    f = lambda t: any([getattr(x,'data','')==data for x in t.children])
+    return tree.find_pred(f)    
 
 def detect_edge(tree,data1,data2):
     # returns tuplist of [(node,nodelist), (node,nodelist)]
