@@ -114,12 +114,39 @@ def simplify_tree(tree):
             ind = node.children.index(factor)
             node.children[ind] = factor.children[1].children[1]
 
-    # TODO
     # insert 'multiply' as first item in all data=='term'
+    nodes = list(tree.find_data('term'))
+    for node in nodes:
+        if getattr(node.children[0],'data','') not in ['multiply','divide']:
+            node.children.insert(0,Tree(data='multiply',children=[]))
+
     # identify parent -> multiply, term -> items 
     # replace with parent -> items
     # identify parent -> divide,term -> items
     # replace with parent -> flipped(items)
+    collapsible = False
+    for node in nodes:
+        for i in range(len(node.children)-1):
+            if getattr(node.children[i],'data','')=='multiply' and getattr(node.children[i+1],'data','')=='term':
+                collapsible = True
+                insert_this = node.children[i+1].children
+            if getattr(node.children[i],'data','')=='divide' and getattr(node.children[i+1],'data','')=='term':
+                collapsible = True
+                insert_this = []
+                for term in node.children[i+1].children:
+                    if getattr(term,'data','')=='multiply':
+                        insert_this.append(Tree(data='divide',children=[]))
+                    elif getattr(term,'data','')=='divide':
+                        insert_this.append(Tree(data='multiply',children=[]))
+                    else:
+                        insert_this.append(term)
+            if collapsible:
+                del node.children[i:i+2]
+                node.children[i:i] = insert_this
+                break
+        if collapsible:
+            break
+    modified = modified or collapsible
 
     #first insert 'add' as first token of sums
     nodes = list(tree.find_data('sum'))
