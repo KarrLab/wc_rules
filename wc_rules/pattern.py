@@ -1,16 +1,19 @@
 from .indexer import DictLike
 from .utils import generate_id
 from .expr_parse import parse_expression
-from .expr2 import parser, Serializer, prune_tree, simplify_tree, BuiltinHook, PatternHook
+from .expr2 import parser, Serializer, prune_tree, simplify_tree, BuiltinHook, PatternHook, get_dependencies
 from operator import lt,le,eq,ne,ge,gt
 import random
 import pprint
+from collections import deque
 
 class Pattern(DictLike):
     def __init__(self,idx,nodelist=None,recurse=True):
         super().__init__()
         self.id = idx
-        self._expressions = dict()
+        self._constraints = ''
+        self._finalize = False
+        self._tree = None
         #self._nodes = dict()
         if nodelist:
             for node in nodelist:
@@ -20,6 +23,7 @@ class Pattern(DictLike):
         return self.get(idx)
 
     def add_node(self,node,recurse=True):
+        assert self._finalize is False
         if node not in self:
             self.add(node)
             if recurse:
@@ -35,15 +39,61 @@ class Pattern(DictLike):
             self._expressions[which_dict].add(tupl)
         return self
     '''
+    def add_constraints(self,string_input):
+        assert self._finalize is False
+        strings = [x.strip() for x in string_input.split('\n')]
+        strings = [x for x in strings if x not in ['',"\n",None]]
+        self._constraints = self._constraints + "\n".join(strings)
+        return self
 
-    def add_expressions(self,string_input): 
-        tree = parser.parse(string_input)
+    def compile_reference_dependencies(self):
+        # literal attributes
+        attrdeps = []
+        for node in self:
+            attrlist = node.get_literal_attrs().keys()
+            attrdeps.extend([(node.id,x) for x in attrlist if x!='id'])
+        return attrdeps
+
+    def compile_defined_dependencies(self):
+        deps = get_dependencies(self._tree)
+        attrdeps = set()
+        for expr in deps:
+            attrdeps.update(expr['attributes'])
+        return list(attrdeps)
+
+    def finalize(self): 
+        # ensure there are no neighbour nodes not in pattern
+        examined = set()
+        
+        start_node = self[min(self._dict.keys())]
+        stack = deque([start_node])        
+        while len(stack)>0:
+            current_node = stack.popleft()
+            assert current_node in self
+            neighbours = set(current_node.listget_all_related()) - examined
+            examined.add(current_node)
+            stack.extendleft(list(neighbours))
+
+        # ensure pattern is fully connected
+        assert sorted([x.id for x in examined])==sorted(self.keys())
+
+        # ensure constraints can be parsed 
+        tree = parser.parse(self._constraints)
         tree = prune_tree(tree)
-        modified = False
-        while True:
+        modified = True
+        # simplify constraints as much as possible
+        while modified:
             tree,modified = simplify_tree(tree)
-            if not modified:
-                break
+        # assign tree
+        self._tree = tree
+
+        # get reference & defined dependencies
+        attrdeps_ref = self.compile_reference_dependencies()
+        attrdeps_def = self.compile_defined_dependencies()
+        for x in attrdeps_def:
+            assert x in attrdeps_ref
+
+        
         #print(tree.pretty())
         #print(tree)
         evaluators = Serializer(h=BuiltinHook(),p=PatternHook()).transform(tree)
