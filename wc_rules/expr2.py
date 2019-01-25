@@ -222,9 +222,6 @@ def detect_edge(tree,data1,data2):
 def get_dependencies(tree):
     deplist = []
     for expr in tree.children:
-        if not hasattr(expr,'data'):
-            # this is to ignore NEWLINE tokens at the top level
-            continue
         deps = defaultdict(set)
         # first get all function call nodes
         if expr.data=='assignment':
@@ -244,7 +241,7 @@ def get_dependencies(tree):
             elif function_call_type == ('variable','function_name'):
                 var,func = [node_to_str(x) for x in ch]
                 deps['variables'].add(var)
-                deps['varfunctions'].add( (var,func) )
+                deps['varfunctions'].add( (var,func,None) )
             elif function_call_type == ('variable','function_name','kwargs'):
                 var,func,_ = [node_to_str(x) for x in ch]
                 kwargs = ch[2].children

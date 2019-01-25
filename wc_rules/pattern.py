@@ -88,10 +88,9 @@ class Pattern(DictLike):
         self._tree = tree
 
         # get reference & defined dependencies
-        attrdeps_ref = self.compile_reference_dependencies()
-        attrdeps_def = self.compile_defined_dependencies()
-        for x in attrdeps_def:
-            assert x in attrdeps_ref
+        deps = get_dependencies(self._tree)
+        
+        
 
         
         #print(tree.pretty())
