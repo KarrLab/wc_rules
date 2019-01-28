@@ -1,5 +1,5 @@
 
-from wc_rules.expr2 import parser, get_dependencies, BuiltinHook
+from wc_rules.expr2 import parser, get_dependencies, BuiltinHook, prune_tree
 import math
 import unittest
 
@@ -20,6 +20,7 @@ any(c.ph,d.mth,exists({a:a,b:b} in p3))
 class TestExpressionParser(unittest.TestCase):
 	def test_simpleparse(self):
 		tree = parser.parse(list_of_strings)
+		tree = prune_tree(tree)
 		deplist = get_dependencies(tree)
 
 	def test_builtinhook(self):
