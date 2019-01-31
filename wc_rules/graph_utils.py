@@ -5,7 +5,42 @@
 :License: MIT
 """
 import networkx
+from collections import namedtuple
+from pprint import pformat
 
+ExprGraphNode = namedtuple('ExprGN',['type','subtype','matchstr'])
+
+def build_simple_graph(dictlike):
+
+    G = networkx.MultiDiGraph()
+    variables = dict()
+    # adding nodes
+    for node in dictlike:
+        tup = ExprGraphNode(
+            type= 'variable',
+            subtype=node.id,
+            matchstr=node.__class__.__name__
+            )
+        G.add_node(tup)
+        variables[node.id] = tup
+
+    # add edges - a forward and a reverse
+    visited = set()
+    for node in dictlike:
+        attrs = node.get_nonempty_related_attributes()
+        for attr in attrs:
+            related_attr = node.get_related_name(attr)
+            for node2 in node.listget(attr):        
+                if node2 in visited:
+                    continue
+                G.add_edge(variables[node.id],variables[node2.id],label=attr)
+                G.add_edge(variables[node2.id],variables[node.id],label=related_attr)
+        visited.add(node)
+    return (G,variables)
+
+
+
+############# OLD
 class GraphMeta(object):
     """ Inner class holding values used in graph methods
 
