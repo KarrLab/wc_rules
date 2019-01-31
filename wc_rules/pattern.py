@@ -1,11 +1,12 @@
 from .indexer import DictLike
-from .utils import generate_id
+from .utils import generate_id,ValidateError
 from .expr_parse import parse_expression
 from .expr2 import parser, Serializer, prune_tree, simplify_tree, BuiltinHook, PatternHook, get_dependencies
 from operator import lt,le,eq,ne,ge,gt
 import random
 import pprint
-from collections import deque
+from collections import deque,defaultdict
+from .graph_utils import build_simple_graph
 
 class Pattern(DictLike):
     def __init__(self,idx,nodelist=None,recurse=True):
@@ -46,20 +47,21 @@ class Pattern(DictLike):
         self._constraints = self._constraints + "\n".join(strings)
         return self
 
-    def compile_reference_dependencies(self):
-        # literal attributes
-        attrdeps = []
-        for node in self:
-            attrlist = node.get_literal_attrs().keys()
-            attrdeps.extend([(node.id,x) for x in attrlist if x!='id'])
-        return attrdeps
-
-    def compile_defined_dependencies(self):
+    def validate_dependencies(self):
         deps = get_dependencies(self._tree)
-        attrdeps = set()
-        for expr in deps:
-            attrdeps.update(expr['attributes'])
-        return list(attrdeps)
+
+        final_deps = defaultdict(set)
+        final_deps['variables'] = set([x.id for x in self])
+
+        for dep in deps:
+            # check variables
+            for var in sorted(dep['variables']):
+                if var not in final_deps['variables'] | final_deps['assignments']:
+                    raise ValidateError('Variable ' + var + ' not found in pattern ' + self.id)
+            for var,attr in sorted(dep['attributes']):
+                if attr not in self[var].get_literal_attributes():
+                    raise ValidateError('Attribute ' + attr + ' not found in variable ' + var)
+        return final_deps
 
     def finalize(self): 
         # ensure there are no neighbour nodes not in pattern
@@ -88,14 +90,19 @@ class Pattern(DictLike):
         self._tree = tree
 
         # get reference & defined dependencies
-        deps = get_dependencies(self._tree)
+        compiled_deps = self.validate_dependencies()
         
         
+        # here we build a networkx graph to evaluate symmetry
+        g,helper = build_simple_graph(self)
 
-        
+        # use get dependencies to attach nodes referring to attributes & functions
+
+
+
         #print(tree.pretty())
         #print(tree)
-        evaluators = Serializer(h=BuiltinHook(),p=PatternHook()).transform(tree)
+        #evaluators = Serializer(h=BuiltinHook(),p=PatternHook()).transform(tree)
         #print(evaluators)
         return self
 
