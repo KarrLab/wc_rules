@@ -54,6 +54,12 @@ class BaseClass(core.Model):
             x.remove('id')
         return x
 
+    def get_related_attributes(self):
+        return list(self.get_related_attrs().keys())        
+
+    def get_literal_attributes(self):
+        return list(self.get_literal_attrs().keys())        
+
     def listget(self,attr):
         x = getattr(self,attr)
         if not isinstance(x,list):
@@ -65,6 +71,9 @@ class BaseClass(core.Model):
         for attr in self.get_nonempty_related_attributes():
             x.update(self.listget(attr))
         return list(x)
+
+    def get_related_name(self,attr):
+        return self.__class__.Meta.local_attributes[attr].related_name
 
     def duplicate(self,id=None,preserve_id=False,attrlist=None):
         ''' duplicates node up to scalar attributes '''
