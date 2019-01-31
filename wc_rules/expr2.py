@@ -339,6 +339,7 @@ class MatchLocal(AttrDict):
 
 class Serializer(Transformer):
     # m for match, h for expressionhook, p for patternhook
+    allowed_functions = ['count','exists','nexists']
 
     def __init__(self,h,p):
         self.expression_hook = h
@@ -388,7 +389,7 @@ class Serializer(Transformer):
         elif args[0].data == 'function_name':
             is_a_function = True
             s = self.n2s(args[0].children)
-            if s in ['count','exists']:
+            if s in ['count','exists','nexists']:
                 names.append('p')
             names.append(s)
             if len(args) > 1:
