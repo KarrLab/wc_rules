@@ -11,6 +11,10 @@ class X(BaseClass):
     pi = PositiveIntegerAttribute()
     s = StringAttribute()
 
+    @dynamic
+    def product(f,i,factor=1):
+        return f*i*factor
+
 
 class TestAttributes(unittest.TestCase):
 
@@ -22,3 +26,12 @@ class TestAttributes(unittest.TestCase):
         self.assertEqual(x1.i,None)
         self.assertEqual(x1.pi,None)
         self.assertEqual(x1.s,None)
+
+    def test_dynamic_decorator(self):
+        x1 = X(id='idx1',b=True,f=0.5,i=100)
+
+        self.assertTrue(x1.product._isdynamic)
+        self.assertEqual(x1.product(),50)
+        self.assertEqual(x1.product(factor=3),150)
+        self.assertEqual(x1.product(f=0.25,factor=3),75)
+        self.assertEqual(x1.product(f=0.25,i=10,factor=3),7.5)

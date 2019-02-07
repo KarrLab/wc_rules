@@ -1,5 +1,6 @@
 from obj_model import core
 from obj_model import bio
+from functools import wraps
 
 # scalar attributes
 class IdAttribute(core.StringAttribute):
@@ -45,3 +46,15 @@ class ManyToManyAttribute(core.ManyToManyAttribute):pass
 class BioSeqAttribute(bio.BioSeqAttribute):
     def __init__(self):
         super().__init__(default=None)
+
+# wrapper for methods that can be called for setting pattern constraints & during simulation
+def dynamic(fn):
+    fnvars = fn.__code__.co_varnames
+    @wraps(fn)
+    def outer(self_obj,**kwargs):
+        populate_this = [x for x in fnvars if x in self_obj.get_literal_attrs() and x not in kwargs]
+        for var in populate_this:
+            kwargs[var] = getattr(self_obj,var)
+        return fn(**kwargs)
+    outer._isdynamic = True
+    return outer

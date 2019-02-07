@@ -92,7 +92,6 @@ class Pattern(DictLike):
         # get reference & defined dependencies
         compiled_deps = self.validate_dependencies()
         
-        
         # here we build a networkx graph to evaluate symmetry
         g,helper = build_simple_graph(self)
 
