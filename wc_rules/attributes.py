@@ -57,4 +57,5 @@ def dynamic(fn):
             kwargs[var] = getattr(self_obj,var)
         return fn(**kwargs)
     outer._isdynamic = True
+    outer._vars = fnvars
     return outer

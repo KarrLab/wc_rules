@@ -6,7 +6,7 @@ from operator import lt,le,eq,ne,ge,gt
 import random
 import pprint
 from collections import deque,defaultdict
-from .graph_utils import build_simple_graph
+from . import graph_utils as gr
 
 class Pattern(DictLike):
     def __init__(self,idx,nodelist=None,recurse=True):
@@ -53,17 +53,39 @@ class Pattern(DictLike):
         final_deps = defaultdict(set)
         final_deps['variables'] = set([x.id for x in self])
 
+        constants = BuiltinHook.allowed_constants
+        builtins = BuiltinHook.allowed_functions
+
         for dep in deps:
+            print(dep)
             # check variables
             for var in sorted(dep['variables']):
-                if var not in final_deps['variables'] | final_deps['assignments']:
+                if var not in final_deps['variables'] | final_deps['assignments'] | constants:
                     raise ValidateError('Variable ' + var + ' not found in pattern ' + self.id)
             for var,attr in sorted(dep['attributes']):
-                if attr not in self[var].get_literal_attributes():
-                    raise ValidateError('Attribute ' + attr + ' not found in variable ' + var)
+                if var in final_deps['variables']:
+                    if attr not in self[var].get_literal_attributes():
+                        raise ValidateError('Attribute ' + attr + ' not found in variable ' + var)
+            for var, fname, kws in sorted(dep['varmethods']):
+                if var in final_deps['variables']:
+                    fns_dict = self[var].get_dynamic_methods()
+                    if fname not in fns_dict:
+                        raise ValidateError('Method ' + fname + ' not found in variable ' + var)
+                    fn = fns_dict[fname]
+                    if kws is not None:
+                        for kw in kws:
+                            if kw not in fn._vars:
+                                raise ValidateError('Keyword ' + kw + ' not found in method ' + var + '.' + fname)
+            for var in dep['assignments']:
+                final_deps['assignments'].add(var)
+            for fn in dep['builtins']:
+                if fn not in builtins:
+                    raise ValidateError('Builtin function ' + fn + ' not found')
+                            
+
         return final_deps
 
-    def finalize(self): 
+    def validate_pattern_connectivity(self):
         # ensure there are no neighbour nodes not in pattern
         examined = set()
         
@@ -78,22 +100,27 @@ class Pattern(DictLike):
 
         # ensure pattern is fully connected
         assert sorted([x.id for x in examined])==sorted(self.keys())
+        return self
 
-        # ensure constraints can be parsed 
+    def parse_constraints(self):
         tree = parser.parse(self._constraints)
         tree = prune_tree(tree)
         modified = True
         # simplify constraints as much as possible
         while modified:
             tree,modified = simplify_tree(tree)
-        # assign tree
-        self._tree = tree
+        return tree
+
+    def finalize(self): 
+        
+        self.validate_pattern_connectivity()
+        self._tree = self.parse_constraints()
 
         # get reference & defined dependencies
         compiled_deps = self.validate_dependencies()
         
         # here we build a networkx graph to evaluate symmetry
-        g,helper = build_simple_graph(self)
+        g,helper = gr.build_simple_graph(self)
 
         # use get dependencies to attach nodes referring to attributes & functions
 

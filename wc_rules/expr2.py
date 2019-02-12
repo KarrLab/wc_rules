@@ -241,13 +241,13 @@ def get_dependencies(tree):
             elif function_call_type == ('variable','function_name'):
                 var,func = [node_to_str(x) for x in ch]
                 deps['variables'].add(var)
-                deps['varfunctions'].add( (var,func,None) )
+                deps['varmethods'].add( (var,func,None) )
             elif function_call_type == ('variable','function_name','kwargs'):
                 var,func,_ = [node_to_str(x) for x in ch]
                 kwargs = ch[2].children
                 kws = tuple(sorted([node_to_str(x.children[0]) for x in kwargs]))
                 deps['variables'].add(var)
-                deps['varfunctions'].add( (var,func,kws) )
+                deps['varmethods'].add( (var,func,kws) )
             elif function_call_type  in [('function_name','args'),('function_name',)]:
                 function_name = node_to_str(ch[0])
                 deps['builtins'].add(function_name)
@@ -257,6 +257,7 @@ def get_dependencies(tree):
             deps['patterns'].add(pattern)
             varpairs = node.children[0].children
             pvars = []
+            lvars = []
             for varpair in varpairs:
                 pvars.append(node_to_str(varpair.children[0]))
             deps['patternvars'].add( tuple([pattern,tuple(pvars)]))
@@ -266,15 +267,15 @@ def get_dependencies(tree):
 class BuiltinHook(object):
     # this class holds the builtin functions accessible to expressions constraining patterns
 
-    allowed_functions =  [
+    allowed_functions =  set([
     'abs', 'ceil', 'factorial', 'floor', 'exp', 'expm1', 'log', 'log1p', 'log2', 'log10',
     'pow', 'sqrt', 'acos', 'asin', 'atan', 'atan2', 'cos', 'hypot', 'sin', 'tan', 'degrees', 'radians', 
     'max', 'min', 'sum', 'any', 'all', 'not',
-    ]
+    ])
 
-    allowed_constants = [
+    allowed_constants = set([
     'pi','tau','avo',
-    ]
+    ])
 
     abs = math.fabs
     ceil = math.ceil

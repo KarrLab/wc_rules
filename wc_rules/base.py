@@ -75,6 +75,9 @@ class BaseClass(core.Model):
     def get_related_name(self,attr):
         return self.__class__.Meta.local_attributes[attr].related_name
 
+    def get_dynamic_methods(self):
+        return {x:getattr(self,x) for x in dir(self) if hasattr(getattr(self,x),'_isdynamic')}
+
     def duplicate(self,id=None,preserve_id=False,attrlist=None):
         ''' duplicates node up to scalar attributes '''
         new_node = self.__class__()
