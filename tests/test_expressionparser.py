@@ -60,8 +60,8 @@ class TestExpressionParser(unittest.TestCase):
 			(h.all(True,False,False),False),
 			(h.any(False,False,False),False),
 			(h.all(True,True,True),True),
-			(h.notf(True),False),
-			(h.notf(False),True),
+			(h.inv(True),False),
+			(h.inv(False),True),
 		]
 
 		for x,y in tuplist:

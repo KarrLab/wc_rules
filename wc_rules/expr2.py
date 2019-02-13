@@ -231,6 +231,7 @@ def get_dependencies(tree):
         for node in funcnodes:
             ch = node.children
             function_call_type = tuple([x.data for x in ch])
+            
             if function_call_type == ('variable',):
                 var = node_to_str(ch[0])
                 deps['variables'].add(var)
@@ -251,16 +252,21 @@ def get_dependencies(tree):
             elif function_call_type  in [('function_name','args'),('function_name',)]:
                 function_name = node_to_str(ch[0])
                 deps['builtins'].add(function_name)
-        matchnodes = expr.find_pred(lambda x: x.data == 'match_expression')
-        for node in matchnodes:
-            pattern = node_to_str(node.children[1])
-            deps['patterns'].add(pattern)
-            varpairs = node.children[0].children
-            pvars = []
-            lvars = []
-            for varpair in varpairs:
-                pvars.append(node_to_str(varpair.children[0]))
-            deps['patternvars'].add( tuple([pattern,tuple(pvars)]))
+            elif function_call_type == ('function_name','match_expression'):
+                function_name = node_to_str(ch[0])
+                node = ch[1]
+                pattern = node_to_str(node.children[1])
+                deps['matchfuncs'].add(function_name)
+                deps['patterns'].add(pattern)
+                
+                varpairs = node.children[0].children
+                vpairs = []
+                for varpair in varpairs:
+                    pvar = node_to_str(varpair.children[0])
+                    lvar = node_to_str(varpair.children[1])
+                    vpairs.append(tuple([pvar,lvar]))
+                deps['patternvarpairs'].add( tuple([pattern,tuple(vpairs)]))
+            
         deplist.append(deps)
     return deplist
 
@@ -270,7 +276,7 @@ class BuiltinHook(object):
     allowed_functions =  set([
     'abs', 'ceil', 'factorial', 'floor', 'exp', 'expm1', 'log', 'log1p', 'log2', 'log10',
     'pow', 'sqrt', 'acos', 'asin', 'atan', 'atan2', 'cos', 'hypot', 'sin', 'tan', 'degrees', 'radians', 
-    'max', 'min', 'sum', 'any', 'all', 'not',
+    'max', 'min', 'sum', 'any', 'all', 'inv',
     ])
 
     allowed_constants = set([
@@ -313,10 +319,12 @@ class BuiltinHook(object):
     @staticmethod
     def all(*args): return builtins.all(args)
     @staticmethod
-    def notf(arg): return not arg
+    def inv(arg): return not arg
 
 class PatternHook(object):
     # this class handles match expressions and match counts
+
+    allowed_methods = ['count','exists','match']
     
     def count(pattern=None,varpairs=None):
         # this method should access the filter method on ReteNet pattern nodes

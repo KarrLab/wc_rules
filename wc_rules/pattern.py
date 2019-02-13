@@ -47,18 +47,16 @@ class Pattern(DictLike):
         self._constraints = self._constraints + "\n".join(strings)
         return self
 
-    def validate_dependencies(self):
+    def validate_dependencies(self,builtin_hook,pattern_hook):
         deps = get_dependencies(self._tree)
 
         final_deps = defaultdict(set)
         final_deps['variables'] = set([x.id for x in self])
 
-        constants = BuiltinHook.allowed_constants
-        builtins = BuiltinHook.allowed_functions
+        constants = builtin_hook.allowed_constants
+        builtins = builtin_hook.allowed_functions
 
         for dep in deps:
-            print(dep)
-            # check variables
             for var in sorted(dep['variables']):
                 if var not in final_deps['variables'] | final_deps['assignments'] | constants:
                     raise ValidateError('Variable ' + var + ' not found in pattern ' + self.id)
@@ -77,13 +75,24 @@ class Pattern(DictLike):
                             if kw not in fn._vars:
                                 raise ValidateError('Keyword ' + kw + ' not found in method ' + var + '.' + fname)
             for var in dep['assignments']:
+                if var in final_deps['variables']:
+                    raise ValidateError('New variable ' + var + ' cannot clash with existing variables ')
+                if var in final_deps['assignments']:
+                    raise ValidateError('New variable ' + var + ' cannot be redefined ')
                 final_deps['assignments'].add(var)
             for fn in dep['builtins']:
                 if fn not in builtins:
                     raise ValidateError('Builtin function ' + fn + ' not found')
-                            
-
-        return final_deps
+            for pat in dep['patterns']:
+                final_deps['patterns'].add(pat)
+            for pat,vpairlist in dep['patternvarpairs']:
+                pvars = []
+                for pvar,var in vpairlist:
+                    if var not in final_deps['variables']:
+                        raise ValidateError('Variable ' + var + ' not found in pattern ' + self.id)
+                    pvars.append(pvar)
+                final_deps['patternvars'].add(tuple([pat,tuple(pvars)]))
+        return
 
     def validate_pattern_connectivity(self):
         # ensure there are no neighbour nodes not in pattern
@@ -111,13 +120,12 @@ class Pattern(DictLike):
             tree,modified = simplify_tree(tree)
         return tree
 
-    def finalize(self): 
+    def finalize(self,builtin_hook=BuiltinHook(),pattern_hook=PatternHook()): 
         
         self.validate_pattern_connectivity()
         self._tree = self.parse_constraints()
-
-        # get reference & defined dependencies
-        compiled_deps = self.validate_dependencies()
+        self.validate_dependencies(builtin_hook,pattern_hook)
+        
         
         # here we build a networkx graph to evaluate symmetry
         g,helper = gr.build_simple_graph(self)
