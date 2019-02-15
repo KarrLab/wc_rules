@@ -48,6 +48,7 @@ class Pattern(DictLike):
         return self
 
     def validate_dependencies(self,builtin_hook,pattern_hook):
+        # checks dependencies internal to the pattern
         deps = get_dependencies(self._tree)
 
         final_deps = defaultdict(set)
@@ -57,34 +58,39 @@ class Pattern(DictLike):
         builtins = builtin_hook.allowed_functions
 
         for dep in deps:
+            # since we're iterating over the dependencies for each constraint,
+            # variable assignments prior to using them will be okay
             for var in sorted(dep['variables']):
+                # is the variable already in the pattern
                 if var not in final_deps['variables'] | final_deps['assignments'] | constants:
                     raise ValidateError('Variable ' + var + ' not found in pattern ' + self.id)
             for var,attr in sorted(dep['attributes']):
+                # is the attribute present on the variable
+                # can only be checked for non-assigned variables
                 if var in final_deps['variables']:
                     if attr not in self[var].get_literal_attributes():
                         raise ValidateError('Attribute ' + attr + ' not found in variable ' + var)
             for var, fname, kws in sorted(dep['varmethods']):
+                # is the function available to the variable
                 if var in final_deps['variables']:
                     fns_dict = self[var].get_dynamic_methods()
                     if fname not in fns_dict:
                         raise ValidateError('Method ' + fname + ' not found in variable ' + var)
                     fn = fns_dict[fname]
+                    # are the keywords correct
                     if kws is not None:
                         for kw in kws:
                             if kw not in fn._vars:
                                 raise ValidateError('Keyword ' + kw + ' not found in method ' + var + '.' + fname)
             for var in dep['assignments']:
-                if var in final_deps['variables']:
+                # are assigned variables uniquely assigned and different from existing variables
+                if var in final_deps['variables'] | final_deps['assignments']:
                     raise ValidateError('New variable ' + var + ' cannot clash with existing variables ')
-                if var in final_deps['assignments']:
-                    raise ValidateError('New variable ' + var + ' cannot be redefined ')
                 final_deps['assignments'].add(var)
             for fn in dep['builtins']:
+                # are the builtin functions used allowed ones
                 if fn not in builtins:
                     raise ValidateError('Builtin function ' + fn + ' not found')
-            for pat in dep['patterns']:
-                final_deps['patterns'].add(pat)
             for pat,vpairlist in dep['patternvarpairs']:
                 pvars = []
                 for pvar,var in vpairlist:
@@ -92,7 +98,10 @@ class Pattern(DictLike):
                         raise ValidateError('Variable ' + var + ' not found in pattern ' + self.id)
                     pvars.append(pvar)
                 final_deps['patternvars'].add(tuple([pat,tuple(pvars)]))
-        return
+            for fn in dep['matchfuncs']:
+                if fn not in pattern_hook.allowed_methods:
+                    raise ValidateError('The method ' + fn + ' is not available to match objects')
+        return deps
 
     def validate_pattern_connectivity(self):
         # ensure there are no neighbour nodes not in pattern
@@ -124,11 +133,13 @@ class Pattern(DictLike):
         
         self.validate_pattern_connectivity()
         self._tree = self.parse_constraints()
-        self.validate_dependencies(builtin_hook,pattern_hook)
+        deps = self.validate_dependencies(builtin_hook,pattern_hook)
         
+        g,helper = gr.build_simple_graph(self,deps)
         
-        # here we build a networkx graph to evaluate symmetry
-        g,helper = gr.build_simple_graph(self)
+        #x = gr.compute_simple_morphisms(g)
+        #print(x)
+
 
         # use get dependencies to attach nodes referring to attributes & functions
 

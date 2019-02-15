@@ -5,38 +5,108 @@
 :License: MIT
 """
 import networkx
-from collections import namedtuple
+import networkx.algorithms.isomorphism as iso
+from collections import namedtuple,defaultdict
 from pprint import pformat
+from attrdict import AttrDict
 
-ExprGraphNode = namedtuple('ExprGN',['type','subtype','matchstr'])
+ExprGraphNode = namedtuple('ExprGN',['category','name'])
 
-def build_simple_graph(dictlike):
+class NodeCounter(object):
+    def __init__(self):
+        self.n = -1
 
-    G = networkx.MultiDiGraph()
-    variables = dict()
-    # adding nodes
+    def gen_new_node(self):
+        self.n += 1
+        return self.n
+
+
+def build_simple_graph(dictlike,deps):
+    
+    G = networkx.DiGraph()
+    counter = NodeCounter()
+    node_dict = defaultdict(dict)
+    
+    def add_new_node(graph,counter,category,name):
+        data = ExprGraphNode(category = category,name = name)
+        new_id = counter.gen_new_node()
+        graph.add_node(new_id,data=data)
+        return (graph,counter,new_id)
+
+    # add variables
     for node in dictlike:
-        tup = ExprGraphNode(
-            type= 'variable',
-            subtype=node.id,
-            matchstr=node.__class__.__name__
-            )
-        G.add_node(tup)
-        variables[node.id] = tup
-
-    # add edges - a forward and a reverse
+        G,counter,new_id = add_new_node(G,counter,'variable',node.id)
+        node_dict['variables'][node.id] = new_id
+    
+    # add edges
     visited = set()
     for node in dictlike:
         attrs = node.get_nonempty_related_attributes()
         for attr in attrs:
             related_attr = node.get_related_name(attr)
             for node2 in node.listget(attr):        
-                if node2 in visited:
-                    continue
-                G.add_edge(variables[node.id],variables[node2.id],label=attr)
-                G.add_edge(variables[node2.id],variables[node.id],label=related_attr)
+                if node2 not in visited:
+                    id1 = node_dict['variables'][node.id]
+                    id2 = node_dict['variables'][node2.id]
+                    G.add_edge(id1,id2,label=attr)
+                    G.add_edge(id2,id1,label=related_attr)
         visited.add(node)
-    return (G,variables)
+
+    for dep in deps:
+        # add assigned variables
+        for var in dep['assignments']:
+            G,counter,new_id = add_new_node(G,counter,'variable',node.id)
+            node_dict['variables'][node.id] = new_id
+
+        # add attributes
+        for var,attr in dep['attributes']:
+            if tuple([var,attr]) not in node_dict['attributes']:
+                G,counter,new_id = add_new_node(G,counter,'attribute',attr)
+                var_id = node_dict['variables'][var]
+                G.add_edge(var_id,new_id,label='')
+                node_dict['attributes'][tuple([var,attr])] = new_id
+
+        # add varmethods
+        for var,fname,kws in dep['varmethods']:
+            if tuple([var,fname]) not in node_dict['functions']:
+                G,counter,new_id = add_new_node(G,counter,'function',fname)
+                var_id = node_dict['variables'][var]
+                G.add_edge(var_id,new_id,label='')
+                node_dict['functions'][tuple([var,fname])] = new_id
+
+        for fname in dep['builtins']:
+            if fname not in node_dict['functions']:
+                G,counter,new_id = add_new_node(G,counter,'function',fname)
+                node_dict['functions'][fname] = new_id
+        
+        for fname in dep['matchfuncs']:
+            if fname not in node_dict['functions']:
+                G,counter,new_id = add_new_node(G,counter,'function',fname)
+                node_dict['functions'][fname] = new_id
+
+        for pat in dep['patterns']:
+            if pat not in node_dict['patterns']:
+                G,counter,new_id = add_new_node(G,counter,'pattern',pat)
+                node_dict['patterns'][pat] = new_id
+
+    if False:
+        for node in G.nodes(data=True):
+            print(node)
+        for edge in G.edges(data=True):
+            print(edge)
+        print(pformat(node_dict))
+    
+    return (G,node_dict)
+
+def compute_simple_morphisms(G):
+    nodematch = lambda x,y: x['data'] == y['data']
+    edgematch = lambda x,y: x.label == y.label
+    
+    x = iso.DiGraphMatcher(G,G,nodematch).is_isomorphic()
+    return True
+
+
+
 
 
 
