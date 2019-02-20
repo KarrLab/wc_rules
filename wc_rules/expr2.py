@@ -1,8 +1,11 @@
 from lark import Lark, tree, Transformer,Visitor, v_args, Tree,Token
-from collections import defaultdict
+from collections import defaultdict,namedtuple
 import builtins,math
 from attrdict import AttrDict
 from pprint import pformat, pprint
+from functools import partial
+from .utils import ValidateError
+import networkx
 # DO NOT USE CAPS
 grammar = """
 %import common.CNAME
@@ -23,7 +26,7 @@ COMMENT: /#.*/
     variable: CNAME
     attribute: CNAME
 
-    arg: expression|boolean_expression
+    arg: expression
     kw: CNAME
     kwarg: kw "=" arg
     args: arg ("," arg )*
@@ -269,6 +272,279 @@ def get_dependencies(tree):
             
         deplist.append(deps)
     return deplist
+
+
+ExprGraphNode = namedtuple('ExprGN',['category','name'])
+
+class NodeCounter(object):
+    def __init__(self):
+        self.n = -1
+
+    def gen_new_node(self):
+        self.n += 1
+        return NodeRef(self.n)
+
+
+class NodeRef(object):
+    def __init__(self,v):
+        self._v = v
+
+    def increment(self):
+        self._v += 1
+
+    def __hash__(self): return hash(self._v)
+
+    def __eq__(self,other):
+        return self._v == other._v
+
+    def __repr__(self):
+        return 'NodeRef('+str(self._v)+')'
+    pass
+
+def add_new_node(graph,counter,category,name):
+    data = ExprGraphNode(category = category,name = name)
+    new_id = counter.gen_new_node()
+    graph.add_node(new_id,data=data)
+    return (graph,counter,new_id)
+
+
+def build_simple_graph(dictlike):
+    
+    G = networkx.DiGraph()
+    counter = NodeCounter()
+    node_dict = defaultdict(dict)
+        
+    # add variables
+    for node in dictlike:
+        G,counter,new_id = add_new_node(G,counter,'variable',node.id)
+        node_dict['variables'][node.id] = new_id
+    
+    # add edges
+    visited = set()
+    for node in dictlike:
+        attrs = node.get_nonempty_related_attributes()
+        for attr in attrs:
+            related_attr = node.get_related_name(attr)
+            for node2 in node.listget(attr):        
+                if node2 not in visited:
+                    id1 = node_dict['variables'][node.id]
+                    id2 = node_dict['variables'][node2.id]
+                    G.add_edge(id1,id2,label=attr)
+                    G.add_edge(id2,id1,label=related_attr)
+        visited.add(node)
+
+    return G,node_dict,counter
+
+def build_graph_for_symmetry_analysis(G,node_dict,counter,deps,tree):
+    for dep in deps:
+        # add assigned variables
+        for var in dep['assignments']:
+            G,counter,new_id = add_new_node(G,counter,'variable',var)
+            node_dict['variables'][var] = new_id
+
+        # add attributes
+        for var,attr in dep['attributes']:
+            if tuple([var,attr]) not in node_dict['attributes']:
+                G,counter,new_id = add_new_node(G,counter,'attribute',attr)
+                var_id = node_dict['variables'][var]
+                G.add_edge(var_id,new_id,label='')
+                node_dict['attributes'][tuple([var,attr])] = new_id
+
+        # add varmethods
+        for var,fname,kws in dep['varmethods']:
+            if tuple([var,fname]) not in node_dict['functions']:
+                G,counter,new_id = add_new_node(G,counter,'function',fname)
+                var_id = node_dict['variables'][var]
+                G.add_edge(var_id,new_id,label='')
+                node_dict['functions'][tuple([var,fname])] = new_id
+
+        for fname in dep['builtins']:
+            if fname not in node_dict['functions']:
+                G,counter,new_id = add_new_node(G,counter,'function',fname)
+                node_dict['functions'][fname] = new_id
+        
+        for fname in dep['matchfuncs']:
+            if fname not in node_dict['functions']:
+                G,counter,new_id = add_new_node(G,counter,'function',fname)
+                node_dict['functions'][fname] = new_id
+
+        for pat in dep['patterns']:
+            if pat not in node_dict['patterns']:
+                G,counter,new_id = add_new_node(G,counter,'pattern',pat)
+                node_dict['patterns'][pat] = new_id
+
+    graphbuilder = GraphBuilder(G,node_dict,counter)
+
+    #pprint(tree.children)
+    G = graphbuilder.transform(tree)
+
+
+    verbose = True
+    if verbose:
+        for node in G.nodes(data=True):
+            print(node)
+        for edge in G.edges(data=True):
+            print(edge)
+        print(pformat(node_dict))
+    
+    return (G,node_dict)
+
+class GraphBuilder(Transformer):
+
+    def __init__(self,graph,node_dict,counter):
+        self.graph = graph
+        self.node_dict = node_dict
+        self.counter = counter
+
+    def check_node_exists(self,category,val):
+        return val in self.node_dict[category]
+
+    def add_new_node(self,category,name=None):
+        new_id = self.counter.gen_new_node()
+        if name is None:
+            name = category + '_'+ str(new_id._v)
+        data = ExprGraphNode(category = category,name = name)
+        self.graph.add_node(new_id,data=data)
+        self.node_dict[category][name] = new_id
+        return new_id
+
+    def add_to_category(category):
+        def inner(slf,args):
+            val = args[0].__str__()
+            if slf.check_node_exists(category,val):
+                return slf.node_dict[category][val]
+            new_id = slf.add_new_node(category,val)
+            return new_id
+        return inner
+
+    def add_op(op):
+        return lambda x,y: x.add_new_node(op)
+
+    def n2s(self,arg): return arg[0].__str__()
+    def pass_on(self,arg): return arg[0]
+    
+    number = add_to_category('literals')
+    string = add_to_category('literals')
+    variable = add_to_category('variables')
+    pattern = add_to_category('patterns')
+    function_name = n2s
+    attribute = n2s
+    kw = n2s
+    kwarg = tuple
+    kwargs = list
+    arg = pass_on
+    pattern_variable = n2s
+    varpair = tuple
+    varpairs = list
+
+    def args(self,args):
+        return [(i,a) for i,a in enumerate(args)]
+
+    eq = add_op('eq')
+    ne = add_op('ne')
+    le = add_op('le')
+    ge = add_op('ge')
+    leq = add_op('leq')
+    geq = add_op('geq')
+   
+
+    def true(self,args):
+        new_id = self.add_new_node('literals','True')
+        return new_id
+
+    def false(self,args):
+        new_id = self.add_new_node('literals','False')
+        return new_id
+
+    def function_call(self,args):
+        # function_call: variable "." function_name "(" [kwargs] ")"
+        #  | function_name "(" [args] ")"
+        #  | function_name "(" match_expression ")"
+        #  | variable "." attribute 
+        #  | variable
+
+        # what is the first arg? if it is a noderef it is a variable
+        nodes_to_return = []
+        if isinstance(args[0],NodeRef):
+            # its a variable
+            var = self.graph.nodes[args[0]]['data'].name
+            if len(args) == 1:
+                # function_call := variable
+                nodes_to_return.append(args[0])
+            elif (var,args[1]) in self.node_dict['attributes']:
+                # function_call := variable "." attribute
+                nodes_to_return.append(self.node_dict['attributes'][(var,args[1])])
+            elif (var,args[1]) in self.node_dict['functions']:
+                # function_call := variable "." function_name [kwargs]
+                nodes_to_return.append(self.node_dict['functions'][(var,args[1])])
+                if len(args)>2:
+                    # kwargs exists
+                    new_kwargs_node = self.add_new_node('kwargs')
+                    nodes_to_return.append(new_kwargs_node)
+                    kwargs = args[2]
+                    for kw,ref in kwargs:
+                        self.graph.add_edge(ref,new_kwargs_node,label=kw)
+            else:
+                raise ValidateError('Function call could not be found.')
+        elif isinstance(args[0],str):
+            # # function_call := function_name [args/match_expression]
+            fname = args[0]
+            node_ref = self.node_dict['functions'][fname]
+            nodes_to_return.append(node_ref)
+            if len(args) > 1:
+                # does it have args/matchexpression
+                new_args_node = self.add_new_node('args')
+                for i,n in args[1]:
+                    self.graph.add_edge(n,new_args_node,label=str(i))
+                nodes_to_return.append(new_args_node)
+        else:
+            raise ValidateError('Function call could not be found.')
+
+        new_funccall_node = self.add_new_node('function_call')
+        
+        for node in nodes_to_return:
+            self.graph.add_edge(node,new_funccall_node,label='')    
+        return new_funccall_node
+
+    def match_expression(self,args):
+        varpairs = args[0]
+        pattern = args[1]
+
+        new_varpairs_node = self.add_new_node('varpairs')
+        for pvar,var in varpairs:
+            self.graph.add_edge(var,new_varpairs_node,label=pvar)
+        new_matchexpr_node = self.add_new_node('match_expression')
+        
+        self.graph.add_edge(new_varpairs_node,new_matchexpr_node,label='')
+        self.graph.add_edge(pattern,new_matchexpr_node,label='')
+
+        return [(0,new_matchexpr_node)]
+
+    
+    def boolean_expression(self,args):
+        if len(args)==1:
+            lhs = args[0]
+            op = self.eq([])
+            rhs = self.true([])
+
+        else:
+            lhs = args[0]
+            op = args[1]
+            rhs = args[2]
+
+            lhs_label = ''
+            rhs_label = ''
+            if self.graph.nodes[op]['data'].category in ['ge','le','geq','leq']:
+                lhs_label = 'lhs'
+                rhs_label = 'rhs'
+
+            self.graph.add_edge(lhs,op,label=lhs_label)
+            self.graph.add_edge(rhs,op,label=rhs_label)
+        
+        return op
+
+    def expressions(self,args):
+        return self.graph
 
 class BuiltinHook(object):
     # this class holds the builtin functions accessible to expressions constraining patterns

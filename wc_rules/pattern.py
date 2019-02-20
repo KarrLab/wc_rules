@@ -1,12 +1,12 @@
 from .indexer import DictLike
 from .utils import generate_id,ValidateError
 from .expr_parse import parse_expression
-from .expr2 import parser, Serializer, prune_tree, simplify_tree, BuiltinHook, PatternHook, get_dependencies
+from .expr2 import parser, Serializer, prune_tree, simplify_tree, BuiltinHook, PatternHook, get_dependencies, build_simple_graph, build_graph_for_symmetry_analysis
 from operator import lt,le,eq,ne,ge,gt
 import random
 import pprint
 from collections import deque,defaultdict
-from . import graph_utils as gr
+
 
 class Pattern(DictLike):
     def __init__(self,idx,nodelist=None,recurse=True):
@@ -131,11 +131,11 @@ class Pattern(DictLike):
 
     def finalize(self,builtin_hook=BuiltinHook(),pattern_hook=PatternHook()): 
         
-        self.validate_pattern_connectivity()
         self._tree = self.parse_constraints()
         deps = self.validate_dependencies(builtin_hook,pattern_hook)
         
-        g,helper = gr.build_simple_graph(self,deps)
+        g,node_dict,counter = build_simple_graph(self)
+        g,node_dict = build_graph_for_symmetry_analysis(g,node_dict,counter,deps,self._tree)
         
         #x = gr.compute_simple_morphisms(g)
         #print(x)
