@@ -449,7 +449,7 @@ class GraphBuilder(Transformer):
         return new_id
 
     def false(self,args):
-        new_id = self.add_new_node('literals','False','True')
+        new_id = self.add_new_node('literals','False','False')
         return new_id
 
     def function_call(self,args):
