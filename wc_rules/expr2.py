@@ -274,7 +274,7 @@ def get_dependencies(tree):
     return deplist
 
 
-ExprGraphNode = namedtuple('ExprGN',['category','name'])
+ExprGraphNode = namedtuple('ExprGN',['category','name','matching'])
 
 class NodeCounter(object):
     def __init__(self):
@@ -301,8 +301,11 @@ class NodeRef(object):
         return 'NodeRef('+str(self._v)+')'
     pass
 
-def add_new_node(graph,counter,category,name):
-    data = ExprGraphNode(category = category,name = name)
+def add_new_node(graph,counter,category,name,matching=''):
+    data = ExprGraphNode(category = category,name = name,matching=matching)
+    # category is used sort nodes
+    # name is used to identify individual nodes on the graph
+    # category + matching is used to match nodes.
     new_id = counter.gen_new_node()
     graph.add_node(new_id,data=data)
     return (graph,counter,new_id)
@@ -316,7 +319,7 @@ def build_simple_graph(dictlike):
         
     # add variables
     for node in dictlike:
-        G,counter,new_id = add_new_node(G,counter,'variable',node.id)
+        G,counter,new_id = add_new_node(G,counter,'variable',node.id,node.__class__.__name__)
         node_dict['variables'][node.id] = new_id
     
     # add edges
@@ -345,7 +348,7 @@ def build_graph_for_symmetry_analysis(G,node_dict,counter,deps,tree):
         # add attributes
         for var,attr in dep['attributes']:
             if tuple([var,attr]) not in node_dict['attributes']:
-                G,counter,new_id = add_new_node(G,counter,'attribute',attr)
+                G,counter,new_id = add_new_node(G,counter,'attribute',attr,attr)
                 var_id = node_dict['variables'][var]
                 G.add_edge(var_id,new_id,label='')
                 node_dict['attributes'][tuple([var,attr])] = new_id
@@ -353,40 +356,28 @@ def build_graph_for_symmetry_analysis(G,node_dict,counter,deps,tree):
         # add varmethods
         for var,fname,kws in dep['varmethods']:
             if tuple([var,fname]) not in node_dict['functions']:
-                G,counter,new_id = add_new_node(G,counter,'function',fname)
+                G,counter,new_id = add_new_node(G,counter,'function',fname,fname)
                 var_id = node_dict['variables'][var]
                 G.add_edge(var_id,new_id,label='')
                 node_dict['functions'][tuple([var,fname])] = new_id
 
         for fname in dep['builtins']:
             if fname not in node_dict['functions']:
-                G,counter,new_id = add_new_node(G,counter,'function',fname)
+                G,counter,new_id = add_new_node(G,counter,'function',fname,fname)
                 node_dict['functions'][fname] = new_id
         
         for fname in dep['matchfuncs']:
             if fname not in node_dict['functions']:
-                G,counter,new_id = add_new_node(G,counter,'function',fname)
+                G,counter,new_id = add_new_node(G,counter,'function',fname,fname)
                 node_dict['functions'][fname] = new_id
 
         for pat in dep['patterns']:
             if pat not in node_dict['patterns']:
-                G,counter,new_id = add_new_node(G,counter,'pattern',pat)
+                G,counter,new_id = add_new_node(G,counter,'pattern',pat,pat)
                 node_dict['patterns'][pat] = new_id
 
     graphbuilder = GraphBuilder(G,node_dict,counter)
-
-    #pprint(tree.children)
-    G = graphbuilder.transform(tree)
-
-
-    verbose = True
-    if verbose:
-        for node in G.nodes(data=True):
-            print(node)
-        for edge in G.edges(data=True):
-            print(edge)
-        print(pformat(node_dict))
-    
+    G,node_dict = graphbuilder.transform(tree)
     return (G,node_dict)
 
 class GraphBuilder(Transformer):
@@ -399,34 +390,37 @@ class GraphBuilder(Transformer):
     def check_node_exists(self,category,val):
         return val in self.node_dict[category]
 
-    def add_new_node(self,category,name=None):
+    def add_new_node(self,category,name=None,matching=''):
         new_id = self.counter.gen_new_node()
         if name is None:
             name = category + '_'+ str(new_id._v)
-        data = ExprGraphNode(category = category,name = name)
+        data = ExprGraphNode(category = category,name = name,matching=matching)
         self.graph.add_node(new_id,data=data)
         self.node_dict[category][name] = new_id
         return new_id
 
-    def add_to_category(category):
+    def add_to_category(category,name_is_matching=False):
         def inner(slf,args):
             val = args[0].__str__()
+            matching = ''
+            if name_is_matching:
+                matching = val
             if slf.check_node_exists(category,val):
                 return slf.node_dict[category][val]
-            new_id = slf.add_new_node(category,val)
+            new_id = slf.add_new_node(category,val,matching)
             return new_id
         return inner
 
-    def add_op(op):
-        return lambda x,y: x.add_new_node(op)
+    def add_op(opcateg,op):
+        return lambda x,y: x.add_new_node(opcateg,matching=op)
 
     def n2s(self,arg): return arg[0].__str__()
     def pass_on(self,arg): return arg[0]
     
-    number = add_to_category('literals')
-    string = add_to_category('literals')
-    variable = add_to_category('variables')
-    pattern = add_to_category('patterns')
+    number = add_to_category('literals',name_is_matching=True)
+    string = add_to_category('literals',name_is_matching=True)
+    variable = add_to_category('variables',name_is_matching=False)
+    pattern = add_to_category('patterns',name_is_matching=True)
     function_name = n2s
     attribute = n2s
     kw = n2s
@@ -436,24 +430,26 @@ class GraphBuilder(Transformer):
     pattern_variable = n2s
     varpair = tuple
     varpairs = list
+    expression = pass_on
+    declared_variable = variable
 
     def args(self,args):
         return [(i,a) for i,a in enumerate(args)]
 
-    eq = add_op('eq')
-    ne = add_op('ne')
-    le = add_op('le')
-    ge = add_op('ge')
-    leq = add_op('leq')
-    geq = add_op('geq')
+    eq = add_op('compare_op','eq')
+    ne = add_op('compare_op','ne')
+    le = add_op('compare_op','le')
+    ge = add_op('compare_op','ge')
+    leq = add_op('compare_op','leq')
+    geq = add_op('compare_op','geq')
    
 
     def true(self,args):
-        new_id = self.add_new_node('literals','True')
+        new_id = self.add_new_node('literals','True','True')
         return new_id
 
     def false(self,args):
-        new_id = self.add_new_node('literals','False')
+        new_id = self.add_new_node('literals','False','True')
         return new_id
 
     def function_call(self,args):
@@ -500,8 +496,10 @@ class GraphBuilder(Transformer):
         else:
             raise ValidateError('Function call could not be found.')
 
-        new_funccall_node = self.add_new_node('function_call')
+        if len(nodes_to_return) == 1:
+            return nodes_to_return[0]
         
+        new_funccall_node = self.add_new_node('function_call')
         for node in nodes_to_return:
             self.graph.add_edge(node,new_funccall_node,label='')    
         return new_funccall_node
@@ -521,7 +519,12 @@ class GraphBuilder(Transformer):
         return [(0,new_matchexpr_node)]
 
     
+    cmp_ops = ['eq','ne','ge','le','geq','leq']
+    lhs_label_dict = dict(zip(cmp_ops,['']*2 + ['lhs']*4))
+    rhs_label_dict = dict(zip(cmp_ops,['']*2 + ['rhs']*4))
+        
     def boolean_expression(self,args):
+
         if len(args)==1:
             lhs = args[0]
             op = self.eq([])
@@ -532,19 +535,63 @@ class GraphBuilder(Transformer):
             op = args[1]
             rhs = args[2]
 
-            lhs_label = ''
-            rhs_label = ''
-            if self.graph.nodes[op]['data'].category in ['ge','le','geq','leq']:
-                lhs_label = 'lhs'
-                rhs_label = 'rhs'
-
-            self.graph.add_edge(lhs,op,label=lhs_label)
-            self.graph.add_edge(rhs,op,label=rhs_label)
+        oplabel = self.graph.nodes[op]['data'].matching
+        lhs_label = self.lhs_label_dict[oplabel]
+        rhs_label = self.rhs_label_dict[oplabel]
+        
+        self.graph.add_edge(lhs,op,label=lhs_label)
+        self.graph.add_edge(rhs,op,label=rhs_label)
         
         return op
 
+    # ?sum: term (add_op term)*
+    # ?term: factor (mul_op factor)* 
+    # ?factor: factor_op factor | atom
+
+    # ?factor_op: "+" -> noflip | "-" -> flipsign
+    # ?add_op: "+" -> add | "-" -> subtract
+    #?mul_op: "*" -> multiply | "/" -> divide
+
+    def factor(self,args):
+        # assuming it has been simplified
+        if len(args)==2:
+            new_flip_node = self.add_new_node('flipsign')
+            self.graph.add_edge(args[1],new_flip_node,label='')
+            return new_flip_node
+        return args[0]
+
+    def constant(s): return lambda x,y: s
+    add = constant('add')
+    subtract = constant('subtract')
+    multiply = constant('multiply')
+    divide = constant('divide')
+
+    def term(self,args):
+        chunks = [args[i:i + 2] for i in range(0, len(args), 2)]
+        if len(chunks)==1 and chunks[0][0]=='multiply':
+            return chunks[0][1]
+        new_term_node = self.add_new_node('term')
+        for op,ref in chunks:
+            self.graph.add_edge(ref,new_term_node,label=op)
+        return new_term_node
+        
+    def sum(self,args):
+        chunks = [args[i:i + 2] for i in range(0, len(args), 2)]
+        if len(chunks)==1 and chunks[0][0]=='add':
+            return chunks[0][1]
+        new_sum_node = self.add_new_node('sum')
+        for op,ref in chunks:
+            self.graph.add_edge(ref,new_sum_node,label=op)
+        return new_sum_node
+        
+    def assignment(self,args):
+        declared_var = args[0]
+        expr = args[1]
+        self.graph.add_edge(expr,declared_var,label='assignment')
+        return declared_var
+
     def expressions(self,args):
-        return self.graph
+        return (self.graph,self.node_dict)
 
 class BuiltinHook(object):
     # this class holds the builtin functions accessible to expressions constraining patterns

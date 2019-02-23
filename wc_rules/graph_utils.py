@@ -10,20 +10,6 @@ from collections import namedtuple,defaultdict
 from pprint import pformat
 from attrdict import AttrDict
 
-
-
-def compute_simple_morphisms(G):
-    nodematch = lambda x,y: x['data'] == y['data']
-    edgematch = lambda x,y: x.label == y.label
-    
-    x = iso.DiGraphMatcher(G,G,nodematch).is_isomorphic()
-    return True
-
-
-
-
-
-
 ############# OLD
 class GraphMeta(object):
     """ Inner class holding values used in graph methods

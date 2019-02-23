@@ -7,6 +7,7 @@ import random
 import pprint
 from collections import deque,defaultdict
 
+import networkx.algorithms.isomorphism as iso
 
 class Pattern(DictLike):
     def __init__(self,idx,nodelist=None,recurse=True):
@@ -15,6 +16,8 @@ class Pattern(DictLike):
         self._constraints = ''
         self._finalize = False
         self._tree = None
+        self._symmetries = None
+        self._orbits = None
         #self._nodes = dict()
         if nodelist:
             for node in nodelist:
@@ -129,26 +132,68 @@ class Pattern(DictLike):
             tree,modified = simplify_tree(tree)
         return tree
 
+    def compute_internal_morphisms(self,G):
+
+        def nodematch(x,y):
+            return x['data'].category == y['data'].category and x['data'].matching == y['data'].matching
+
+        def edgematch(x,y):
+            return x['label'] == y['label']
+        
+        morphisms = list(iso.DiGraphMatcher(G,G,nodematch,edgematch).isomorphisms_iter())
+        return morphisms
+
+    def print_graph(self,G):
+        for node in G.nodes(data=True):
+            print(node)
+        for edge in G.edges(data=True):
+            print(edge)
+        #print(pprint.pformat(node_dict))
+        return
+
+
     def finalize(self,builtin_hook=BuiltinHook(),pattern_hook=PatternHook()): 
-        
-        self._tree = self.parse_constraints()
-        deps = self.validate_dependencies(builtin_hook,pattern_hook)
-        
+        # validate connectivity
+        self.validate_pattern_connectivity()
+
+        # compute symmetries
         g,node_dict,counter = build_simple_graph(self)
-        g,node_dict = build_graph_for_symmetry_analysis(g,node_dict,counter,deps,self._tree)
+        variable_names = [x.id for x in self]
         
-        #x = gr.compute_simple_morphisms(g)
-        #print(x)
+        def retrieve_name(g,x):
+            return g.nodes[x]['data'].name
 
+        def retrieve_mapping(g,m,names):
+            d = [(retrieve_name(g,x),retrieve_name(g,y)) for x,y in m.items() if retrieve_name(g,x) in names]
+            return tuple(sorted(d))
 
-        # use get dependencies to attach nodes referring to attributes & functions
+        candidate_symmetries = sorted([retrieve_mapping(g,m,variable_names) for m in self.compute_internal_morphisms(g)])
+        
+        # parse constraints & use in computing symmetries
+        has_constraints = self._constraints != ''
+        if has_constraints:
+            self._tree = self.parse_constraints()
+            deps = self.validate_dependencies(builtin_hook,pattern_hook)
+            g,node_dict = build_graph_for_symmetry_analysis(g,node_dict,counter,deps,self._tree)
+            # here, using variable_names in retrieve_mapping filters symmetries on non-variable nodes that may be present in the constraints
+            candidate_symmetries2 = sorted(set([retrieve_mapping(g,m,variable_names) for m in self.compute_internal_morphisms(g)]))
+            
+        final_symmetries = candidate_symmetries
+        if len(candidate_symmetries2) < len(candidate_symmetries):
+            final_symmetries = candidate_symmetries2
 
+        self._symmetries = [{x:y for x,y in m} for m in final_symmetries]
 
+        # compute orbits
+        orbits = {x:set([x]) for x in variable_names}
+        for m in self._symmetries:
+            for x,y in m.items():
+                if x!=y:
+                    orbits[x].add(y)
+                    orbits[y].add(x)
+        self._orbits = set([frozenset(orbits[x]) for x in variable_names])
 
-        #print(tree.pretty())
-        #print(tree)
-        #evaluators = Serializer(h=BuiltinHook(),p=PatternHook()).transform(tree)
-        #print(evaluators)
+        #todo: serialize constraints into lambda expressions
         return self
 
     def remove_node(self,node):
