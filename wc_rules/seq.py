@@ -11,7 +11,6 @@ from obj_model import bio
 import Bio.Seq
 import Bio.Alphabet
 
-
 class SequenceMolecule(chem.Molecule):
     """ Generic SequenceMolecule (template for DNA, RNA, protein sequence objects) """
 
