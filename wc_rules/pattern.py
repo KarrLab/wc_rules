@@ -227,9 +227,6 @@ class Pattern(DictLike):
         deps = self.validate_dependencies(builtin_hook,pattern_hook)
         self._symmetries = self.analyze_symmetries(deps)
         self._orbits = self.analyze_orbits()
-
-        print(self._symmetries)
-        print(self._orbits)
         return self
 
     def remove_node(self,node):
