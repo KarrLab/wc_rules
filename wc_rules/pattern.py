@@ -34,6 +34,10 @@ class Pattern(DictLike):
                 for node2 in node.listget_all_related():
                     self.add_node(node2,recurse)
         return self
+
+    @property
+    def variable_names(self):
+        return [x.id for x in self]
     '''
     def add_expression(self,string_input):
         which_dict,tupl = parse_expression(string_input)
@@ -52,6 +56,9 @@ class Pattern(DictLike):
 
     def validate_dependencies(self,builtin_hook,pattern_hook):
         # checks dependencies internal to the pattern
+        if self._tree is None:
+            return None
+
         deps = get_dependencies(self._tree)
 
         final_deps = defaultdict(set)
@@ -123,7 +130,7 @@ class Pattern(DictLike):
         assert sorted([x.id for x in examined])==sorted(self.keys())
         return self
 
-    def process_internal_constraints(self):
+    def process_direct_constraints(self):
         strings = []
         for node in self:
             for attr in node.get_nonempty_scalar_attributes():
@@ -135,9 +142,10 @@ class Pattern(DictLike):
                 strings.append(node.id + '.' + attr + ' == ' + val)
         return "\n".join(strings)
 
-
     def parse_constraints(self):
-        total_constraint_string = "\n".join([self.process_internal_constraints(),self._constraints])
+        # direct constraints: attribute constraints set directly, e.g., A('a',ph=True)
+        # self._constraints: constraints set using add_constraints(), e.g., A('a').add_constraints('''a.ph==True''')
+        total_constraint_string = "\n".join([self.process_direct_constraints(),self._constraints])
         tree = None
         if total_constraint_string  != '':
             tree = parser.parse(total_constraint_string)
@@ -146,8 +154,7 @@ class Pattern(DictLike):
             # simplify constraints as much as possible
             while modified:
                 tree,modified = simplify_tree(tree)
-        self._tree = tree
-        return self
+        return tree
 
     def compute_internal_morphisms(self,G):
 
@@ -160,6 +167,51 @@ class Pattern(DictLike):
         morphisms = list(iso.DiGraphMatcher(G,G,nodematch,edgematch).isomorphisms_iter())
         return morphisms
 
+    def compute_symmetries(self,g):
+        
+        def nodematch(x,y):
+            return x['data'].category == y['data'].category and x['data'].matching == y['data'].matching
+
+        def edgematch(x,y):
+            return x['label'] == y['label']
+        
+        def compute_internal_morphisms(g):
+            return list(iso.DiGraphMatcher(g,g,nodematch,edgematch).isomorphisms_iter())
+
+        def retrieve_name(g,x):
+            return g.nodes[x]['data'].name
+
+        def retrieve_mapping(g,m,names):
+            d = [(retrieve_name(g,x),retrieve_name(g,y)) for x,y in m.items() if retrieve_name(g,x) in names]
+            return tuple(sorted(d))
+
+        symmetries = sorted(set([retrieve_mapping(g,m,self.variable_names) for m in compute_internal_morphisms(g)]))
+        return symmetries
+
+    def analyze_symmetries(self,deps):
+        # scaffold: set of nodes, edges, nodetypes and edgetypes
+        # full pattern: scaffold + constraints
+        
+        # first compute symmetry of scaffold 
+        # if scaffold has multiple symmetries, compute symmetry of scaffold+constraints
+        g,node_dict,counter = build_simple_graph(self)
+        scaffold_symmetries = self.compute_symmetries(g)
+        if len(scaffold_symmetries)>1: 
+            g,node_dict = build_graph_for_symmetry_analysis(g,node_dict,counter,deps,self._tree)
+            final_symmetries = self.compute_symmetries(g)
+        else:
+            final_symmetries = scaffold_symmetries
+        return [{x:y for x,y in m} for m in final_symmetries]
+        
+    def analyze_orbits(self):
+        orbits = {x:set([x]) for x in self.variable_names}
+        for m in self._symmetries:
+            for x,y in m.items():
+                if x!=y:
+                    orbits[x].add(y)
+                    orbits[y].add(x)
+        return set([frozenset(orbits[x]) for x in self.variable_names])
+       
     def print_graph(self,G):
         for node in G.nodes(data=True):
             print(node)
@@ -169,45 +221,15 @@ class Pattern(DictLike):
         return
 
     def finalize(self,builtin_hook=BuiltinHook(),pattern_hook=PatternHook()): 
-        # validate connectivity
+        
         self.validate_pattern_connectivity()
+        self._tree = self.parse_constraints()
+        deps = self.validate_dependencies(builtin_hook,pattern_hook)
+        self._symmetries = self.analyze_symmetries(deps)
+        self._orbits = self.analyze_orbits()
 
-        # compute symmetries
-        g,node_dict,counter = build_simple_graph(self)
-        variable_names = [x.id for x in self]
-        
-        def retrieve_name(g,x):
-            return g.nodes[x]['data'].name
-
-        def retrieve_mapping(g,m,names):
-            d = [(retrieve_name(g,x),retrieve_name(g,y)) for x,y in m.items() if retrieve_name(g,x) in names]
-            return tuple(sorted(d))
-
-        candidate_symmetries = sorted([retrieve_mapping(g,m,variable_names) for m in self.compute_internal_morphisms(g)])
-        final_symmetries = candidate_symmetries
-        
-        # parse constraints & use in computing symmetries
-        self.parse_constraints()
-        if self._tree is not None:
-            deps = self.validate_dependencies(builtin_hook,pattern_hook)
-            g,node_dict = build_graph_for_symmetry_analysis(g,node_dict,counter,deps,self._tree)
-            # here, using variable_names in retrieve_mapping filters symmetries on non-variable nodes that may be present in the constraints
-            candidate_symmetries2 = sorted(set([retrieve_mapping(g,m,variable_names) for m in self.compute_internal_morphisms(g)]))
-            if len(candidate_symmetries2) < len(candidate_symmetries):
-                final_symmetries = candidate_symmetries2
-        self._symmetries = [{x:y for x,y in m} for m in final_symmetries]
-
-        # compute orbits
-        orbits = {x:set([x]) for x in variable_names}
-        for m in self._symmetries:
-            for x,y in m.items():
-                if x!=y:
-                    orbits[x].add(y)
-                    orbits[y].add(x)
-        self._orbits = set([frozenset(orbits[x]) for x in variable_names])
-        
-        # todo: serialize constraints into lambda expressions
-        
+        print(self._symmetries)
+        print(self._orbits)
         return self
 
     def remove_node(self,node):
