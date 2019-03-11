@@ -28,6 +28,8 @@ class GenericError(Exception):
             msg = ''
         super(GenericError, self).__init__(msg)
 
+class ReteNetworkError(GenericError):pass
+
 class IndexerError(GenericError):pass
 class SlicerError(GenericError):pass
 

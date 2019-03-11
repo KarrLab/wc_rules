@@ -5,7 +5,9 @@ from .expr2 import parser, Serializer, prune_tree, simplify_tree, BuiltinHook, P
 from operator import lt,le,eq,ne,ge,gt
 import random
 import pprint
-from collections import deque,defaultdict
+from collections import deque,defaultdict,namedtuple
+
+from .rete2 import *
 
 import networkx.algorithms.isomorphism as iso
 
@@ -221,12 +223,12 @@ class Pattern(DictLike):
         return
 
     def finalize(self,builtin_hook=BuiltinHook(),pattern_hook=PatternHook()): 
-        
         self.validate_pattern_connectivity()
         self._tree = self.parse_constraints()
         deps = self.validate_dependencies(builtin_hook,pattern_hook)
         self._symmetries = self.analyze_symmetries(deps)
         self._orbits = self.analyze_orbits()
+        self.build_rete_subset()
         return self
 
     def remove_node(self,node):
@@ -264,6 +266,60 @@ class Pattern(DictLike):
             new_node = nodemap[node.id]
             node.duplicate_relations(new_node,nodemap)
         return new_pattern
+
+    def build_rete_subset(self):
+        # node_vectors
+        # {node.id: (class,class,class,Entity)}
+
+        ClassTuple = namedtuple("ClassTuple",["cls"])
+        classtuples = dict()
+        for node in self:
+            path = deque()
+            for _class in node.__class__.__mro__:
+                if _class.__name__ == 'BaseClass':
+                    break
+                path.appendleft(ClassTuple(cls=_class))
+            classtuples[node.id] = path
+        
+        # edge_vectors
+        # {(node1.id,node2.id): [(class1,attr1,attr2,class2),...]}, where attr1 < attr2
+        edgetuples = dict()
+        visited = set()
+        EdgeTuple = namedtuple("EdgeTuple",["cls1","attr1","attr2","cls2"])
+        for node in self:
+            for attr in node.get_nonempty_related_attributes():
+                related_attr = node.get_related_name(attr)
+                neighbours = node.listget(attr)
+                for n in neighbours:
+                    if n in visited:
+                        continue
+
+                    if attr < related_attr:
+                        tup = EdgeTuple(cls1=node.__class__,attr1=attr,attr2=related_attr,cls2=n.__class__)
+                        key = (node.id,n.id)
+                    else:
+                        tup = EdgeTuple(cls1=n.__class__,attr1=related_attr,attr2=attr,cls2=node.__class__)
+                        key = (n.id,node.id)
+                    if key not in edgetuples:
+                        edgetuples[key] = deque()
+                    edgetuples[key].append(tup)
+            visited.add(node)        
+        
+
+        # a merge tuple is (lhs,rhs,remap), where remap = sorted( (index,(lhs_index,rhs_index)), ...) )
+        # here, lhs and rhs are either ClassTuples or MergeTuples
+        MergeTuple = namedtuple("MergeTuple",['lhs','rhs','remap'])
+        mergetuples = dict()
+        
+
+
+
+
+        pprint.pprint(classtuples)
+        pprint.pprint(edgetuples)
+
+        return self
+
     """
     def generate_queries_TYPE(self):
         ''' Generates tuples ('type',_class) '''
