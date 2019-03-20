@@ -314,6 +314,7 @@ def add_new_node(graph,counter,category,name,matching=''):
 def build_simple_graph(dictlike):
     
     G = networkx.DiGraph()
+    #print(G.edges(data=True))
     counter = NodeCounter()
     node_dict = defaultdict(dict)
         
@@ -325,20 +326,33 @@ def build_simple_graph(dictlike):
     # add edges
     visited = set()
     for node in dictlike:
-        attrs = node.get_nonempty_related_attributes()
-        for attr in attrs:
-            related_attr = node.get_related_name(attr)
-            for node2 in node.listget(attr):        
-                if node2 not in visited:
-                    id1 = node_dict['variables'][node.id]
-                    id2 = node_dict['variables'][node2.id]
-                    G.add_edge(id1,id2,label=attr)
-                    G.add_edge(id2,id1,label=related_attr)
-        visited.add(node)
+        if node not in visited:
+            attrs = node.get_nonempty_related_attributes()
+            for attr in attrs:
+                related_attr = node.get_related_name(attr)
+                for node2 in node.listget(attr):        
+                    if node2 not in visited:
+                        id1 = node_dict['variables'][node.id]
+                        id2 = node_dict['variables'][node2.id]
+                        if id2 not in G.neighbors(id1):
+                            G.add_edge(id1,id2,label=set())
+                            G.add_edge(id2,id1,label=set())
+                        G[id1][id2]['label'].add((attr,related_attr,))
+                        G[id2][id1]['label'].add((related_attr,attr,))
+                        #if attr <= related_attr:
+                        #    G.add_edge(id1,id2,label=(attr,related_attr))
+                        #if attr >= related_attr:
+                        #    G.add_edge(id2,id1,label=(related_attr,attr))
+                        #print(G.edges(data=True))
+                    # note the edge gets added twice if attr==related_attr
+                    # this is okay!
+            
 
     return G,node_dict,counter
 
 def build_graph_for_symmetry_analysis(G,node_dict,counter,deps,tree):
+    if deps is None:
+        return (G,node_dict)
     for dep in deps:
         # add assigned variables
         for var in dep['assignments']:

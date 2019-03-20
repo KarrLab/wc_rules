@@ -118,15 +118,18 @@ class Pattern(DictLike):
     def validate_pattern_connectivity(self):
         # ensure there are no neighbour nodes not in pattern
         examined = set()
+        self._adjacent = dict()
         
         start_node = self[min(self._dict.keys())]
         stack = deque([start_node])        
         while len(stack)>0:
             current_node = stack.popleft()
+            all_related = current_node.listget_all_related()
+            self._adjacent[current_node.id] = [x.id for x in self]
             assert current_node in self
-            neighbours = set(current_node.listget_all_related()) - examined
+            next_neighbours = set(all_related) - examined
             examined.add(current_node)
-            stack.extendleft(list(neighbours))
+            stack.extendleft(list(next_neighbours))
 
         # ensure pattern is fully connected
         assert sorted([x.id for x in examined])==sorted(self.keys())
@@ -147,15 +150,18 @@ class Pattern(DictLike):
     def parse_constraints(self):
         # direct constraints: attribute constraints set directly, e.g., A('a',ph=True)
         # self._constraints: constraints set using add_constraints(), e.g., A('a').add_constraints('''a.ph==True''')
+        direct_constraints = self.process_direct_constraints()
+        additional_constraints = self._constraints
+        
+        if direct_constraints == '' and additional_constraints == '':
+            return None
+
         total_constraint_string = "\n".join([self.process_direct_constraints(),self._constraints])
-        tree = None
-        if total_constraint_string  != '':
-            tree = parser.parse(total_constraint_string)
-            tree = prune_tree(tree)
-            modified = True
-            # simplify constraints as much as possible
-            while modified:
-                tree,modified = simplify_tree(tree)
+        tree = parser.parse(total_constraint_string)
+        tree = prune_tree(tree)
+        modified = True
+        while modified:
+            tree,modified = simplify_tree(tree)
         return tree
 
     def compute_internal_morphisms(self,G):
@@ -170,15 +176,18 @@ class Pattern(DictLike):
         return morphisms
 
     def compute_symmetries(self,g):
-        
+                
         def nodematch(x,y):
-            return x['data'].category == y['data'].category and x['data'].matching == y['data'].matching
+            v = x['data'].category == y['data'].category and x['data'].matching == y['data'].matching
+            return v
 
         def edgematch(x,y):
-            return x['label'] == y['label']
+            v =  x['label'] == y['label']
+            return v
         
         def compute_internal_morphisms(g):
-            return list(iso.DiGraphMatcher(g,g,nodematch,edgematch).isomorphisms_iter())
+            v = list(iso.DiGraphMatcher(g,g,nodematch,edgematch).isomorphisms_iter())
+            return v
 
         def retrieve_name(g,x):
             return g.nodes[x]['data'].name
@@ -198,6 +207,7 @@ class Pattern(DictLike):
         # if scaffold has multiple symmetries, compute symmetry of scaffold+constraints
         g,node_dict,counter = build_simple_graph(self)
         scaffold_symmetries = self.compute_symmetries(g)
+        #print(scaffold_symmetries)
         if len(scaffold_symmetries)>1: 
             g,node_dict = build_graph_for_symmetry_analysis(g,node_dict,counter,deps,self._tree)
             final_symmetries = self.compute_symmetries(g)
@@ -228,7 +238,9 @@ class Pattern(DictLike):
         deps = self.validate_dependencies(builtin_hook,pattern_hook)
         self._symmetries = self.analyze_symmetries(deps)
         self._orbits = self.analyze_orbits()
-        self.build_rete_subset()
+        #print(self._symmetries)
+        #
+        #self.build_rete_subset()
         return self
 
     def remove_node(self,node):
@@ -268,9 +280,7 @@ class Pattern(DictLike):
         return new_pattern
 
     def build_rete_subset(self):
-        # node_vectors
-        # {node.id: (class,class,class,Entity)}
-
+        # classtuples {node.id: (class,class,class,Entity)}
         ClassTuple = namedtuple("ClassTuple",["cls"])
         classtuples = dict()
         for node in self:
@@ -281,19 +291,20 @@ class Pattern(DictLike):
                 path.appendleft(ClassTuple(cls=_class))
             classtuples[node.id] = path
         
-        # edge_vectors
-        # {(node1.id,node2.id): [(class1,attr1,attr2,class2),...]}, where attr1 < attr2
+        # edgetuples {(node1.id,node2.id): [(class1,attr1,attr2,class2),...]}
+        # where attr1 < attr2
         edgetuples = dict()
         visited = set()
         EdgeTuple = namedtuple("EdgeTuple",["cls1","attr1","attr2","cls2"])
-        for node in self:
+        start = self[sorted([x.id for x in self])[0]]
+        next_node = deque([start])
+        while next_node:
+            node = next_node.popleft()
             for attr in node.get_nonempty_related_attributes():
                 related_attr = node.get_related_name(attr)
-                neighbours = node.listget(attr)
+                neighbours = [n for n in node.listget(attr) if n not in visited]
+                next_node.extend(neighbours)
                 for n in neighbours:
-                    if n in visited:
-                        continue
-
                     if attr < related_attr:
                         tup = EdgeTuple(cls1=node.__class__,attr1=attr,attr2=related_attr,cls2=n.__class__)
                         key = (node.id,n.id)
@@ -306,17 +317,25 @@ class Pattern(DictLike):
             visited.add(node)        
         
 
-        # a merge tuple is (lhs,rhs,remap), where remap = sorted( (index,(lhs_index,rhs_index)), ...) )
-        # here, lhs and rhs are either ClassTuples or MergeTuples
+        # mergetuples (lhs,rhs,remap), where remap = sorted( (index,(lhs_index,rhs_index)), ...) )
+        # here, lhs and rhs are either EdgeTuples or MergeTuples
         MergeTuple = namedtuple("MergeTuple",['lhs','rhs','remap'])
-        mergetuples = dict()
-        
+        mergetuples = set()
+
+        # initial merging: 
+        sortfunc = lambda x: (len(x[1]),*x[0])
+        mergedict = dict()
+        for (idx1,idx2),edgedeque in sorted(edgetuples.items(),key=sortfunc):
+            pass
+            #print(idx1)
+            #print(idx2)
+            #print(edgedeque)
 
 
 
 
-        pprint.pprint(classtuples)
-        pprint.pprint(edgetuples)
+        #pprint.pprint(classtuples)
+        #pprint.pprint(edgetuples)
 
         return self
 
