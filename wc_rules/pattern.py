@@ -367,7 +367,34 @@ class Pattern(DictLike):
         # edgetuples {(node1.id,node2.id): [(class1,attr1,attr2,class2),...]}, where attr1 < attr2
         classtuples = self.get_classtuple_paths()
         edgetuples = self.get_edgetuples()
-        merged = self.get_optimal_merge_path(edgetuples,verbose=False)
+        unmerged = self.get_optimal_merge_path(edgetuples,verbose=False)
+        merged = deque()
+
+        mergetuples = deque()
+        left_index = dict()
+        right_index = dict()
+        print(unmerged)
+        while unmerged:
+            candidate = unmerged.popleft()
+            if len(merged)==0:
+                print(candidate)
+                merged.append(candidate)
+                continue
+            edges_with_candidate_at_index_0 = [e for (n1,n2),elist in edgetuples.items() for e in elist if n1==candidate and n2 in merged]
+            edges_with_candidate_at_index_3 = [e for (n1,n2),elist in edgetuples.items() for e in elist if n2==candidate and n1 in merged]
+            edges = edges_with_candidate_at_index_0 + edges_with_candidate_at_index_0
+            print(candidate)
+            print(edges)
+            print()
+
+            merged.append(candidate)
+
+        #for (n1,n2),elist in edgetuples.items():
+        #    print(n1,n2,elist)
+            
+
+
+
 
         #pprint.pprint(merged)
         MergeTuple = namedtuple("MergeTuple",['lhs','rhs','remap'])
