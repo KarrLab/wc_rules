@@ -367,38 +367,48 @@ class Pattern(DictLike):
         # edgetuples {(node1.id,node2.id): [(class1,attr1,attr2,class2),...]}, where attr1 < attr2
         classtuples = self.get_classtuple_paths()
         edgetuples = self.get_edgetuples()
-        unmerged = self.get_optimal_merge_path(edgetuples,verbose=False)
-        merged = deque()
+        mergepath = self.get_optimal_merge_path(edgetuples,verbose=False)
 
+        def edgetuple_iter(edges,path):
+            i=-1
+            for n1,n2 in sorted(edges.keys(),key=lambda x: (min(path.index(x[0]),path.index(x[1])),x[0],x[1]) ):
+                for e in sorted(edges[(n1,n2)]):
+                    i += 1
+                    yield (i,n1,n2,e)
+
+        MergeTuple = namedtuple("MergeTuple",['lhs','rhs','lhs_remap','rhs_remap'])
+        
+
+        def remap_func(nodes,path):
+            return tuple([(path.index(x),nodes.index(x)) for x in nodes])
+
+        def str_edge(e): return (e.cls1.__name__,e.attr1,e.attr2,e.cls2.__name__)
+
+        # populate mergetuples
+        # Assumptions: rete-node that processes an edge (class(n1),attr1,attr2,class(n2)) will store/output a token (n1,n2)
         mergetuples = deque()
-        left_index = dict()
-        right_index = dict()
-        print(unmerged)
-        while unmerged:
-            candidate = unmerged.popleft()
-            if len(merged)==0:
-                print(candidate)
-                merged.append(candidate)
+        for i,n1,n2,e in edgetuple_iter(edgetuples,mergepath):
+            if i==0:
+                # set seed lhs
+                lhs = e
+                lhs_nodes = [n1,n2]
+                lhs_remap = remap_func(lhs_nodes,mergepath)
+                #print(str_edge(e),lhs_nodes,[])
                 continue
-            edges_with_candidate_at_index_0 = [e for (n1,n2),elist in edgetuples.items() for e in elist if n1==candidate and n2 in merged]
-            edges_with_candidate_at_index_3 = [e for (n1,n2),elist in edgetuples.items() for e in elist if n2==candidate and n1 in merged]
-            edges = edges_with_candidate_at_index_0 + edges_with_candidate_at_index_0
-            print(candidate)
-            print(edges)
-            print()
 
-            merged.append(candidate)
-
-        #for (n1,n2),elist in edgetuples.items():
-        #    print(n1,n2,elist)
+            # set every successive rhs
+            rhs = e
+            rhs_nodes = [n1,n2]
+            rhs_remap = remap_func(rhs_nodes,mergepath)
+            #print(str_edge(e),lhs_nodes,rhs_nodes)
             
+            new_merge_node = MergeTuple(lhs=lhs,rhs=rhs,lhs_remap=lhs_remap,rhs_remap=rhs_remap)
+            mergetuples.append(new_merge_node)
 
+            lhs = new_merge_node
+            lhs_nodes = [x for x in mergepath if x in lhs_nodes or x in rhs_nodes]
+            lhs_remap = remap_func(lhs_nodes,mergepath)
 
-
-
-        #pprint.pprint(merged)
-        MergeTuple = namedtuple("MergeTuple",['lhs','rhs','remap'])
-        mergetuples = set()
         return self
 
     """
