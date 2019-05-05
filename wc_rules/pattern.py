@@ -373,19 +373,27 @@ class Pattern(DictLike):
         def remap_func(nodes,path):
             return tuple([(path.index(x),nodes.index(x)) for x in nodes])
 
-        def str_edge(e): return (e.cls1.__name__,e.attr1,e.attr2,e.cls2.__name__)
-
+        def get_symmetry_maps(path,orbits):
+            sorted_indices = sorted(sorted(mergepath.index(x) for x in orbit) for orbit in orbits)
+            remaps = []
+            for index_list in sorted_indices:
+                if len(index_list)==0: continue
+                remaps.extend([(i,index_list[0]) for i in index_list[1:]])
+            return remaps
+            # outputs a list of tuples [(2,1),(3,1)] etc. which indicates which symmetries to check for
+                
         # populate mergetuples
         # Assumptions: rete-node that processes an edge (class(n1),attr1,attr2,class(n2)) will store/output a token (n1,n2)
-        MergeTuple = namedtuple("MergeTuple",['lhs','rhs','lhs_remap','rhs_remap','token_length'])
+        MergeTuple = namedtuple("MergeTuple",['lhs','rhs','lhs_remap','rhs_remap','token_length','prune_symmetries'])
         mergetuples = deque()
+        
+        symmetry_maps = get_symmetry_maps(mergepath,self._orbits)
         for i,n1,n2,e in edgetuple_iter(edgetuples,mergepath):
             if i==0:
                 # set seed lhs
                 lhs = e
                 lhs_nodes = [n1,n2]
                 lhs_remap = remap_func(lhs_nodes,mergepath)
-                #print(str_edge(e),lhs_nodes,[])
                 continue
 
             # set every successive rhs
@@ -393,24 +401,46 @@ class Pattern(DictLike):
             rhs_nodes = [n1,n2]
             rhs_remap = remap_func(rhs_nodes,mergepath)
             merged_nodes = [x for x in mergepath if x in lhs_nodes or x in rhs_nodes]
-            #print(str_edge(e),lhs_nodes,rhs_nodes)
-            
-            new_merge_node = MergeTuple(lhs=lhs,rhs=rhs,lhs_remap=lhs_remap,rhs_remap=rhs_remap,token_length=len(merged_nodes))
+            newly_added_nodes = [x for x in rhs_nodes if x not in lhs_nodes]
+            prune_symmetries = tuple([(x,y) for x,y in symmetry_maps if mergepath[x] in newly_added_nodes])
+
+            new_merge_node = MergeTuple(
+                    lhs=lhs,
+                    rhs=rhs,
+                    lhs_remap=lhs_remap,
+                    rhs_remap=rhs_remap,
+                    token_length=len(merged_nodes),
+                    prune_symmetries=prune_symmetries
+                    )
             mergetuples.append(new_merge_node)
 
             lhs = new_merge_node
             lhs_nodes = merged_nodes
             lhs_remap = remap_func(lhs_nodes,mergepath)
+        if len(mergetuples)==0:
+            # this addresses the case where there is only one edge in the pattern
+            new_merge_node = MergeTuple(
+                lhs=lhs,
+                rhs=None,
+                lhs_remap=lhs_remap,
+                rhs_remap=None,
+                token_length=2,
+                prune_symmetries=tuple(symmetry_maps)
+                )
+            mergetuples.append(new_merge_node)
         return mergetuples
 
     def build_rete_subset(self):
         # classtuples {node.id: (class,class,class,Entity)}
         # edgetuples {(node1.id,node2.id): [(class1,attr1,attr2,class2),...]}, where attr1 < attr2
-        # mergetuples [MergeTuple(lhs=merge/edge tuple,rhs=...,lhs_remap=[(path.index,lhs_nodes.index),rhs_remap=...])]
+        # mergetuples [ MergeTuple(lhs=merge/edge tuple,rhs=...,
+        #                          lhs_remap=[(path.index,lhs_nodes.index),rhs_remap=...],
+        #                          token_length=n,prune_symmetries=[...]) ]
         classtuples = self.get_classtuple_paths()
         edgetuples = self.get_edgetuples()
         mergepath = self.get_optimal_merge_path(edgetuples,verbose=False)
         mergetuples = self.build_merge_sequence(edgetuples,mergepath)
+
         return self
 
     """
