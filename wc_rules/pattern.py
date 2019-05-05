@@ -362,22 +362,13 @@ class Pattern(DictLike):
                 print()
         return merged
 
-    def build_rete_subset(self):
-        # classtuples {node.id: (class,class,class,Entity)}
-        # edgetuples {(node1.id,node2.id): [(class1,attr1,attr2,class2),...]}, where attr1 < attr2
-        classtuples = self.get_classtuple_paths()
-        edgetuples = self.get_edgetuples()
-        mergepath = self.get_optimal_merge_path(edgetuples,verbose=False)
-
+    def build_merge_sequence(self,edgetuples,mergepath):
         def edgetuple_iter(edges,path):
             i=-1
             for n1,n2 in sorted(edges.keys(),key=lambda x: (min(path.index(x[0]),path.index(x[1])),x[0],x[1]) ):
                 for e in sorted(edges[(n1,n2)]):
                     i += 1
                     yield (i,n1,n2,e)
-
-        MergeTuple = namedtuple("MergeTuple",['lhs','rhs','lhs_remap','rhs_remap'])
-        
 
         def remap_func(nodes,path):
             return tuple([(path.index(x),nodes.index(x)) for x in nodes])
@@ -386,6 +377,7 @@ class Pattern(DictLike):
 
         # populate mergetuples
         # Assumptions: rete-node that processes an edge (class(n1),attr1,attr2,class(n2)) will store/output a token (n1,n2)
+        MergeTuple = namedtuple("MergeTuple",['lhs','rhs','lhs_remap','rhs_remap','token_length'])
         mergetuples = deque()
         for i,n1,n2,e in edgetuple_iter(edgetuples,mergepath):
             if i==0:
@@ -400,15 +392,25 @@ class Pattern(DictLike):
             rhs = e
             rhs_nodes = [n1,n2]
             rhs_remap = remap_func(rhs_nodes,mergepath)
+            merged_nodes = [x for x in mergepath if x in lhs_nodes or x in rhs_nodes]
             #print(str_edge(e),lhs_nodes,rhs_nodes)
             
-            new_merge_node = MergeTuple(lhs=lhs,rhs=rhs,lhs_remap=lhs_remap,rhs_remap=rhs_remap)
+            new_merge_node = MergeTuple(lhs=lhs,rhs=rhs,lhs_remap=lhs_remap,rhs_remap=rhs_remap,token_length=len(merged_nodes))
             mergetuples.append(new_merge_node)
 
             lhs = new_merge_node
-            lhs_nodes = [x for x in mergepath if x in lhs_nodes or x in rhs_nodes]
+            lhs_nodes = merged_nodes
             lhs_remap = remap_func(lhs_nodes,mergepath)
+        return mergetuples
 
+    def build_rete_subset(self):
+        # classtuples {node.id: (class,class,class,Entity)}
+        # edgetuples {(node1.id,node2.id): [(class1,attr1,attr2,class2),...]}, where attr1 < attr2
+        # mergetuples [MergeTuple(lhs=merge/edge tuple,rhs=...,lhs_remap=[(path.index,lhs_nodes.index),rhs_remap=...])]
+        classtuples = self.get_classtuple_paths()
+        edgetuples = self.get_edgetuples()
+        mergepath = self.get_optimal_merge_path(edgetuples,verbose=False)
+        mergetuples = self.build_merge_sequence(edgetuples,mergepath)
         return self
 
     """
