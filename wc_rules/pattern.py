@@ -7,6 +7,7 @@ import random
 import pprint
 from collections import deque,defaultdict,namedtuple
 from itertools import combinations_with_replacement,combinations
+import inspect
 
 from .rete2 import *
 
@@ -229,8 +230,8 @@ class Pattern(DictLike):
     def finalize(self,builtin_hook=BuiltinHook(),pattern_hook=PatternHook()): 
         self.validate_pattern_connectivity()
         self._tree = self.parse_constraints()
-        deps = self.validate_dependencies(builtin_hook,pattern_hook)
-        self._symmetries = self.analyze_symmetries(deps)
+        self._deps = self.validate_dependencies(builtin_hook,pattern_hook)
+        self._symmetries = self.analyze_symmetries(self._deps)
         self._orbits = self.analyze_orbits()
         self.build_rete_subset()
         return self
@@ -417,7 +418,7 @@ class Pattern(DictLike):
             lhs = new_merge_node
             lhs_nodes = merged_nodes
             lhs_remap = remap_func(lhs_nodes,mergepath)
-        if len(mergetuples)==0:
+        if len(mergetuples)==0 and len(edgetuples)==1:
             # this addresses the case where there is only one edge in the pattern
             new_merge_node = MergeTuple(
                 lhs=lhs,
@@ -430,17 +431,38 @@ class Pattern(DictLike):
             mergetuples.append(new_merge_node)
         return mergetuples
 
+    def get_attrtuples(self):
+        simple_attribute_calls = set.union(*[dep['attributes'] for dep in self._deps]) 
+        dynamic_attribute_calls = set()
+        varmethods_to_check = set.union(*[dep['varmethods'] for dep in self._deps])
+        for var,varmethod,kws in varmethods_to_check:
+            arguments = self[var].get_dynamic_methods()[varmethod]._args
+            attrs = self[var].get_literal_attrs()
+            attrdeps = [x for x in arguments if x in attrs]
+            for x in attrdeps:
+                dynamic_attribute_calls.add( (var,x,))
+        AttrTuple = namedtuple("AttrTuple",['cls','attr'])
+        attrtuples = dict()
+        for var,attr in (simple_attribute_calls|dynamic_attribute_calls):
+            _cls =self[var].__class__
+            if var not in attrtuples:
+                attrtuples[var] = deque()
+            a = AttrTuple(cls=_cls,attr=attr)
+            attrtuples[var].append(a)
+        return attrtuples
+        
     def build_rete_subset(self):
         # classtuples {node.id: (class,class,class,Entity)}
         # edgetuples {(node1.id,node2.id): [(class1,attr1,attr2,class2),...]}, where attr1 < attr2
         # mergetuples [ MergeTuple(lhs=merge/edge tuple,rhs=...,
         #                          lhs_remap=[(path.index,lhs_nodes.index),rhs_remap=...],
         #                          token_length=n,prune_symmetries=[...]) ]
+        # attrtuples { node.id: (class,var) }
         classtuples = self.get_classtuple_paths()
         edgetuples = self.get_edgetuples()
         mergepath = self.get_optimal_merge_path(edgetuples,verbose=False)
         mergetuples = self.build_merge_sequence(edgetuples,mergepath)
-
+        attrtuples = self.get_attrtuples()
         return self
 
     """
