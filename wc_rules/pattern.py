@@ -363,7 +363,7 @@ class Pattern(DictLike):
                 print()
         return merged
 
-    def build_merge_sequence(self,edgetuples,mergepath):
+    def build_merge_sequence(self,classtuples,edgetuples,mergepath):
         def edgetuple_iter(edges,path):
             i=-1
             for n1,n2 in sorted(edges.keys(),key=lambda x: (min(path.index(x[0]),path.index(x[1])),x[0],x[1]) ):
@@ -429,6 +429,11 @@ class Pattern(DictLike):
                 prune_symmetries=tuple(symmetry_maps)
                 )
             mergetuples.append(new_merge_node)
+        if len(mergetuples)==0 and len(edgetuples)==0:
+            # addresses the case where the pattern has exactly one node and no edges
+            var = list(classtuples.keys())[0]
+            new_merge_node = MergeTuple(lhs=classtuples[var][-1],lhs_remap=[(0,0)],rhs=None,rhs_remap=None,token_length=1,prune_symmetries=None)
+            mergetuples.append(new_merge_node)
         return mergetuples
 
     def get_attrtuples(self):
@@ -461,10 +466,11 @@ class Pattern(DictLike):
         classtuples = self.get_classtuple_paths()
         edgetuples = self.get_edgetuples()
         mergepath = self.get_optimal_merge_path(edgetuples,verbose=False)
-        mergetuples = self.build_merge_sequence(edgetuples,mergepath)
+        mergetuples = self.build_merge_sequence(classtuples,edgetuples,mergepath)
         attrtuples = self.get_attrtuples()
         return self
 
+        
     """
     def generate_queries_TYPE(self):
         ''' Generates tuples ('type',_class) '''
