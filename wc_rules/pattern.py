@@ -233,9 +233,8 @@ class Pattern(DictLike):
         self._deps = self.validate_dependencies(builtin_hook,pattern_hook)
         self._symmetries = self.analyze_symmetries(self._deps)
         self._orbits = self.analyze_orbits()
-        self.build_rete_subset()
         return self
-
+        
     def remove_node(self,node):
         return self.remove(node)
 
@@ -432,7 +431,7 @@ class Pattern(DictLike):
         if len(mergetuples)==0 and len(edgetuples)==0:
             # addresses the case where the pattern has exactly one node and no edges
             var = list(classtuples.keys())[0]
-            new_merge_node = MergeTuple(lhs=classtuples[var][-1],lhs_remap=[(0,0)],rhs=None,rhs_remap=None,token_length=1,prune_symmetries=None)
+            new_merge_node = MergeTuple(lhs=classtuples[var][-1],lhs_remap=tuple([(0,0)]),rhs=None,rhs_remap=None,token_length=1,prune_symmetries=None)
             mergetuples.append(new_merge_node)
         return mergetuples
 
@@ -454,7 +453,24 @@ class Pattern(DictLike):
                 attrtuples[var] = deque()
             a = AttrTuple(cls=_cls,attr=attr)
             attrtuples[var].append(a)
+
+        for var in attrtuples:
+            attrtuples[var] = tuple(sorted(attrtuples[var]))
+            
         return attrtuples
+
+    def make_patterntuple(self,mergepath,scaffold,attrtuples):
+        PatternTuple = namedtuple("PatternTuple",['name','variables','scaffold','attrs','patterndefs'])
+        name = self.id
+        variables = tuple(mergepath)
+        scaffold = scaffold
+        attrs = set() # (class,attr): (path.index,path.index)
+        for var,attrtuple_deq in attrtuples.items():
+            for attrtuple in attrtuple_deq:
+                attrs.add((attrtuple,mergepath.index(var)))
+        attrs = tuple(sorted(attrs))
+        patternvarpairs = tuple(sorted(set.union(*[dep['patternvarpairs'] for dep in self._deps])))
+        return PatternTuple(name=name,variables=variables,scaffold=scaffold,attrs=attrs,patterndefs=patternvarpairs)
         
     def build_rete_subset(self):
         # classtuples {node.id: (class,class,class,Entity)}
@@ -468,7 +484,8 @@ class Pattern(DictLike):
         mergepath = self.get_optimal_merge_path(edgetuples,verbose=False)
         mergetuples = self.build_merge_sequence(classtuples,edgetuples,mergepath)
         attrtuples = self.get_attrtuples()
-        return self
+        patterntuple = self.make_patterntuple(mergepath,mergetuples[-1],attrtuples)
+        return (classtuples,edgetuples,mergetuples,attrtuples,patterntuple)
 
         
     """
