@@ -200,25 +200,29 @@ class Pattern(DictLike):
         symmetries = sorted(set([retrieve_mapping(g,m,self.variable_names) for m in compute_internal_morphisms(g)]))
         return symmetries
 
-    def analyze_symmetries(self,deps):
+    def compute_orbits(self,symmetries):
+        orbits = {x:set([x]) for x in self.variable_names}
+        for m in symmetries:
+            for x,y in m:
+                if x!=y:
+                    orbits[x].add(y)
+                    orbits[y].add(x) 
+        return set([frozenset(orbits[x]) for x in self.variable_names])
+
+    def analyze_symmetries(self):
         # scaffold: set of nodes, edges, nodetypes and edgetypes
         # full pattern: scaffold + constraints
         
         g,node_dict,counter = build_simple_graph(self)
-        g,node_dict = build_graph_for_symmetry_analysis(g,node_dict,counter,deps,self._tree)
+        scaffold_symmetries = self.compute_symmetries(g)
+
+        g,node_dict = build_graph_for_symmetry_analysis(g,node_dict,counter,self._deps,self._tree)
         final_symmetries = self.compute_symmetries(g)
-        return [{x:y for x,y in m} for m in final_symmetries]
-        
-        
+        return scaffold_symmetries,final_symmetries
+            
     def analyze_orbits(self):
-        orbits = {x:set([x]) for x in self.variable_names}
-        for m in self._symmetries:
-            for x,y in m.items():
-                if x!=y:
-                    orbits[x].add(y)
-                    orbits[y].add(x)
-        return set([frozenset(orbits[x]) for x in self.variable_names])
-       
+        return self.compute_orbits(self._scaffold_symmetries), self.compute_orbits(self._final_symmetries)
+        
     def print_graph(self,G):
         for node in G.nodes(data=True):
             print(node)
@@ -231,8 +235,8 @@ class Pattern(DictLike):
         self.validate_pattern_connectivity()
         self._tree = self.parse_constraints()
         self._deps = self.validate_dependencies(builtin_hook,pattern_hook)
-        self._symmetries = self.analyze_symmetries(self._deps)
-        self._orbits = self.analyze_orbits()
+        self._scaffold_symmetries, self._final_symmetries = self.analyze_symmetries()
+        self._scaffold_orbits, self._final_orbits = self.analyze_orbits()
         return self
         
     def remove_node(self,node):
@@ -315,52 +319,82 @@ class Pattern(DictLike):
 
     def get_optimal_merge_path(self,edgetuples,verbose=False):
         # return a sequence of nodes
-        def populate_connectivity_scores(varnames,edgetuples):
-            n = len(varnames)
-            connectivity_scores = defaultdict(lambda:dict(zip(varnames,[0]*n)))
-            for (idx1,idx2),edgedeque in edgetuples.items():
-                connectivity_scores[idx1][idx2] += len(edgedeque)
-                connectivity_scores[idx2][idx1] += len(edgedeque)
-            return connectivity_scores
+        
 
-        def populate_symmetry_scores(varnames,orbits):
-            n = len(varnames)
-            symmetry_scores = defaultdict(lambda:dict(zip(varnames,[1]*n)))
+        def get_total_connectivity_scores(edgetuples):
+            total_connectivity = defaultdict(int)
+            for (idx1,idx2), edgedeque in edgetuples.items():
+                total_connectivity[idx1] += len(edgedeque)
+                total_connectivity[idx2] += len(edgedeque)
+            return total_connectivity
+
+        def get_local_connectivity_scores(edgetuples):
+            local_connectivity = defaultdict(lambda:defaultdict(int))
+            for (idx1,idx2), edgedeque in edgetuples.items():
+                local_connectivity[idx1][idx2] += len(edgedeque)
+                local_connectivity[idx2][idx1] += len(edgedeque)
+            return local_connectivity
+
+        def get_total_symmetry_scores(orbits):
+            total_symmetry_score = defaultdict(int)
             for orbit in orbits:
-                for i,j in combinations(orbit,2):
-                    symmetry_scores[i][j] += 1
-                    symmetry_scores[j][i] += 1
-            return symmetry_scores
+                for idx in orbit:
+                    total_symmetry_score[idx] = len(orbit)
+            return total_symmetry_score
 
-        def sum_over(x,scores,somelist):
-            if len(somelist)==0:
-                return 0
-            return sum([scores[x][y] for y in somelist])
+        def get_local_symmetry_scores(orbits):
+            local_symmetry_score = defaultdict(lambda:defaultdict(int))
+            for orbit in orbits:
+                for idx1,idx2 in combinations(orbit,2):
+                    local_symmetry_score[idx1][idx2] += 1
+                    local_symmetry_score[idx2][idx1] += 1
+            return local_symmetry_score
 
-        def score_function(x,merged,connectivity_scores,symmetry_scores):
-            s1 = sum_over(x,connectivity_scores,merged)
-            s2 = sum_over(x,symmetry_scores,merged)
-            s3 = x
-            return (-s1*s2,s3)
-    
+        def sum_over(x,local_scores,merged):
+            return sum([local_scores[y] for y in merged])
 
-        connectivity_scores = populate_connectivity_scores(self.variable_names,edgetuples)
-        symmetry_scores = populate_symmetry_scores(self.variable_names,self._orbits)        
+        def score_fn(x,scoredict,merged):
+            # low local symmetry
+            # low total symmetry
+            # high local connectivity
+            # high total connectivity
+            # low label
 
+            s1 = sum_over(x,scoredict['local_symmetry'][x],merged)
+            s2 = scoredict['total_symmetry'][x]
+            s3 = - sum_over(x,scoredict['local_connectivity'][x],merged)
+            s4 = - scoredict['total_connectivity'][x]
+            return (s1,s2,s3,s4,x)
+
+
+        # compute local and total scores 
+        scoredict = {
+        'total_connectivity': get_total_connectivity_scores(edgetuples),
+        'local_connectivity': get_local_connectivity_scores(edgetuples),
+        'total_symmetry': get_total_symmetry_scores(self._scaffold_orbits),
+        'local_symmetry': get_local_symmetry_scores(self._scaffold_orbits),
+        }
+
+        #pprint.pprint(scoredict)
+
+        # merging happens here
         unmerged = self.variable_names.copy()
         merged = deque()
         score = dict()
-            
+        
         while unmerged:
-            score = {x:score_function(x,merged,connectivity_scores,symmetry_scores) for x in unmerged}
+            score = {x:score_fn(x,scoredict,merged) for x in unmerged}
+            if verbose:
+                pprint.pprint(score)
             unmerged = sorted(unmerged,key=lambda x:score[x])
             merged.append(unmerged.pop(0))
             if verbose:
-                pprint.pprint(score)
                 print('Unmerged: ', unmerged)
                 print('Merged: ', merged)
                 print()
+        
         return merged
+        
 
     def build_merge_sequence(self,classtuples,edgetuples,mergepath):
         def edgetuple_iter(edges,path):
@@ -373,6 +407,7 @@ class Pattern(DictLike):
         def remap_func(nodes,path):
             return tuple([(path.index(x),nodes.index(x)) for x in nodes])
 
+        '''
         def get_symmetry_maps(path,orbits):
             sorted_indices = sorted(sorted(mergepath.index(x) for x in orbit) for orbit in orbits)
             remaps = []
@@ -381,13 +416,21 @@ class Pattern(DictLike):
                 remaps.extend([(i,index_list[0]) for i in index_list[1:]])
             return remaps
             # outputs a list of tuples [(2,1),(3,1)] etc. which indicates which symmetries to check for
-                
+        '''        
         # populate mergetuples
         # Assumptions: rete-node that processes an edge (class(n1),attr1,attr2,class(n2)) will store/output a token (n1,n2)
         MergeTuple = namedtuple("MergeTuple",['lhs','rhs','lhs_remap','rhs_remap','token_length','prune_symmetries'])
         mergetuples = deque()
         
-        symmetry_maps = get_symmetry_maps(mergepath,self._orbits)
+        #symmetry_maps = get_symmetry_maps(mergepath,self._orbits)
+        #### TODO
+        #### From original symmetry maps into
+        #### those that remap the NEW nodes from RHS
+        #### store them as remap vecs on individual merge nodes
+        #### TODO
+        #### Segregate original symmetry maps into 
+        #### ones preserved by final pattern vs not preserved
+        #### now, add generators for the broken symmetries onto the scaffold
         for i,n1,n2,e in edgetuple_iter(edgetuples,mergepath):
             if i==0:
                 # set seed lhs
@@ -402,7 +445,7 @@ class Pattern(DictLike):
             rhs_remap = remap_func(rhs_nodes,mergepath)
             merged_nodes = [x for x in mergepath if x in lhs_nodes or x in rhs_nodes]
             newly_added_nodes = [x for x in rhs_nodes if x not in lhs_nodes]
-            prune_symmetries = tuple([(x,y) for x,y in symmetry_maps if mergepath[x] in newly_added_nodes])
+            #prune_symmetries = tuple([(x,y) for x,y in symmetry_maps if mergepath[x] in newly_added_nodes])
 
             new_merge_node = MergeTuple(
                     lhs=lhs,
@@ -410,7 +453,7 @@ class Pattern(DictLike):
                     lhs_remap=lhs_remap,
                     rhs_remap=rhs_remap,
                     token_length=len(merged_nodes),
-                    prune_symmetries=prune_symmetries
+                    prune_symmetries=None
                     )
             mergetuples.append(new_merge_node)
 
@@ -425,7 +468,7 @@ class Pattern(DictLike):
                 lhs_remap=lhs_remap,
                 rhs_remap=None,
                 token_length=2,
-                prune_symmetries=tuple(symmetry_maps)
+                prune_symmetries=None
                 )
             mergetuples.append(new_merge_node)
         if len(mergetuples)==0 and len(edgetuples)==0:
@@ -458,19 +501,6 @@ class Pattern(DictLike):
             attrtuples[var] = tuple(sorted(attrtuples[var]))
             
         return attrtuples
-
-    def make_patterntuple(self,mergepath,scaffold,attrtuples):
-        PatternTuple = namedtuple("PatternTuple",['name','variables','scaffold','attrs','patterndefs'])
-        name = self.id
-        variables = tuple(mergepath)
-        scaffold = scaffold
-        attrs = set() # (class,attr): (path.index,path.index)
-        for var,attrtuple_deq in attrtuples.items():
-            for attrtuple in attrtuple_deq:
-                attrs.add((attrtuple,mergepath.index(var)))
-        attrs = tuple(sorted(attrs))
-        patternvarpairs = tuple(sorted(set.union(*[dep['patternvarpairs'] for dep in self._deps])))
-        return PatternTuple(name=name,variables=variables,scaffold=scaffold,attrs=attrs,patterndefs=patternvarpairs)
         
     def build_rete_subset(self):
         # classtuples {node.id: (class,class,class,Entity)}
@@ -483,9 +513,25 @@ class Pattern(DictLike):
         edgetuples = self.get_edgetuples()
         mergepath = self.get_optimal_merge_path(edgetuples,verbose=False)
         mergetuples = self.build_merge_sequence(classtuples,edgetuples,mergepath)
-        attrtuples = self.get_attrtuples()
-        patterntuple = self.make_patterntuple(mergepath,mergetuples[-1],attrtuples)
-        return (classtuples,edgetuples,mergetuples,attrtuples,patterntuple)
+        #attrtuples = self.get_attrtuples()
+
+        # get set of classtuples 
+        classtuple_set = set()
+        [classtuple_set.update(x) for x in classtuples.values()]
+        #pprint.pprint(classtuple_set)
+        
+        # get set of edgetuples
+        edgetuple_set = set()
+        [edgetuple_set.update(x) for x in edgetuples.values()]
+        #pprint.pprint(edgetuple_set)
+        
+        #for m in mergetuples:
+        #    print(m)
+        
+        return self
+
+        #patterntuple = self.make_patterntuple(mergepath,mergetuples[-1],attrtuples)
+        #return (classtuples,edgetuples,mergetuples,attrtuples,patterntuple)
 
         
     """
