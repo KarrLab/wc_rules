@@ -320,7 +320,6 @@ class Pattern(DictLike):
     def get_optimal_merge_path(self,edgetuples,verbose=False):
         # return a sequence of nodes
         
-
         def get_total_connectivity_scores(edgetuples):
             total_connectivity = defaultdict(int)
             for (idx1,idx2), edgedeque in edgetuples.items():
@@ -407,75 +406,120 @@ class Pattern(DictLike):
         def remap_func(nodes,path):
             return tuple([(path.index(x),nodes.index(x)) for x in nodes])
 
-        '''
-        def get_symmetry_maps(path,orbits):
-            sorted_indices = sorted(sorted(mergepath.index(x) for x in orbit) for orbit in orbits)
-            remaps = []
-            for index_list in sorted_indices:
-                if len(index_list)==0: continue
-                remaps.extend([(i,index_list[0]) for i in index_list[1:]])
-            return remaps
-            # outputs a list of tuples [(2,1),(3,1)] etc. which indicates which symmetries to check for
-        '''        
+        def redo_symmetries(symmetries,path):
+            return [tuple(sorted([(path.index(x),path.index(y)) for x,y in sym])) for sym in symmetries]
+            
+        def compute_subgraph_symmetries_by_level(symmetries,path):
+            # an n-level is a subgraph  composed from first n nodes of path
+            # redo symmetries from labels to mergepath indices            
+            syms = [tuple(sorted([(path.index(x),path.index(y)) for x,y in sym])) for sym in symmetries]
+            leveldict = {}
+            for level in range(0,len(path)):
+                level_syms = set()
+                for sym in syms:
+                    # subset of symmetry map for that level 
+                    current_sym = [(x,y) for x,y in sym if x<=level and y<=level]
+                    # is the subset itself a symmetry (size = level+1)
+                    if len(current_sym) == level + 1:
+                        level_syms.add(tuple(current_sym))
+                leveldict[level] = sorted(level_syms)[1:]
+                # here, we skip the identity symmetry
+
+            # now we go through leveldict and remove symmetries whose subsets
+            # were already checked at a previous level
+            for level in range(0,len(path)-1):
+                current_level_syms = leveldict[level]
+                #print(current_level_syms)
+                for level2 in range(level+1,len(path)):
+                    higher_level_syms = leveldict[level2]
+                    new_syms = []
+                    for sym in higher_level_syms:
+                        exclude = False
+                        for old_sym in current_level_syms:
+                            if old_sym==sym[:level+1]:
+                                exclude = True
+                        if not exclude:
+                            new_syms.append(sym)
+                    if len(new_syms) < len(higher_level_syms):
+                        leveldict[level2] = new_syms
+            return leveldict
+        
+        # computing subgraph symmetries to be checked
+        # {level: [sym,]}
+        leveldict = compute_subgraph_symmetries_by_level(self._scaffold_symmetries,mergepath)
+        #pprint.pprint(leveldict)
+
         # populate mergetuples
         # Assumptions: rete-node that processes an edge (class(n1),attr1,attr2,class(n2)) will store/output a token (n1,n2)
-        MergeTuple = namedtuple("MergeTuple",['lhs','rhs','lhs_remap','rhs_remap','token_length','prune_symmetries'])
+        MergeTuple = namedtuple("MergeTuple",[
+            'lhs','rhs',
+            'lhs_remap','rhs_remap',
+            'token_length',
+            'check_symmetries'])
         mergetuples = deque()
-        
-        #symmetry_maps = get_symmetry_maps(mergepath,self._orbits)
-        #### TODO
-        #### From original symmetry maps into
-        #### those that remap the NEW nodes from RHS
-        #### store them as remap vecs on individual merge nodes
-        #### TODO
-        #### Segregate original symmetry maps into 
-        #### ones preserved by final pattern vs not preserved
-        #### now, add generators for the broken symmetries onto the scaffold
-        for i,n1,n2,e in edgetuple_iter(edgetuples,mergepath):
-            if i==0:
-                # set seed lhs
-                lhs = e
-                lhs_nodes = [n1,n2]
-                lhs_remap = remap_func(lhs_nodes,mergepath)
-                continue
-
-            # set every successive rhs
-            rhs = e
-            rhs_nodes = [n1,n2]
-            rhs_remap = remap_func(rhs_nodes,mergepath)
-            merged_nodes = [x for x in mergepath if x in lhs_nodes or x in rhs_nodes]
-            newly_added_nodes = [x for x in rhs_nodes if x not in lhs_nodes]
-            #prune_symmetries = tuple([(x,y) for x,y in symmetry_maps if mergepath[x] in newly_added_nodes])
-
+        if len(edgetuples)==0:
+            # case 1: pattern has only one node
+            var = list(classtuples.keys())[0]
             new_merge_node = MergeTuple(
-                    lhs=lhs,
-                    rhs=rhs,
-                    lhs_remap=lhs_remap,
-                    rhs_remap=rhs_remap,
-                    token_length=len(merged_nodes),
-                    prune_symmetries=None
-                    )
+                lhs=classtuples[var][-1],
+                lhs_remap=tuple([(0,0)]),
+                rhs=None,
+                rhs_remap=None,
+                token_length=1,
+                check_symmetries = None
+                )
             mergetuples.append(new_merge_node)
-
-            lhs = new_merge_node
-            lhs_nodes = merged_nodes
-            lhs_remap = remap_func(lhs_nodes,mergepath)
-        if len(mergetuples)==0 and len(edgetuples)==1:
-            # this addresses the case where there is only one edge in the pattern
+        elif len(edgetuples)==1:
+            # case 2: pattern has only one edge
             new_merge_node = MergeTuple(
-                lhs=lhs,
+                lhs=edgetuples[0],
                 rhs=None,
                 lhs_remap=lhs_remap,
                 rhs_remap=None,
                 token_length=2,
-                prune_symmetries=None
+                check_symmetries = None
                 )
             mergetuples.append(new_merge_node)
-        if len(mergetuples)==0 and len(edgetuples)==0:
-            # addresses the case where the pattern has exactly one node and no edges
-            var = list(classtuples.keys())[0]
-            new_merge_node = MergeTuple(lhs=classtuples[var][-1],lhs_remap=tuple([(0,0)]),rhs=None,rhs_remap=None,token_length=1,prune_symmetries=None)
-            mergetuples.append(new_merge_node)
+        else:
+            # case 3: pattern has more than one edge
+            for i,n1,n2,e in edgetuple_iter(edgetuples,mergepath):
+                if i==0:
+                    # set seed lhs
+                    lhs = e
+                    lhs_nodes = [n1,n2]
+                    lhs_remap = remap_func(lhs_nodes,mergepath)
+                    continue
+
+                # set every successive rhs
+                rhs = e
+                rhs_nodes = [n1,n2]
+                rhs_remap = remap_func(rhs_nodes,mergepath)
+                merged_nodes = [x for x in mergepath if x in lhs_nodes or x in rhs_nodes]
+                newly_added_nodes = [x for x in rhs_nodes if x not in lhs_nodes]
+                if len(newly_added_nodes) > 0 and len(merged_nodes)>1 and leveldict[len(merged_nodes)-1] != []:
+                    check_symmetries = tuple(leveldict[len(merged_nodes)-1])
+                else:
+                    check_symmetries = None
+                
+                new_merge_node = MergeTuple(
+                        lhs=lhs,
+                        rhs=rhs,
+                        lhs_remap=lhs_remap,
+                        rhs_remap=rhs_remap,
+                        token_length=len(merged_nodes),
+                        check_symmetries=check_symmetries
+                        )
+                mergetuples.append(new_merge_node)
+
+                lhs = new_merge_node
+                lhs_nodes = merged_nodes
+                lhs_remap = remap_func(lhs_nodes,mergepath)
+        
+        #### TODO
+        #### Segregate original symmetry maps into 
+        #### ones preserved by final pattern vs not preserved
+        #### now, add generators for the broken symmetries onto the scaffold
+        
         return mergetuples
 
     def get_attrtuples(self):

@@ -26,8 +26,8 @@ class TestPattern(unittest.TestCase):
 		p1 = Pattern('p1').add_node(a)
 		p1.finalize()
 
-		self.assertTrue(len(p1._symmetries),1)
-		self.assertTrue(len(p1._orbits),2)
+		self.assertTrue(len(p1._final_symmetries),1)
+		self.assertTrue(len(p1._final_orbits),2)
 		
 	def test_symmetry_01(self):
 
@@ -39,9 +39,9 @@ class TestPattern(unittest.TestCase):
 		p1 = Pattern('p1').add_node(a)
 		p1.finalize()
 
-		self.assertTrue(len(p1._symmetries),2)
-		self.assertTrue(len(p1._orbits),1)
-		self.assertTrue(p1._orbits.pop(),frozenset({'a','b'}))
+		self.assertTrue(len(p1._final_symmetries),2)
+		self.assertTrue(len(p1._final_orbits),1)
+		self.assertTrue(p1._final_orbits.pop(),frozenset({'a','b'}))
 
 		# same thing x1,x2,x3
 		a = M1('a')
@@ -54,9 +54,9 @@ class TestPattern(unittest.TestCase):
 		p1 = Pattern('p1').add_node(a)
 		p1.finalize()
 
-		self.assertTrue(len(p1._symmetries),3)
-		self.assertTrue(len(p1._orbits),1)
-		self.assertTrue(p1._orbits.pop(),frozenset({'a','b','c'}))
+		self.assertTrue(len(p1._final_symmetries),3)
+		self.assertTrue(len(p1._final_orbits),1)
+		self.assertTrue(p1._final_orbits.pop(),frozenset({'a','b','c'}))
 
 	def test_symmetry_02(self):
 		# symmetry of x1<-attr1,attr2->x2<-attr1,attr2->x1
@@ -69,9 +69,9 @@ class TestPattern(unittest.TestCase):
 		p1 = Pattern('p1').add_node(a)
 		p1.finalize()
 
-		self.assertTrue(len(p1._symmetries),2)
-		self.assertTrue(len(p1._orbits),1)
-		self.assertTrue(p1._orbits.pop(),frozenset({'a','b'}))	
+		self.assertTrue(len(p1._final_symmetries),2)
+		self.assertTrue(len(p1._final_orbits),1)
+		self.assertTrue(p1._final_orbits.pop(),frozenset({'a','b'}))	
 
 		# same thing x1,x2,x3
 		a = M2('a')
@@ -84,8 +84,8 @@ class TestPattern(unittest.TestCase):
 		p1 = Pattern('p1').add_node(a)
 		p1.finalize()
 
-		self.assertTrue(len(p1._symmetries),1)
-		self.assertTrue(len(p1._orbits),3)
+		self.assertTrue(len(p1._final_symmetries),1)
+		self.assertTrue(len(p1._final_orbits),3)
 
 		a.targets.add(b)
 		a.targets.add(c)
@@ -94,9 +94,9 @@ class TestPattern(unittest.TestCase):
 		p1 = Pattern('p1').add_node(a)
 		p1.finalize()
 
-		self.assertTrue(len(p1._symmetries),3)
-		self.assertTrue(len(p1._orbits),1)
-		self.assertTrue(p1._orbits.pop(),frozenset({'a','b','c'}))
+		self.assertTrue(len(p1._final_symmetries),3)
+		self.assertTrue(len(p1._final_orbits),1)
+		self.assertTrue(p1._final_orbits.pop(),frozenset({'a','b','c'}))
 
 	def test_symmetry_03(self):
 		# simple site-bond
@@ -106,8 +106,8 @@ class TestPattern(unittest.TestCase):
 		p1 = Pattern('p1').add_node(a)
 		p1.finalize()
 
-		self.assertTrue(len(p1._symmetries),1)
-		self.assertTrue(len(p1._orbits),2)
+		self.assertTrue(len(p1._final_symmetries),1)
+		self.assertTrue(len(p1._final_orbits),2)
 
 		# simple site-bond-site
 		a = Site('site')
@@ -117,5 +117,5 @@ class TestPattern(unittest.TestCase):
 		p1 = Pattern('p1').add_node(a)
 		p1.finalize()
 
-		self.assertTrue(len(p1._symmetries),2)
-		self.assertTrue(len(p1._orbits),2)
+		self.assertTrue(len(p1._final_symmetries),2)
+		self.assertTrue(len(p1._final_orbits),2)
