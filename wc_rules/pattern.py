@@ -22,6 +22,7 @@ class Pattern(DictLike):
         self._tree = None
         self._symmetries = None
         self._orbits = None
+        self._mergepath = None
         #self._nodes = dict()
         if nodelist:
             for node in nodelist:
@@ -317,6 +318,7 @@ class Pattern(DictLike):
             visited.add(node)
         return edgetuples
 
+    
     def get_optimal_merge_path(self,edgetuples,verbose=False):
         # return a sequence of nodes
         
@@ -393,7 +395,9 @@ class Pattern(DictLike):
                 print()
         
         return merged
-        
+    
+    def maps_to_indices(self,maps,path):
+        return [tuple(sorted([(path.index(x),path.index(y)) for x,y in m])) for m in maps]    
 
     def build_merge_sequence(self,classtuples,edgetuples,mergepath):
         def edgetuple_iter(edges,path):
@@ -405,14 +409,12 @@ class Pattern(DictLike):
 
         def remap_func(nodes,path):
             return tuple([(path.index(x),nodes.index(x)) for x in nodes])
-
-        def redo_symmetries(symmetries,path):
-            return [tuple(sorted([(path.index(x),path.index(y)) for x,y in sym])) for sym in symmetries]
-            
+   
         def compute_subgraph_symmetries_by_level(symmetries,path):
             # an n-level is a subgraph  composed from first n nodes of path
-            # redo symmetries from labels to mergepath indices            
-            syms = [tuple(sorted([(path.index(x),path.index(y)) for x,y in sym])) for sym in symmetries]
+            # redo symmetries from labels to mergepath indices
+            syms = self.maps_to_indices(symmetries,path)            
+            #syms = [tuple(sorted([(path.index(x),path.index(y)) for x,y in sym])) for sym in symmetries]
             leveldict = {}
             for level in range(0,len(path)):
                 level_syms = set()
@@ -442,12 +444,51 @@ class Pattern(DictLike):
                             new_syms.append(sym)
                     if len(new_syms) < len(higher_level_syms):
                         leveldict[level2] = new_syms
+
+            # re-add the identity symmetry
+            for level in range(0,len(path)):
+                identity = tuple([(x,x) for x in range(0,level+1)])
+                leveldict[level] = [identity] + leveldict[level]
             return leveldict
         
+        
+        def compute_broken_symmetries(scaffold_symmetries,final_symmetries):
+            
+            def convolve_maps(map2,map1):
+            # apply map2 to map1 
+                map2_dict = dict(map2)
+                return tuple(sorted([ (x,map2_dict[y]) for x,y in map1 ]))
+            
+            break_symmetry_check = len(scaffold_symmetries) > len(final_symmetries)
+            stack = None
+            if break_symmetry_check:
+                if len(final_symmetries)==1:
+                    stack = self.maps_to_indices(scaffold_symmetries,mergepath)
+                else:
+                    preserved = self.maps_to_indices(final_symmetries,mergepath)
+                    final = self.maps_to_indices(scaffold_symmetries,mergepath)
+                    not_preserved = deque([x for x in final if x not in preserved])
+                    length = len(final_symmetries[0])
+                    stack = [tuple([(x,x) for x in range(0,length)])]
+                    while not_preserved:
+                        current = not_preserved.popleft()
+                        convolved = [convolve_maps(x,current) for x in preserved]
+                        for elem in [x for x in convolved if x in not_preserved]:
+                            not_preserved.remove(elem)
+                        stack.append(current)
+            return stack
+                    
+                
+
+
         # computing subgraph symmetries to be checked
         # {level: [sym,]}
         leveldict = compute_subgraph_symmetries_by_level(self._scaffold_symmetries,mergepath)
         #pprint.pprint(leveldict)
+
+        # are symmetries being broken?
+        break_symmetries = compute_broken_symmetries(self._scaffold_symmetries,self._final_symmetries)
+        #pprint.pprint(break_symmetries)
 
         # populate mergetuples
         # Assumptions: rete-node that processes an edge (class(n1),attr1,attr2,class(n2)) will store/output a token (n1,n2)
@@ -455,7 +496,8 @@ class Pattern(DictLike):
             'lhs','rhs',
             'lhs_remap','rhs_remap',
             'token_length',
-            'check_symmetries'])
+            'check_symmetries',
+            'break_symmetries'])
         mergetuples = deque()
         if len(edgetuples)==0:
             # case 1: pattern has only one node
@@ -466,7 +508,8 @@ class Pattern(DictLike):
                 rhs=None,
                 rhs_remap=None,
                 token_length=1,
-                check_symmetries = None
+                check_symmetries = None,
+                break_symmetries = None
                 )
             mergetuples.append(new_merge_node)
         elif len(edgetuples)==1:
@@ -477,12 +520,15 @@ class Pattern(DictLike):
                 lhs_remap=lhs_remap,
                 rhs_remap=None,
                 token_length=2,
-                check_symmetries = None
+                check_symmetries = None,
+                break_symmetries = None
                 )
             mergetuples.append(new_merge_node)
         else:
             # case 3: pattern has more than one edge
+            edges_added = 0
             for i,n1,n2,e in edgetuple_iter(edgetuples,mergepath):
+                edges_added += 1
                 if i==0:
                     # set seed lhs
                     lhs = e
@@ -501,19 +547,25 @@ class Pattern(DictLike):
                 else:
                     check_symmetries = None
                 
+                b = None
+                if edges_added == len(edgetuples):
+                    b = break_symmetries
                 new_merge_node = MergeTuple(
                         lhs=lhs,
                         rhs=rhs,
                         lhs_remap=lhs_remap,
                         rhs_remap=rhs_remap,
                         token_length=len(merged_nodes),
-                        check_symmetries=check_symmetries
+                        check_symmetries=check_symmetries,
+                        break_symmetries = b
                         )
                 mergetuples.append(new_merge_node)
 
                 lhs = new_merge_node
                 lhs_nodes = merged_nodes
                 lhs_remap = remap_func(lhs_nodes,mergepath)
+
+            # breaking symmetries
         
         #### TODO
         #### Segregate original symmetry maps into 
@@ -555,8 +607,8 @@ class Pattern(DictLike):
         # attrtuples { node.id: (class,var) }
         classtuples = self.get_classtuple_paths()
         edgetuples = self.get_edgetuples()
-        mergepath = self.get_optimal_merge_path(edgetuples,verbose=False)
-        mergetuples = self.build_merge_sequence(classtuples,edgetuples,mergepath)
+        self._mergepath = self.get_optimal_merge_path(edgetuples,verbose=False)
+        mergetuples = self.build_merge_sequence(classtuples,edgetuples,self._mergepath)
         #attrtuples = self.get_attrtuples()
 
         # get set of classtuples 
