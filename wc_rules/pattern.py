@@ -582,7 +582,6 @@ class Pattern(DictLike):
 
         for var in attrtuples:
             attrtuples[var] = tuple(sorted(attrtuples[var]))
-
         return attrtuples
         
     def build_rete_subset(self):
@@ -598,11 +597,16 @@ class Pattern(DictLike):
         mergetuples = self.build_merge_sequence(classtuples,edgetuples,self._mergepath)
         attrtuples = self.get_attrtuples()
 
+
         # building internal dependency graph for pattern
         attr_dependency_table = defaultdict(list)
-        for var,attrtuples in attrtuples.items():
-            for attrtuple in attrtuples:
+        for var,attrs in attrtuples.items():
+            for attrtuple in attrs:
                 bisect.insort(attr_dependency_table[attrtuple],self._mergepath.index(var))
+
+        
+        for attrtuple in attr_dependency_table.keys():
+            attr_dependency_table[attrtuple] = tuple(attr_dependency_table[attrtuple])
 
         classtuple_set = set()
         [classtuple_set.update(x) for x in classtuples.values()]
@@ -613,7 +617,25 @@ class Pattern(DictLike):
         attrtuple_set = set()
         [attrtuple_set.update(x) for x in attrtuples.values()]        
 
-        # now build final pattern
+        # now build final patterntuple
+        # name - pattern name
+        # scaffold - mergetuple
+        # attrs dict {attrtuple: (indices to check)}
+        # incoming patterns dict {patname: remap_indices}
+        PatternTuple = namedtuple('PatternTuple',['name',
+            'scaffold','attrs','incoming_patterns'
+            ])
+
+        new_pat = PatternTuple(
+            name = self.id,
+            scaffold = mergetuples[-1],
+            attrs = tuple([tuple(x) for x in attr_dependency_table.items()]),
+            incoming_patterns = None
+            )
+
+        pprint.pprint(new_pat)
+
+
         
         return self
 
