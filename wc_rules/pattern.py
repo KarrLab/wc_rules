@@ -284,20 +284,21 @@ class Pattern(DictLike):
     def get_classtuple_paths(self):
         # classtuples {node.id: (class,class,class,Entity)}
         ClassTuple = namedtuple("ClassTuple",["cls"])
-        classtuples = dict()
+        classtuples, classtuple_set = dict(),set()
         for node in self:
             path = deque()
             for _class in node.__class__.__mro__:
                 if _class.__name__ == 'BaseClass':
                     break
                 path.appendleft(ClassTuple(cls=_class))
+                classtuple_set.add(ClassTuple(cls=_class))
             classtuples[node.id] = path
-        return classtuples
+        return classtuples,classtuple_set
 
     def get_edgetuples(self):
         # edgetuples {(node1.id,node2.id): [(class1,attr1,attr2,class2),...]}
         # where attr1 < attr2
-        edgetuples = dict()
+        edgetuples,edgetuple_set = dict(),set()
         visited = set()
         EdgeTuple = namedtuple("EdgeTuple",["cls1","attr1","attr2","cls2"])
         start = self[sorted([x.id for x in self])[0]]
@@ -316,87 +317,9 @@ class Pattern(DictLike):
                     if key not in edgetuples:
                         edgetuples[key] = deque()
                     edgetuples[key].append(tup)
-        return edgetuples
-
-    '''
-    def get_optimal_merge_path(self,edgetuples,verbose=False):
-        # return a sequence of nodes
-        
-        def get_total_connectivity_scores(edgetuples):
-            total_connectivity = defaultdict(int)
-            for (idx1,idx2), edgedeque in edgetuples.items():
-                total_connectivity[idx1] += len(edgedeque)
-                total_connectivity[idx2] += len(edgedeque)
-            return total_connectivity
-
-        def get_local_connectivity_scores(edgetuples):
-            local_connectivity = defaultdict(lambda:defaultdict(int))
-            for (idx1,idx2), edgedeque in edgetuples.items():
-                local_connectivity[idx1][idx2] += len(edgedeque)
-                local_connectivity[idx2][idx1] += len(edgedeque)
-            return local_connectivity
-
-        def get_total_symmetry_scores(orbits):
-            total_symmetry_score = defaultdict(int)
-            for orbit in orbits:
-                for idx in orbit:
-                    total_symmetry_score[idx] = len(orbit)
-            return total_symmetry_score
-
-        def get_local_symmetry_scores(orbits):
-            local_symmetry_score = defaultdict(lambda:defaultdict(int))
-            for orbit in orbits:
-                for idx1,idx2 in combinations(orbit,2):
-                    local_symmetry_score[idx1][idx2] += 1
-                    local_symmetry_score[idx2][idx1] += 1
-            return local_symmetry_score
-
-        def sum_over(x,local_scores,merged):
-            return sum([local_scores[y] for y in merged])
-
-        def score_fn(x,scoredict,merged):
-            # low local symmetry
-            # low total symmetry
-            # high local connectivity
-            # high total connectivity
-            # low label
-
-            s1 = sum_over(x,scoredict['local_symmetry'][x],merged)
-            s2 = scoredict['total_symmetry'][x]
-            s3 = - sum_over(x,scoredict['local_connectivity'][x],merged)
-            s4 = - scoredict['total_connectivity'][x]
-            return (s1,s2,s3,s4,x)
-
-
-        # compute local and total scores 
-        scoredict = {
-        'total_connectivity': get_total_connectivity_scores(edgetuples),
-        'local_connectivity': get_local_connectivity_scores(edgetuples),
-        'total_symmetry': get_total_symmetry_scores(self._scaffold_orbits),
-        'local_symmetry': get_local_symmetry_scores(self._scaffold_orbits),
-        }
-
-        #pprint.pprint(scoredict)
-
-        # merging happens here
-        unmerged = self.variable_names.copy()
-        merged = deque()
-        score = dict()
-        
-        while unmerged:
-            score = {x:score_fn(x,scoredict,merged) for x in unmerged}
-            if verbose:
-                pprint.pprint(score)
-            unmerged = sorted(unmerged,key=lambda x:score[x])
-            merged.append(unmerged.pop(0))
-            if verbose:
-                print('Unmerged: ', unmerged)
-                print('Merged: ', merged)
-                print()
-        
-        return merged
-    '''
-        
+                    edgetuple_set.add(tup)
+        return edgetuples,edgetuple_set
+  
     def sort_orbits(self,edgetuples):
         orbits = self._scaffold_orbits
         # orbits sorted by external degree, internal degree, orbit size, node class, and
@@ -533,7 +456,7 @@ class Pattern(DictLike):
             (n1,n2),e = [x for x in edgetuples.items()][0]
             new_merge_node = MergeTuple(
                     lhs=e,
-                    lhs_remap=tuple(enumerate([n1,n2])),
+                    lhs_remap=tuple(enumerate([mergepath.index(n1),mergepath.index(n2)])),
                     rhs=None,
                     rhs_remap=None,
                     token_length=2,
@@ -578,6 +501,8 @@ class Pattern(DictLike):
 
     def get_attrtuples(self):
         attrtuples = dict()
+        attrtuple_set = set()
+        AttrTuple = namedtuple("AttrTuple",['cls','attr'])
         if self._deps is not None:
             simple_attribute_calls = set.union(*[dep['attributes'] for dep in self._deps]) 
             dynamic_attribute_calls = set()
@@ -588,7 +513,7 @@ class Pattern(DictLike):
                 attrdeps = [x for x in arguments if x in attrs]
                 for x in attrdeps:
                     dynamic_attribute_calls.add( (var,x,))
-            AttrTuple = namedtuple("AttrTuple",['cls','attr'])
+            
             attrtuples = dict()
             for var,attr in (simple_attribute_calls|dynamic_attribute_calls):
                 _cls =self[var].__class__
@@ -596,10 +521,11 @@ class Pattern(DictLike):
                     attrtuples[var] = deque()
                 a = AttrTuple(cls=_cls,attr=attr)
                 attrtuples[var].append(a)
+                attrtuple_set.add(a)
 
             for var in attrtuples:
                 attrtuples[var] = tuple(sorted(attrtuples[var]))
-        return attrtuples
+        return attrtuples,attrtuple_set
 
     def build_rete_subset(self):
         # classtuples {node.id: (class,class,class,Entity)}
@@ -608,8 +534,8 @@ class Pattern(DictLike):
         #                          lhs_remap=[(path.index,lhs_nodes.index),rhs_remap=...],
         #                          token_length=n,prune_symmetries=[...]) ]
         # attrtuples { node.id: (class,var) }
-        classtuples = self.get_classtuple_paths()
-        edgetuples = self.get_edgetuples()
+        classtuples, classtuple_set = self.get_classtuple_paths()
+        edgetuples, edgetuple_set = self.get_edgetuples()
         sorted_orbits = self.sort_orbits(edgetuples)
         self._mergepath = self.get_merge_path(sorted_orbits,edgetuples)
         if len(self.variable_names)==1:
@@ -622,7 +548,7 @@ class Pattern(DictLike):
         def maps_to_indices(maps,path):
             return [tuple(sorted([(path.index(x),path.index(y)) for x,y in m])) for m in maps]
         
-        attrtuples = self.get_attrtuples()
+        attrtuples, attrtuple_set = self.get_attrtuples()
 
         # building internal dependency graph for pattern
         attr_dependency_table = defaultdict(list)
@@ -630,28 +556,17 @@ class Pattern(DictLike):
             for attrtuple in attrs:
                 bisect.insort(attr_dependency_table[attrtuple],self._mergepath.index(var))
 
-        
         for attrtuple in attr_dependency_table.keys():
             attr_dependency_table[attrtuple] = tuple(attr_dependency_table[attrtuple])
         attr_relations = [tuple(x) for x in attr_dependency_table.items()]
-
-        classtuple_set = set()
-        [classtuple_set.update(x) for x in classtuples.values()]
-        
-        edgetuple_set = set()
-        [edgetuple_set.update(x) for x in edgetuples.values()]
-
-        attrtuple_set = set()
-        [attrtuple_set.update(x) for x in attrtuples.values()]        
 
         # now build final patterntuple
         # name - pattern name
         # scaffold - mergetuple
         # attrs dict {attrtuple: (indices to check)}
-        # incoming patterns dict {patname: remap_indices}
-
+        
         # if number of nodes==1
-        # scaffold = ClassTuple node
+        # scaffold = MergeTuple(ClassTuple) node
         # if number of edges==1
         # scaffold = MergeTuple(EdgeTuple) node 
         # if number of edges > 1
@@ -671,109 +586,16 @@ class Pattern(DictLike):
             patterns = None
             )
 
-        print(new_pat.scaffold)
-        print(new_pat.scaffold_symmetry_breaks)
-        print(new_pat.internal_symmetries)
-        print(new_pat.attrs)
-        return self
-
-        #patterntuple = self.make_patterntuple(mergepath,mergetuples[-1],attrtuples)
-        #return (classtuples,edgetuples,mergetuples,attrtuples,patterntuple)
-
+        # Pattern relations cannot be specified here.
+        # They have to be analyzed globally
         
-    """
-    def generate_queries_TYPE(self):
-        ''' Generates tuples ('type',_class) '''
-        type_queries = {}
-        for node in self:
-            idx = node.id
-            type_queries[idx] = []
-            list_of_classes = node.__class__.__mro__
-            for _class in reversed(list_of_classes):
-                if _class.__name__ in ['BaseClass','Model','object']:
-                    continue
-                v = ['type',_class]
-                type_queries[idx].append(tuple(v))
-        return type_queries
+        return {'name':self.id,
+        'classes':classtuple_set, 
+        'edges':edgetuple_set, 
+        'attrs':attrtuple_set, 
+        'merges':mergetuples, 
+        'pattern': new_pat}
 
-    def generate_queries_ATTR(self):
-        ''' Generates tuples ('attr',attrname,operator,value) '''
-        attr_queries = {}
-        for node in self:
-            idx = node.id
-            attr_queries[idx] = []
-            for attr in sorted(node.get_nonempty_scalar_attributes()):
-                if attr=='id': continue
-                v = ['attr',attr,eq,getattr(node,attr)]
-                attr_queries[idx].append(tuple(v))
-
-        op_str = ['<','<=','==','!=','>=','>']
-        ops = [lt,le,eq,ne,ge,gt]
-        op_dict = dict(zip(op_str,ops))
-        if 'bool_cmp' in self._expressions:
-            for entry in self._expressions['bool_cmp']:
-                var,attr,op,value = entry
-                v = ['attr',attr,op_dict[op],value]
-                attr_queries[var].append(tuple(v))
-        if 'num_cmp' in self._expressions:
-            for entry in self._expressions['num_cmp']:
-                var,attr,op,value = entry
-                v = ['attr',attr,op_dict[op],value]
-                attr_queries[var].append(tuple(v))
-        return attr_queries
-
-    def generate_queries_REL(self):
-        ''' Generate tuples ('rel',idx1,attrname,related_attrname,idx2) '''
-        rel_queries = []
-        already_encountered = []
-        for node in self:
-            idx = node.id
-            for attr in node.get_nonempty_related_attributes():
-                for node2 in node.listget(attr):
-                    if node2.id in already_encountered:
-                        continue
-                    related_attr = node.__class__.Meta.local_attributes[attr].related_name
-                    # this is alphabetical comparison 'ab' < 'b'
-                    if attr <= related_attr:
-                            v = ['rel',idx,attr,related_attr,node2.id]
-                    else:
-                        v = ['rel',node2.id,related_attr,attr,idx]
-                    rel_queries.append(tuple(v))
-            already_encountered.append(idx)
-
-        if 'is_empty' in self._expressions:
-            varlist = self._expressions['is_empty']
-            for (var,attr) in varlist:
-                node  = self.get_node(var)
-                related_attr = node.__class__.Meta.local_attributes[attr].related_name
-                if attr < related_attr:
-                    v = ['rel',var,attr,related_attr,None]
-                else:
-                    v = ['rel',None,related_attr,attr,var]
-                rel_queries.append(tuple(v))
-        return rel_queries
-
-    def generate_queries_ISIN(self):
-        is_in = []
-        if 'is_in' in self._expressions:
-            is_in = [('is_in',x) for x in self._expressions['is_in']]
-        return is_in
-
-    def generate_queries_ISNOTIN(self):
-        is_not_in = []
-        if 'is_not_in' in self._expressions:
-            is_not_in = [('is_not_in',x) for x in self._expressions['is_not_in']]
-        return is_not_in
-
-    def generate_queries(self):
-        return {
-            'type': self.generate_queries_TYPE(),
-            'attr': self.generate_queries_ATTR(),
-            'rel': self.generate_queries_REL(),
-            'is_in': self.generate_queries_ISIN(),
-            'is_not_in': self.generate_queries_ISNOTIN(),
-        }
-    """
 def main():
     pass
 
