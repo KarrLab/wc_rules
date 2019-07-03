@@ -519,9 +519,10 @@ class Pattern(DictLike):
 
     def get_computed_variables(self):
         variables = []
-        for dep in self._deps:
-            for item in dep['assignments']:
-                variables.append(item)
+        if self._deps:
+            for dep in self._deps:
+                for item in dep['assignments']:
+                    variables.append(item)
         return variables
 
     def build_rete_subset(self):
@@ -588,16 +589,65 @@ class Pattern(DictLike):
 
         # Pattern relations cannot be specified here.
         # They have to be analyzed globally
-        return {'name':self.id, 
+        return {
         'edges':edgetuple_set, 
         'attrs':attrtuple_set, 
         'merges':mergetuples, 
         'pattern_tuple': new_pat,
-        'pattern':self,
         'node_variables': tuple(mergepath),
         'computed_variables': tuple(computed_vars)
         }
         
+
+class PatternCollector(object):
+    def __init__(self):
+        self.patterns = dict()
+        self.pattern_variables = dict()
+        self.pattern_relations = dict()
+        self.pattern_lengths = dict()
+        self.pattern_merges = dict()
+        self.pattern_tuples = dict()
+        self.edges = set()
+        self.attrs = set()
+
+    def add_pattern(self,pat):
+        assert pat._finalized, "Pattern not finalized: " + pat.id
+        assert pat not in self.patterns, "Pattern already added.: " + pat.id
+        patdict = pat.build_rete_subset()
+        self.edges.update(patdict['edges'])
+        self.attrs.update(patdict['attrs'])
+        self.patterns[pat.id] = pat
+        self.pattern_variables[pat.id] = patdict['node_variables'] + patdict['computed_variables']
+        self.pattern_lengths[pat.id] = len(self.pattern_variables[pat.id])
+        self.pattern_merges[pat.id] = patdict['merges']
+        self.pattern_tuples[pat.id] = patdict['pattern_tuple']
+
+        if pat._deps:
+            for dep in pat._deps:
+                if len(dep['patternvarpairs']) > 0:
+                    self.pattern_relations[pat.id] = dict()
+                for incoming_pat, varpairs in dep['patternvarpairs']:
+                    assert incoming_pat in self.pattern_variables, "Pattern dependency not found: "+incoming_pat
+                    assert incoming_pat != pat.id, "Pattern cannot be dependent on itself: "+incoming_pat
+                    for incoming_var, var in varpairs:
+                        assert incoming_var in self.pattern_variables[incoming_pat]
+
+                    incoming_path = self.pattern_variables[incoming_pat]
+                    current_path = self.pattern_variables[pat.id]
+                    remap_tuples = []
+
+                    for incoming_var, var in varpairs:
+                        remap_tuples.append(tuple([incoming_path.index(incoming_var), current_path.index(var)]))                        
+                    self.pattern_relations[pat.id][incoming_pat] = tuple(sorted(remap_tuples))
+
+        return self
+
+    def make_rete_network(self):
+        return None
+
+
+        
+
 
 
 def main():

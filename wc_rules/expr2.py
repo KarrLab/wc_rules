@@ -661,7 +661,7 @@ class BuiltinHook(object):
 class PatternHook(object):
     # this class handles match expressions and match counts
 
-    allowed_methods = ['count','exists','match']
+    allowed_methods = ['count','exists','expand','nexists']
     
     def count(pattern=None,varpairs=None):
         # this method should access the filter method on ReteNet pattern nodes
