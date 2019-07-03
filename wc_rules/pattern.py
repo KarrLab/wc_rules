@@ -21,11 +21,14 @@ class Pattern(DictLike):
         super().__init__()
         self.id = idx
         self._constraints = ''
-        self._finalize = False
+        self._finalized = False
         self._tree = None
-        self._symmetries = None
-        self._orbits = None
-        self._mergepath = None
+        self._deps = None
+        self._scaffold_symmetries = None
+        self._scaffold_orbits = None
+        self._final_symmetries = None
+        self._final_orbits = None
+        
         #self._nodes = dict()
         if nodelist:
             for node in nodelist:
@@ -35,7 +38,7 @@ class Pattern(DictLike):
         return self.get(idx)
 
     def add_node(self,node,recurse=True):
-        assert self._finalize is False
+        assert self._finalized is False, "Pattern already in use. Cannot be modified."
         if node not in self:
             self.add(node)
             if recurse:
@@ -56,7 +59,7 @@ class Pattern(DictLike):
         return self
     '''
     def add_constraints(self,string_input):
-        assert self._finalize is False
+        assert self._finalized is False, "Pattern already in use. Cannot be modified."
         strings = [x.strip() for x in string_input.split('\n')]
         strings = [x for x in strings if x not in ['',"\n",None]]
         self._constraints = self._constraints + "\n".join(strings)
@@ -241,6 +244,7 @@ class Pattern(DictLike):
         self._deps = self.validate_dependencies(builtin_hook,pattern_hook)
         self._scaffold_symmetries, self._final_symmetries = self.analyze_symmetries()
         self._scaffold_orbits, self._final_orbits = self.analyze_orbits()
+        self._finalized = True
         return self
         
     def remove_node(self,node):
@@ -281,20 +285,6 @@ class Pattern(DictLike):
 
 
     #### building rete subset
-    def get_classtuple_paths(self):
-        # classtuples {node.id: (class,class,class,Entity)}
-        ClassTuple = namedtuple("ClassTuple",["cls"])
-        classtuples, classtuple_set = dict(),set()
-        for node in self:
-            path = deque()
-            for _class in node.__class__.__mro__:
-                if _class.__name__ == 'BaseClass':
-                    break
-                path.appendleft(ClassTuple(cls=_class))
-                classtuple_set.add(ClassTuple(cls=_class))
-            classtuples[node.id] = path
-        return classtuples,classtuple_set
-
     def get_edgetuples(self):
         # edgetuples {(node1.id,node2.id): [(class1,attr1,attr2,class2),...]}
         # where attr1 < attr2
@@ -359,7 +349,7 @@ class Pattern(DictLike):
             temp_path = sorted(temp_path,key=lambda x: score[x])
         return mergepath
 
-    def build_merge_sequence(self,classtuples,edgetuples,mergepath):
+    def build_merge_sequence(self,edgetuples,mergepath):
 
         def edgetuple_iter(new_key_dict,edgetuples):
             sorted_keys = sorted(new_key_dict.keys(),key = lambda x: (min(x),max(x)))
@@ -527,6 +517,13 @@ class Pattern(DictLike):
                 attrtuples[var] = tuple(sorted(attrtuples[var]))
         return attrtuples,attrtuple_set
 
+    def get_computed_variables(self):
+        variables = []
+        for dep in self._deps:
+            for item in dep['assignments']:
+                variables.append(item)
+        return variables
+
     def build_rete_subset(self):
         # classtuples {node.id: (class,class,class,Entity)}
         # edgetuples {(node1.id,node2.id): [(class1,attr1,attr2,class2),...]}, where attr1 < attr2
@@ -534,16 +531,18 @@ class Pattern(DictLike):
         #                          lhs_remap=[(path.index,lhs_nodes.index),rhs_remap=...],
         #                          token_length=n,prune_symmetries=[...]) ]
         # attrtuples { node.id: (class,var) }
-        classtuples, classtuple_set = self.get_classtuple_paths()
+        #classtuples, classtuple_set = self.get_classtuple_paths()
         edgetuples, edgetuple_set = self.get_edgetuples()
         sorted_orbits = self.sort_orbits(edgetuples)
-        self._mergepath = self.get_merge_path(sorted_orbits,edgetuples)
+        mergepath = self.get_merge_path(sorted_orbits,edgetuples)
         if len(self.variable_names)==1:
-            mergetuples = deque(list(classtuples.values())[0][-1])
+            ClassTuple = namedtuple("ClassTuple",["cls"])
+            c = ClassTuple(cls=self[self.variable_names[0]])
+            mergetuples = deque([c])
             scaffold_symmetry_breaks = ()
             internal_symmetries = ((0,0),)
         else:
-            mergetuples,scaffold_symmetry_breaks, internal_symmetries = self.build_merge_sequence(classtuples,edgetuples,self._mergepath)
+            mergetuples,scaffold_symmetry_breaks, internal_symmetries = self.build_merge_sequence(edgetuples,mergepath)
         
         def maps_to_indices(maps,path):
             return [tuple(sorted([(path.index(x),path.index(y)) for x,y in m])) for m in maps]
@@ -554,7 +553,7 @@ class Pattern(DictLike):
         attr_dependency_table = defaultdict(list)
         for var,attrs in attrtuples.items():
             for attrtuple in attrs:
-                bisect.insort(attr_dependency_table[attrtuple],self._mergepath.index(var))
+                bisect.insort(attr_dependency_table[attrtuple],mergepath.index(var))
 
         for attrtuple in attr_dependency_table.keys():
             attr_dependency_table[attrtuple] = tuple(attr_dependency_table[attrtuple])
@@ -571,30 +570,35 @@ class Pattern(DictLike):
         # scaffold = MergeTuple(EdgeTuple) node 
         # if number of edges > 1
         # scaffold = MergeTuple node w/ symmetry_checks
+
+        computed_vars = self.get_computed_variables()
+
         
-        PatternTuple = namedtuple('PatternTuple',['name',
+        PatternTuple = namedtuple('PatternTuple',[
             'scaffold','scaffold_symmetry_breaks', 'internal_symmetries',
-            'attrs','patterns'
+            'attrs',
             ])
 
         new_pat = PatternTuple(
-            name = self.id,
             scaffold = mergetuples[-1],
             scaffold_symmetry_breaks = tuple(scaffold_symmetry_breaks),
             internal_symmetries = tuple(internal_symmetries),
             attrs = tuple(attr_relations),
-            patterns = None
             )
 
         # Pattern relations cannot be specified here.
         # They have to be analyzed globally
-        
-        return {'name':self.id,
-        'classes':classtuple_set, 
+        return {'name':self.id, 
         'edges':edgetuple_set, 
         'attrs':attrtuple_set, 
         'merges':mergetuples, 
-        'pattern': new_pat}
+        'pattern_tuple': new_pat,
+        'pattern':self,
+        'node_variables': tuple(mergepath),
+        'computed_variables': tuple(computed_vars)
+        }
+        
+
 
 def main():
     pass
