@@ -179,4 +179,5 @@ class MoleculeFactory(object):
                     setattr(s,k,v)
 
         m.add_sites(*ss)
-        return m,ss
+        # returns a list with first element molecule and the rest sites
+        return (m,) + tuple(ss)

@@ -16,6 +16,19 @@ from .rete2 import *
 
 import networkx.algorithms.isomorphism as iso
 
+ClassTuple = namedtuple("ClassTuple",["cls"])
+EdgeTuple = namedtuple("EdgeTuple",["cls1","attr1","attr2","cls2"])
+MergeTuple = namedtuple("MergeTuple",[
+            'lhs','rhs',
+            'lhs_remap','rhs_remap',
+            'token_length',
+            'symmetry_checks'
+            ])
+PatternTuple = namedtuple('PatternTuple',[
+    'scaffold','scaffold_symmetry_breaks', 'internal_symmetries',
+    'attrs',
+    ])
+
 class Pattern(DictLike):
     def __init__(self,idx,nodelist=None,recurse=True):
         super().__init__()
@@ -290,7 +303,7 @@ class Pattern(DictLike):
         # where attr1 < attr2
         edgetuples,edgetuple_set = dict(),set()
         visited = set()
-        EdgeTuple = namedtuple("EdgeTuple",["cls1","attr1","attr2","cls2"])
+        
         start = self[sorted([x.id for x in self])[0]]
         next_node = deque([start])
         while next_node:
@@ -301,7 +314,9 @@ class Pattern(DictLike):
                 neighbours = [n for n in node.listget(attr) if n not in visited]
                 next_node.extend(neighbours)
                 for n in neighbours:
-                    (attr1,cls1,idx1),(attr2,cls2,idx2) = sorted([(attr,node.__class__,node.id),(related_attr,n.__class__,n.id)])
+                    class_dict = {x.__name__:x for x in [n.__class__,node.__class__]}
+                    (attr1,clsname1,idx1),(attr2,clsname2,idx2) = sorted([(attr,node.__class__.__name__,node.id),(related_attr,n.__class__.__name__,n.id)])
+                    cls1, cls2 = (class_dict[x] for x in [clsname1,clsname2])
                     tup = EdgeTuple(cls1=cls1,attr1=attr1,attr2=attr2,cls2=cls2)
                     key = (idx1,idx2)
                     if key not in edgetuples:
@@ -428,12 +443,14 @@ class Pattern(DictLike):
             return leveldict
         
         # Assumptions: rete-node that processes an edge (class(n1),attr1,attr2,class(n2)) will store/output a token (n1,n2)
-        MergeTuple = namedtuple("MergeTuple",[
-            'lhs','rhs',
-            'lhs_remap','rhs_remap',
-            'token_length',
-            'symmetry_checks'
-            ])
+
+        # explaining remaps
+        # if a parent rete node sends a token (x,y)
+        # and the merge path of the current rete node is (a,b,y,x)
+        # then (x,y).index(x) -> (a,b,y,x).index(x) = (0,3)
+        # similarly (x,y).index(y) -> (a,b,y,x).index(x) = (1,2)
+        # so the remap_tuples = ((0,3),(1,2))
+
 
         scaffold_symmetry_breaks = expand_symmetries(self._scaffold_symmetries,self._final_symmetries,mergepath)
         internal_symmetries = maps_to_indices(self._final_symmetries,mergepath)
@@ -443,7 +460,8 @@ class Pattern(DictLike):
         total_edges = sum([len(x) for x in edgetuples.values()])
         if total_edges == 1:
             # case 1: pattern has only one edge
-            (n1,n2),e = [x for x in edgetuples.items()][0]
+            (n1,n2),elist = [x for x in edgetuples.items()][0]
+            e = elist[0]
             new_merge_node = MergeTuple(
                     lhs=e,
                     lhs_remap=tuple(enumerate([mergepath.index(n1),mergepath.index(n2)])),
@@ -537,7 +555,6 @@ class Pattern(DictLike):
         sorted_orbits = self.sort_orbits(edgetuples)
         mergepath = self.get_merge_path(sorted_orbits,edgetuples)
         if len(self.variable_names)==1:
-            ClassTuple = namedtuple("ClassTuple",["cls"])
             c = ClassTuple(cls=self[self.variable_names[0]])
             mergetuples = deque([c])
             scaffold_symmetry_breaks = ()
@@ -574,12 +591,6 @@ class Pattern(DictLike):
 
         computed_vars = self.get_computed_variables()
 
-        
-        PatternTuple = namedtuple('PatternTuple',[
-            'scaffold','scaffold_symmetry_breaks', 'internal_symmetries',
-            'attrs',
-            ])
-
         new_pat = PatternTuple(
             scaffold = mergetuples[-1],
             scaffold_symmetry_breaks = tuple(scaffold_symmetry_breaks),
@@ -594,8 +605,7 @@ class Pattern(DictLike):
         'attrs':attrtuple_set, 
         'merges':mergetuples, 
         'pattern_tuple': new_pat,
-        'node_variables': tuple(mergepath),
-        'computed_variables': tuple(computed_vars)
+        'mergepath': tuple(mergepath),
         }
         
 
@@ -605,23 +615,18 @@ class PatternCollector(object):
         self.pattern_variables = dict()
         self.pattern_relations = dict()
         self.pattern_lengths = dict()
-        self.pattern_merges = dict()
-        self.pattern_tuples = dict()
-        self.edges = set()
-        self.attrs = set()
+        #self.pattern_merges = dict()
+        #self.pattern_tuples = dict()
+        #self.edges = set()
+        #self.attrs = set()
 
     def add_pattern(self,pat):
         assert pat._finalized, "Pattern not finalized: " + pat.id
         assert pat not in self.patterns, "Pattern already added.: " + pat.id
-        patdict = pat.build_rete_subset()
-        self.edges.update(patdict['edges'])
-        self.attrs.update(patdict['attrs'])
         self.patterns[pat.id] = pat
-        self.pattern_variables[pat.id] = patdict['node_variables'] + patdict['computed_variables']
+        self.pattern_variables[pat.id] = pat.variable_names + pat.get_computed_variables()
         self.pattern_lengths[pat.id] = len(self.pattern_variables[pat.id])
-        self.pattern_merges[pat.id] = patdict['merges']
-        self.pattern_tuples[pat.id] = patdict['pattern_tuple']
-
+        
         if pat._deps:
             for dep in pat._deps:
                 if len(dep['patternvarpairs']) > 0:
@@ -631,22 +636,9 @@ class PatternCollector(object):
                     assert incoming_pat != pat.id, "Pattern cannot be dependent on itself: "+incoming_pat
                     for incoming_var, var in varpairs:
                         assert incoming_var in self.pattern_variables[incoming_pat]
-
-                    incoming_path = self.pattern_variables[incoming_pat]
-                    current_path = self.pattern_variables[pat.id]
-                    remap_tuples = []
-
-                    for incoming_var, var in varpairs:
-                        remap_tuples.append(tuple([incoming_path.index(incoming_var), current_path.index(var)]))                        
-                    self.pattern_relations[pat.id][incoming_pat] = tuple(sorted(remap_tuples))
-
-        return self
-
-    def make_rete_network(self):
-        return None
-
-
+                    self.pattern_relations[pat.id][incoming_pat] = varpairs
         
+        return self
 
 
 
