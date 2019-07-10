@@ -10,7 +10,7 @@ def get_colors(categories):
     return dict(zip(list(categories),x))
 
 def generate_gml_node(idx, label ,fill):
-    graphics = " graphics [ hasOutline 0 fill \"" + fill + "\" ] "
+    graphics = " graphics [ type \"ellipse\" hasOutline 0 fill \"" + fill + "\" ] "
     labelgraphics = " LabelGraphics [text \"" + label + "\" ] "
     nodetext = "node [id " + str(idx) + graphics + labelgraphics + " ] "
     return nodetext
