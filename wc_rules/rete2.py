@@ -7,7 +7,7 @@ from . import gml
 
 from itertools import combinations
 from collections import namedtuple,defaultdict,deque
-
+import pydblite as db
 import pprint
 
 
@@ -140,6 +140,7 @@ class ReteNet(DictLike):
 
 		return self
 
+
 	def depth_first_search(self,start_node):
 		def get_next_nodes(obj,visited):
 			vec = []
@@ -162,6 +163,22 @@ class ReteNet(DictLike):
 		    next_nodes.extendleft(suc)
 		    visited.add(current_node)
 		    yield current_node
+
+	def initialize_caches(self):
+		signatures = ['check_edge','check_attr','merge','pattern']
+		edge = ['node1','node2']
+		attr = ['node','value','old_value']
+		for node in self:
+			if node.signature in signatures:
+				node.cache = db.Base(':memory:')
+			if node.signature=='check_edge':
+				node.cache = node.cache.create(*edge)
+			if node.signature=='check_attr':
+				node.cache = node.cache.create(*attr)
+			if node.signature in ['merge','pattern']:
+				h = list(range(0,node.info['token_length']))
+				node.cache = node.cache.create(*h)
+		return self
         
 	def draw_as_gml(self):
 		node_labels, node_categories, idx_dict = dict(),dict(),dict()
@@ -189,6 +206,93 @@ class ReteNet(DictLike):
 		final_text = gml.generate_gml(node_labels,edge_tuples,node_categories)
 		return final_text
 
+	def process_action(self,action,verbose=False):
+		ent = ClassTuple(cls=Entity)
+		if verbose:
+			print('Begin processing action ', action_to_string(action))
+		self[ent].process_action(action,verbose)
+
+		if verbose:
+			print()
+		return True
+
+NodeToken = namedtuple('NodeToken',['cls','id'])
+EdgeToken = namedtuple('EdgeToken',['node1','attr1','attr2','node2'])
+AttrToken = namedtuple('AttrToken',['node','attr','value','old_value'])
+
+Action = namedtuple('Action',['action','target_type','target','info'])
+# here, 'action'='insert'/'remove'/'verify'
+# 'target_type' = 'node','edge','attr','match'
+# 'target' = NodeToken,EdgeToken,AttrToken,Tuple
+# 'info' = additional info needed to process target (typically signature of sender)
+
+def action_to_string(action):
+	def node_to_string(node):
+		return ''.join(['(',node.cls.__name__,',',node.id,')'])
+
+	def edge_to_string(edge):
+		return ''.join(['(',node_to_string(edge.node1),'.',edge.attr1,'-',edge.attr2,'.',node_to_string(edge.node2),')'])
+
+	def attr_to_string(attr):
+		return ''.join(['(',node_to_string(attr.node),'.',attr.attr,':',str(attr.old_value),'->',str(attr.value),')'])
+
+	def tuple_to_string(tup):
+		return '(' + ','.join(tup) + ')'
+
+	if isinstance(action.target,NodeToken):
+		str1 = node_to_string(action.target)
+	elif isinstance(action.target,EdgeToken):
+		str1 = edge_to_string(action.target)
+	elif isinstance(action.target,AttrToken):
+		str1 = attr_to_string(action.target)
+	else:
+		str1 = tuple_to_string(action.target)
+	return '<' + action.action + ' ' + action.target_type + ' ' + str1 + '>'
+
+def insert_node(_cls,idx):
+	target = NodeToken(cls=_cls,id=idx)
+	return Action(action='insert',target=target,target_type='node',info=None)
+
+def remove_node(_cls,idx):
+	target = NodeToken(cls=_cls,id=idx)
+	return Action(action='remove',target=target,target_type='node',info=None)
+
+def insert_edge(cls1,idx1,attr1,cls2,idx2,attr2):
+	clsdict = {cls1.__name__:cls1,cls2.__name__:cls2}
+	(attr1,clsname1,idx1),(attr2,clsname2,idx2) = sorted([(attr1,cls1.__name__,idx1),(attr2,cls2.__name__,idx2)])
+	node1 = NodeToken(cls=clsdict[clsname1],id=idx1)
+	node2 = NodeToken(cls=clsdict[clsname2],id=idx2)
+	edge = EdgeToken(node1=node1,attr1=attr1,attr2=attr2,node2=node2)
+	return Action(action='insert',target=edge,target_type='edge',info=None)
+
+def remove_edge(cls1,idx1,attr1,cls2,idx2,attr2):
+	clsdict = {cls1.__name__:cls1,cls2.__name__:cls2}
+	(attr1,clsname1,idx1),(attr2,clsname2,idx2) = sorted([(attr1,cls1.__name__,idx1),(attr2,cls2.__name__,idx2)])
+	node1 = NodeToken(cls=clsdict[clsname1],id=idx1)
+	node2 = NodeToken(cls=clsdict[clsname2],id=idx2)
+	edge = EdgeToken(node1=node1,attr1=attr1,attr2=attr2,node2=node2)
+	return Action(action='remove',target=edge,target_type='edge',info=None)
+
+def insert_match(somelist,info=None):
+	return Action(action='insert',target=tuple(somelist),target_type='match',info=info)
+
+def remove_match(somelist,info=None):
+	return Action(action='remove',target=tuple(somelist),target_type='match',info=info)
+
+def verify_match(somelist,info=None):
+	return Action(action='verify',target=tuple(somelist),target_type='match',info=info)
+
+# methods to process tokens
+def get_classname(token):
+	if isinstance(token,NodeToken):
+		return token.cls
+	if isinstance(token,EdgeToken):
+		return token.node1.cls
+	if isinstance(token,AttrToken):
+		return token.node.cls
+	assert False, "Something bad happened!"
+	return
+
 
 class ReteNode(core.Model):
 	# outgoing edges to nodes that check types, edges and attrs
@@ -212,7 +316,6 @@ class ReteNode(core.Model):
 		self.id = idx
 		self.signature = signature
 		self.cache = None
-		# info holds additional info pertaining to the specific node
 		self.info = dict()
 
 	def __str__(self):
@@ -232,12 +335,108 @@ class ReteNode(core.Model):
 		if self.signature == 'pattern':
 			return self.id
 
+	def process_action(self,action,verbose=False):
+		if self.signature=='check_type':
+			self.check_type_behavior(action,verbose)
+		elif self.signature=='check_edge':
+			self.check_edge_behavior(action,verbose)
+		return self
 
+	def process_action_all_relevant_nodes(self,action,attr,verbose=False):
+		for node in getattr(self,attr):
+			node.process_action(action,verbose)
+		return self
+
+	# behavior 1: check_type
+	# receive action, check type, pass to types, attrs, edges, lhs's, 
+
+	def check_type_behavior(self,action,verbose=False):
+		# assume internal type is check_type
+		# first check if type matches
+		class_to_check = get_classname(action.target)
+		reference_class = self.id.cls
+		condition = issubclass(class_to_check,reference_class)
 		
+		if verbose:
+			str1 = '{' + str(self) + '}'
+			str2 = action_to_string(action)
+			strs = [str1, 'checking',str2,':',str(condition)]
+			print(' '.join(strs))
 
-NodeToken = namedtuple('NodeToken',['cls','id'])
-InsertNode = namedtuple('InsertNode',['node'])
-RemoveNode = namedtuple('RemoveNode',['node'])
-EditAttr = namedtuple('EditAttr',['node','attr','value','old_value'])
-InsertEdge = namedtuple('InsertEdge',['node1','attr1','attr2','node2'])
-RemoveEdge = namedtuple('RemoveEdge',['node1','attr1','attr2','node2'])
+		# if so pass it on to downstream nodes
+		# check_types, check_edges, check_attrs, and as_lhss
+		if condition:
+			for node in self.to_types:
+				node.process_action(action,verbose=verbose)
+			if action.target_type=='edge':
+				self.process_action_all_relevant_nodes(action,'to_edges',verbose=verbose)
+			if action.target_type=='attr':
+				self.process_action_all_relevant_nodes(action,'to_atrrs',verbose=verbose)
+			if action.target_type == 'node':
+				if action.action=='insert':
+					new_action = insert_new_match([action.target.id],info='lhs')
+				if action.action=='remove':		
+					new_action = remove_new_match([action.target.id],info='lhs')
+				for node in self.as_lhs:
+					node.process_action(new_action,verbose=verbose)	
+		return self
+
+	# behavior 2: check_edge
+	# receive edge action, check types, 
+	# store if necessary, pass to lhss and rhss
+
+	def check_edge_behavior(self,action,verbose=False):
+		# assume action.target is an edge
+		# first check if edge matches
+		edge = action.target
+		check_tuple = (edge.node1.cls,edge.attr1,edge.attr2,edge.node2.cls)
+		condition = check_tuple == (tuple(self.id))
+
+		if verbose:
+			str1 = '{' + str(self) + '}'
+			str2 =  action_to_string(action)
+			strs = [str1, 'checking',str2,':',str(condition)]
+			print(' '.join(strs))
+
+		# if so first update internal caches
+		if condition and action.action=='insert':
+			self.cache.insert(edge.node1.id,edge.node2.id)
+
+			if verbose:
+				str1 ='{' + str(self) + '}'
+				str2 = ''.join(['(',edge.node1.id,',',edge.node2.id,')'])
+				print('\t',str1, 'inserting', str2, 'into cache')
+
+		if condition and action.action=='remove':
+			recs = self.cache(node1=edge.node1.id,node2=edge.node2.id)
+			self.cache.delete(recs)
+			
+			if verbose:
+				for rec in recs:
+					str1 ='{' + str(self) + '}'
+					str2 = ''.join(['(',rec['node1'],',',rec['node2'],')'])
+				print('\t',str1, 'removing', str2, 'from cache')
+		
+		
+		# check if symmetric
+		symmetric = (self.id.cls1,self.id.attr1)==(self.id.cls2,self.id.attr2)
+		# then forward to any merge nodes
+		
+		if action.action=='insert':
+			actions = [insert_match([action.target.node1.id,action.target.node2.id],info='lhs')]
+			if symmetric:
+				actions.append(insert_match([action.target.node1.id,action.target.node2.id],info='lhs'))
+			for node in self.as_lhs:
+				for action in actions:
+					node.process_action(actions)
+
+		if action.action=='remove':
+			actions = [remove_match([action.target.node1.id,action.target.node2.id],info='rhs')]
+			if symmetric:
+				actions.append(remove_match([action.target.node1.id,action.target.node2.id],info='rhs'))
+			for node in self.as_rhs:
+				for action in actions:
+					node.process_action(actions)
+
+		return self
+		

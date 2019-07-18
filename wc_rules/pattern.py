@@ -555,8 +555,16 @@ class Pattern(DictLike):
         sorted_orbits = self.sort_orbits(edgetuples)
         mergepath = self.get_merge_path(sorted_orbits,edgetuples)
         if len(self.variable_names)==1:
-            c = ClassTuple(cls=self[self.variable_names[0]])
-            mergetuples = deque([c])
+            c = ClassTuple(cls=self[self.variable_names[0]].__class__)
+            new_merge_node = MergeTuple(
+                    lhs=c,
+                    lhs_remap=((0,0),),
+                    rhs=None,
+                    rhs_remap=None,
+                    token_length = 1,
+                    symmetry_checks = tuple(),
+                )
+            mergetuples = deque([new_merge_node])
             scaffold_symmetry_breaks = ()
             internal_symmetries = ((0,0),)
         else:
