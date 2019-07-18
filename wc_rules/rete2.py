@@ -221,7 +221,7 @@ EdgeToken = namedtuple('EdgeToken',['node1','attr1','attr2','node2'])
 AttrToken = namedtuple('AttrToken',['node','attr','value','old_value'])
 
 Action = namedtuple('Action',['action','target_type','target','info'])
-# here, 'action'='insert'/'remove'/'verify'
+# here, 'action'='insert'/'remove'/'verify'/'edit'
 # 'target_type' = 'node','edge','attr','match'
 # 'target' = NodeToken,EdgeToken,AttrToken,Tuple
 # 'info' = additional info needed to process target (typically signature of sender)
@@ -257,6 +257,18 @@ def remove_node(_cls,idx):
 	target = NodeToken(cls=_cls,id=idx)
 	return Action(action='remove',target=target,target_type='node',info=None)
 
+def edit_attr(_cls,idx,attr,value,old_value):
+	node = NodeToken(cls=_cls,id=idx)
+	target = AttrToken(node=node,attr=attr,value=value,old_value=old_value)
+	return Action(action='edit',target=target,target_type='attr',info=None)
+
+def node_action(_cls,idx,action='insert'):
+	if action=='insert':
+		return insert_node(_cls,idx)
+	if action=='remove':
+		return remove_node(_cls,idx)
+	return 
+
 def insert_edge(cls1,idx1,attr1,cls2,idx2,attr2):
 	clsdict = {cls1.__name__:cls1,cls2.__name__:cls2}
 	(attr1,clsname1,idx1),(attr2,clsname2,idx2) = sorted([(attr1,cls1.__name__,idx1),(attr2,cls2.__name__,idx2)])
@@ -273,6 +285,13 @@ def remove_edge(cls1,idx1,attr1,cls2,idx2,attr2):
 	edge = EdgeToken(node1=node1,attr1=attr1,attr2=attr2,node2=node2)
 	return Action(action='remove',target=edge,target_type='edge',info=None)
 
+def edge_action(cls1,idx1,attr1,cls2,idx2,attr2,action='insert'):
+	if action=='insert':
+		return insert_edge(cls1,idx1,attr1,cls2,idx2,attr2)
+	if action=='remove':
+		return remove_edge(cls1,idx1,attr1,cls2,idx2,attr2)
+	return
+
 def insert_match(somelist,info=None):
 	return Action(action='insert',target=tuple(somelist),target_type='match',info=info)
 
@@ -281,6 +300,16 @@ def remove_match(somelist,info=None):
 
 def verify_match(somelist,info=None):
 	return Action(action='verify',target=tuple(somelist),target_type='match',info=info)
+
+def match_action(somelist,info=None,action='insert'):
+	if action=='insert':
+		return insert_match(somelist,info)
+	if action=='remove':
+		return remove_match(somelist,info)
+	if action=='verify':
+		return verify_match(somelist,info)
+	return 
+
 
 # methods to process tokens
 def get_classname(token):
@@ -340,6 +369,8 @@ class ReteNode(core.Model):
 			self.check_type_behavior(action,verbose)
 		elif self.signature=='check_edge':
 			self.check_edge_behavior(action,verbose)
+		elif self.signature=='check_attr':
+			self.check_attr_behavior(action,verbose)
 		return self
 
 	def process_action_all_relevant_nodes(self,action,attr,verbose=False):
@@ -349,6 +380,27 @@ class ReteNode(core.Model):
 
 	# behavior 1: check_type
 	# receive action, check type, pass to types, attrs, edges, lhs's, 
+	
+	def verbose_textgenerator(self,action,verb='check',condition=None):
+		str1 = '{' + str(self) + '}'
+		str2 = action_to_string(action)
+		verb = verb + 'ing'
+		if condition is not None:
+			str3 = ': '+str(condition)
+		else:
+			str3 = ''
+		return ' '.join([str1,verb,str2,str3])
+	
+	def verbose_textgenerator2(self,somelist,verb='insert',tab=True):
+		if tab:
+			str1 = "\t"
+		str2 =  '(' + ','.join([str(x) for x in somelist]) + ')'
+		prep = ''
+		if verb=='insert':
+			prep = 'into'
+		elif verb=='remove':
+			prep = 'from'
+		return ' '.join([str1,verb,str2,prep,'cache'])
 
 	def check_type_behavior(self,action,verbose=False):
 		# assume internal type is check_type
@@ -358,27 +410,19 @@ class ReteNode(core.Model):
 		condition = issubclass(class_to_check,reference_class)
 		
 		if verbose:
-			str1 = '{' + str(self) + '}'
-			str2 = action_to_string(action)
-			strs = [str1, 'checking',str2,':',str(condition)]
-			print(' '.join(strs))
-
+			print(self.verbose_textgenerator(action,'check',condition))
+			
 		# if so pass it on to downstream nodes
 		# check_types, check_edges, check_attrs, and as_lhss
 		if condition:
 			for node in self.to_types:
 				node.process_action(action,verbose=verbose)
-			if action.target_type=='edge':
-				self.process_action_all_relevant_nodes(action,'to_edges',verbose=verbose)
-			if action.target_type=='attr':
-				self.process_action_all_relevant_nodes(action,'to_atrrs',verbose=verbose)
-			if action.target_type == 'node':
-				if action.action=='insert':
-					new_action = insert_new_match([action.target.id],info='lhs')
-				if action.action=='remove':		
-					new_action = remove_new_match([action.target.id],info='lhs')
-				for node in self.as_lhs:
-					node.process_action(new_action,verbose=verbose)	
+			relevant_attrs = {'edge':'to_edges','attr':'to_attrs'}
+			if action.target_type in relevant_attrs:
+				self.process_action_all_relevant_nodes(action,relevant_attrs[action.target_type],verbose=verbose)
+			if action.target_type == 'node' and len(self.as_lhs) > 0:
+				new_action = match_action([action.target.id],info='lhs',action=action.action)
+				self.process_action_all_relevant_nodes(new_action,'as_lhs',verbose=verbose)
 		return self
 
 	# behavior 2: check_edge
@@ -391,52 +435,87 @@ class ReteNode(core.Model):
 		edge = action.target
 		check_tuple = (edge.node1.cls,edge.attr1,edge.attr2,edge.node2.cls)
 		condition = check_tuple == (tuple(self.id))
+		
+		if verbose:
+			print(self.verbose_textgenerator(action,'check',condition))
+			
+		# identify what to do
+		insertions = []
+		removals = []
+		if condition and action.action=='insert':
+			insertions = [[edge.node1.id,edge.node2.id]]
+		if condition and action.action=='remove':
+			removals = self.cache(node1=edge.node1.id,node2=edge.node2.id)
+		
+		# update internal caches
+		if len(removals) > 0:
+			self.cache.delete(removals)
+			if verbose:
+				for elem in removals:
+					print(self.verbose_textgenerator2(elem,'remove'))
+
+		for elem in insertions:
+			self.cache.insert(*elem)
+			if verbose:
+				print(self.verbose_textgenerator2(elem,'insert'))
+
+		# forward actions to merge nodes
+		def make_actions(elem,action='insert',side='lhs',symmetric=False):
+			actions = [match_action(elem,info=side,action=action)]
+			if symmetric:
+				actions.append(insert_match(reversed(elem,info=side,action=action)))
+			return actions
+
+		symmetric = (self.id.cls1,self.id.attr1)==(self.id.cls2,self.id.attr2)
+		for side in ['lhs','rhs']:
+			for elem in removals:
+				actions = make_actions(elem,'remove','lhs',symmetric)
+				for act in actions:
+					self.process_action_all_relevant_nodes(act,'as_'+side,verbose)
+			for elem in insertions:
+				actions = make_actions(elem,'insert','lhs',symmetric)
+				for act in actions:
+					self.process_action_all_relevant_nodes(act,'as_'+side,verbose)
+			
+		return self
+
+
+	### behavior 3: check_attr
+	# receive attr action, check types
+	# update internal caches, then pass it to relevant patterns
+
+	def check_attr_behavior(self,action,verbose=False):
+		# cache has attr = ['node','value','old_value']
+		attrtoken = action.target
+		assert attrtoken.value != attrtoken.old_value
+		condition = (attrtoken.node.cls,attrtoken.attr) == tuple(self.id)
 
 		if verbose:
-			str1 = '{' + str(self) + '}'
-			str2 =  action_to_string(action)
-			strs = [str1, 'checking',str2,':',str(condition)]
-			print(' '.join(strs))
-
-		# if so first update internal caches
-		if condition and action.action=='insert':
-			self.cache.insert(edge.node1.id,edge.node2.id)
-
-			if verbose:
-				str1 ='{' + str(self) + '}'
-				str2 = ''.join(['(',edge.node1.id,',',edge.node2.id,')'])
-				print('\t',str1, 'inserting', str2, 'into cache')
-
-		if condition and action.action=='remove':
-			recs = self.cache(node1=edge.node1.id,node2=edge.node2.id)
-			self.cache.delete(recs)
+			print(self.verbose_textgenerator(action,'check',condition))
+		
+		insertion = None
+		removal = None
+		if condition:
+			node = attrtoken.node.id
+			value = attrtoken.value
+			old_value = attrtoken.old_value
+			current_elems = list(self.cache('node')==node)
 			
-			if verbose:
-				for rec in recs:
-					str1 ='{' + str(self) + '}'
-					str2 = ''.join(['(',rec['node1'],',',rec['node2'],')'])
-				print('\t',str1, 'removing', str2, 'from cache')
-		
-		
-		# check if symmetric
-		symmetric = (self.id.cls1,self.id.attr1)==(self.id.cls2,self.id.attr2)
-		# then forward to any merge nodes
-		
-		if action.action=='insert':
-			actions = [insert_match([action.target.node1.id,action.target.node2.id],info='lhs')]
-			if symmetric:
-				actions.append(insert_match([action.target.node1.id,action.target.node2.id],info='lhs'))
-			for node in self.as_lhs:
-				for action in actions:
-					node.process_action(actions)
-
-		if action.action=='remove':
-			actions = [remove_match([action.target.node1.id,action.target.node2.id],info='rhs')]
-			if symmetric:
-				actions.append(remove_match([action.target.node1.id,action.target.node2.id],info='rhs'))
-			for node in self.as_rhs:
-				for action in actions:
-					node.process_action(actions)
-
+			assert (attrtoken.old_value is not None) == len(current_elems)
+			if len(current_elems) == 1:
+				assert current_elems[0]['value'] == attrtoken.old_value
+				removal = current_elems[0]
+			if value is not None:
+				insertion = (attrtoken.node.id,value,old_value)
+			if removal is not None:
+				self.cache.delete(removal)
+				if verbose:
+					somelist = [removal[x] for x in ['node','value','old_value']]
+					print(self.verbose_textgenerator2(somelist,verb='remove',tab=True))
+			if insertion is not None:
+				self.cache.insert(*insertion)
+				if verbose:
+					print(self.verbose_textgenerator2(insertion,verb='insert',tab=True))
 		return self
+
 		
