@@ -5,7 +5,7 @@ from .base import BaseClass
 from .entity import Entity
 from . import gml
 
-from itertools import combinations
+from itertools import combinations,product
 from collections import namedtuple,defaultdict,deque
 import pydblite as db
 import pprint
@@ -179,13 +179,29 @@ class ReteNet(DictLike):
 				h = list(range(0,node.info['token_length']))
 				node.cache = node.cache.create(*h)
 		return self
+
+	def print_caches(self):
+		start_node = self[ClassTuple(cls=Entity)]
+		str1 = ''
+		for idx,node in enumerate(self.depth_first_search(start_node)):
+			str1 += str(node) + '\n'
+			if node.cache is None or len(node.cache)==0:
+				str1 += '[]\n\n'
+			else:
+				str1 += '[\n'
+				for r in node.cache:
+					elems = [str(r[x]) for x in node.cache.fields]
+					str1 += ','.join(elems) + '\n'
+				str1 += ']\n\n'
+		return str1
+
         
 	def draw_as_gml(self):
 		node_labels, node_categories, idx_dict = dict(),dict(),dict()
 		edge_tuples = list()
 		start_node = self[ClassTuple(cls=Entity)]
 		for idx,node in enumerate(self.depth_first_search(start_node)):
-			node_labels[idx] = str(node)
+			node_labels[idx] = str(node)[1:-1]
 			node_categories[idx] = node.signature
 			idx_dict[node.id] = idx
 
@@ -348,21 +364,24 @@ class ReteNode(core.Model):
 		self.info = dict()
 
 	def __str__(self):
+		ret = ''
 		if self.signature == 'check_type':
-			return self.id.cls.__name__
+			ret =  self.id.cls.__name__
 		if self.signature == 'check_edge':
 			x1 = self.id.cls1.__name__
 			x2 = self.id.attr1
 			x3 = self.id.attr2
 			x4 = self.id.cls2.__name__
 			str1 = x1 + '.' + x2 + ' - ' + x4 + '.' + x3
-			return str1
+			ret= str1
 		if self.signature == 'check_attr':
-			return self.id.cls.__name__ + '.' + self.id.attr
+			ret= self.id.cls.__name__ + '.' + self.id.attr
 		if self.signature == 'merge':
-			return ''
+			ret= ''
 		if self.signature == 'pattern':
-			return self.id
+			ret= self.id
+		ret = '{' + ret + '}'
+		return ret
 
 	def process_action(self,action,verbose=False):
 		if self.signature=='check_type':
@@ -371,6 +390,8 @@ class ReteNode(core.Model):
 			self.check_edge_behavior(action,verbose)
 		elif self.signature=='check_attr':
 			self.check_attr_behavior(action,verbose)
+		elif self.signature=='merge':
+			self.merge_behavior(action,verbose)
 		return self
 
 	def process_action_all_relevant_nodes(self,action,attr,verbose=False):
@@ -382,7 +403,7 @@ class ReteNode(core.Model):
 	# receive action, check type, pass to types, attrs, edges, lhs's, 
 	
 	def verbose_textgenerator(self,action,verb='check',condition=None):
-		str1 = '{' + str(self) + '}'
+		str1 = str(self)
 		str2 = action_to_string(action)
 		verb = verb + 'ing'
 		if condition is not None:
@@ -433,8 +454,9 @@ class ReteNode(core.Model):
 		# assume action.target is an edge
 		# first check if edge matches
 		edge = action.target
-		check_tuple = (edge.node1.cls,edge.attr1,edge.attr2,edge.node2.cls)
-		condition = check_tuple == (tuple(self.id))
+		condition = all([edge.attr1==self.id.attr1,edge.attr2==self.id.attr2,issubclass(edge.node1.cls,self.id.cls1),issubclass(edge.node2.cls,self.id.cls2)])
+		#check_tuple = (edge.node1.cls,edge.attr1,edge.attr2,edge.node2.cls)
+		#condition = check_tuple == (tuple(self.id))
 		
 		if verbose:
 			print(self.verbose_textgenerator(action,'check',condition))
@@ -459,24 +481,30 @@ class ReteNode(core.Model):
 			if verbose:
 				print(self.verbose_textgenerator2(elem,'insert'))
 
-		# forward actions to merge nodes
-		def make_actions(elem,action='insert',side='lhs',symmetric=False):
-			actions = [match_action(elem,info=side,action=action)]
-			if symmetric:
-				actions.append(insert_match(reversed(elem,info=side,action=action)))
-			return actions
+		
 
-		symmetric = (self.id.cls1,self.id.attr1)==(self.id.cls2,self.id.attr2)
-		for side in ['lhs','rhs']:
-			for elem in removals:
-				actions = make_actions(elem,'remove','lhs',symmetric)
-				for act in actions:
-					self.process_action_all_relevant_nodes(act,'as_'+side,verbose)
-			for elem in insertions:
-				actions = make_actions(elem,'insert','lhs',symmetric)
-				for act in actions:
-					self.process_action_all_relevant_nodes(act,'as_'+side,verbose)
-			
+		def double_if_symmetric(elemlist,symmetric=False):
+			# this is to return every edge and its reverse
+			# if the edge-conditions being checked for are symmetric
+			elems = []
+			if not symmetric:
+				elems = elemlist
+			else:
+				for elem in elemlist:
+					elems.append(elem)
+					elems.append(list(reversed(elem)))
+			return elems
+
+		symmetric = (self.id.cls1,self.id.attr1)==(self.id.cls1,self.id.attr1)
+		for elem in double_if_symmetric(removals,symmetric):
+			for side in ['lhs','rhs']:
+				new_action = remove_match(elem,info=side)
+				self.process_action_all_relevant_nodes(new_action,'as_'+side,verbose=verbose)
+		for elem in double_if_symmetric(insertions,symmetric):
+			for side in ['lhs','rhs']:
+				new_action = insert_match(elem,info=side)
+				self.process_action_all_relevant_nodes(new_action,'as_'+side,verbose=verbose)
+		
 		return self
 
 
@@ -488,7 +516,7 @@ class ReteNode(core.Model):
 		# cache has attr = ['node','value','old_value']
 		attrtoken = action.target
 		assert attrtoken.value != attrtoken.old_value
-		condition = (attrtoken.node.cls,attrtoken.attr) == tuple(self.id)
+		condition = issubclass(attrtoken.node.cls,self.id.cls) and attrtoken.attr == self.id.attr
 
 		if verbose:
 			print(self.verbose_textgenerator(action,'check',condition))
@@ -501,7 +529,13 @@ class ReteNode(core.Model):
 			old_value = attrtoken.old_value
 			current_elems = list(self.cache('node')==node)
 			
+			# checks
+			# current token's old value is existing value already stored in cache
+			# unless current token's old value is None, in which case, there shd be no
+			# matching element in the cache
+
 			assert (attrtoken.old_value is not None) == len(current_elems)
+			
 			if len(current_elems) == 1:
 				assert current_elems[0]['value'] == attrtoken.old_value
 				removal = current_elems[0]
@@ -516,6 +550,42 @@ class ReteNode(core.Model):
 				self.cache.insert(*insertion)
 				if verbose:
 					print(self.verbose_textgenerator2(insertion,verb='insert',tab=True))
+
+		# forward to downstream patterns
+		new_action = verify_match([node],info=self.id)
+		self.process_action_all_relevant_nodes(new_action,'as_attrs',verbose)
+		
+		return self
+
+
+	### behavior 3: merge
+	# receive insert action from lhs, get matching elements from rhs and merge
+	# also vice versa
+	# send new merges downstream
+
+	# receive remove action from lhs/rhs, filter cache, remove elements
+	# send remove action downstream
+
+	def merge_behavior(self,action,verbose=False):
+		# this helps manage actions in both directions
+		#print(action)
+		side = dict()
+		side_node = dict()
+		if action.info=='lhs':
+			side = {'first':'lhs','second':'rhs'}
+			side_node = {'first':self.lhs, 'second':self.rhs}
+			remap_dict = {'first':self.info['lhs_remap'],'second':self.info['rhs_remap']}
+		elif action.info=='rhs':
+			side = {'first':'rhs','second':'lhs'}
+			side_node = {'first':self.rhs, 'second':self.lhs}
+			remap_dict = {'first':self.info['rhs_remap'],'second':self.info['lhs_remap']}
+
+		insertions = []
+		removals = []
+		# if it is an insert action, try to get a merge from the other side
+	
+
+		#print({x:str(side_node[x]) for x in side_node},self.cache.fields)
 		return self
 
 		
