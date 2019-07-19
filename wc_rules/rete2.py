@@ -9,6 +9,7 @@ from itertools import combinations,product
 from collections import namedtuple,defaultdict,deque
 import pydblite as db
 import pprint
+from functools import reduce
 
 
 ClassTuple = namedtuple("ClassTuple",["cls"])
@@ -65,6 +66,8 @@ class ReteNet(DictLike):
 	def add_checkedge(self,etuple):
 		if etuple not in self._dict:
 			self.add(ReteNode(etuple,'check_edge'))
+
+		self[etuple].info['token_length'] = 2
 
 		# etuple is cls1,attr1,attr2,cls2
 		# add outgoing edge from ReteNode(cls1) to currentnode
@@ -176,7 +179,7 @@ class ReteNet(DictLike):
 			if node.signature=='check_attr':
 				node.cache = node.cache.create(*attr)
 			if node.signature in ['merge','pattern']:
-				h = list(range(0,node.info['token_length']))
+				h = [str(x) for x in range(0,node.info['token_length'])]
 				node.cache = node.cache.create(*h)
 		return self
 
@@ -468,19 +471,23 @@ class ReteNode(core.Model):
 			insertions = [[edge.node1.id,edge.node2.id]]
 		if condition and action.action=='remove':
 			removals = self.cache(node1=edge.node1.id,node2=edge.node2.id)
+
+		def convert_to_tuple(record,fields):
+			return tuple([record[x] for x in fields])
 		
 		# update internal caches
 		if len(removals) > 0:
 			self.cache.delete(removals)
 			if verbose:
 				for elem in removals:
-					print(self.verbose_textgenerator2(elem,'remove'))
+					print(self.verbose_textgenerator2(convert_to_tuple(elem,self.cache.fields),'remove'))
 
 		for elem in insertions:
 			self.cache.insert(*elem)
 			if verbose:
 				print(self.verbose_textgenerator2(elem,'insert'))
 
+		self.cache.commit()
 		
 
 		def double_if_symmetric(elemlist,symmetric=False):
@@ -495,11 +502,16 @@ class ReteNode(core.Model):
 					elems.append(list(reversed(elem)))
 			return elems
 
-		symmetric = (self.id.cls1,self.id.attr1)==(self.id.cls1,self.id.attr1)
-		for elem in double_if_symmetric(removals,symmetric):
+		symmetric = (self.id.cls1,self.id.attr1)==(self.id.cls2,self.id.attr2)
+
+		removals2 = [convert_to_tuple(x,self.cache.fields) for x in removals]
+		
+		for elem in double_if_symmetric(removals2,symmetric):
 			for side in ['lhs','rhs']:
 				new_action = remove_match(elem,info=side)
 				self.process_action_all_relevant_nodes(new_action,'as_'+side,verbose=verbose)
+				
+
 		for elem in double_if_symmetric(insertions,symmetric):
 			for side in ['lhs','rhs']:
 				new_action = insert_match(elem,info=side)
@@ -550,7 +562,7 @@ class ReteNode(core.Model):
 				self.cache.insert(*insertion)
 				if verbose:
 					print(self.verbose_textgenerator2(insertion,verb='insert',tab=True))
-
+			self.cache.commit()
 		# forward to downstream patterns
 		new_action = verify_match([node],info=self.id)
 		self.process_action_all_relevant_nodes(new_action,'as_attrs',verbose)
@@ -583,9 +595,102 @@ class ReteNode(core.Model):
 		insertions = []
 		removals = []
 		# if it is an insert action, try to get a merge from the other side
-	
 
-		#print({x:str(side_node[x]) for x in side_node},self.cache.fields)
+		def reorder_element(match,remap,token_length,reverse=False):
+			if reverse:
+				remap = sorted([(y,x) for (x,y) in remap])
+			elem = [None]*token_length
+			for x,y in remap:
+				elem[y] = match[x]
+			return elem
+
+		def satisfies_canonical_ordering(elem,symmetry_checks):
+			for x,y in symmetry_checks:
+				if elem[x] is not None and elem[y] is not None and elem[x] > elem[y]:
+					return False
+			return True
+
+		def convert_to_tuple(record,fields):
+			return tuple([record[x] for x in fields])
+
+		def filter_cache(_cache,elem):
+			fil = None
+			for i,x in enumerate(elem):
+				if x is not None:
+					if fil is None:
+						fil = (_cache(_cache.fields[i])==x)
+					else:
+						fil =  (_cache(_cache.fields[i])==x) & fil
+			return list(fil)
+
+		def interpolate(elem1,elem2):
+			assert len(elem1) == len(elem2), "To interpolate, two matches must have same lengths"
+			def choose(x,y):
+				if x is None:
+					return y
+				return x
+			return [choose(x,y) for x,y in zip(elem1,elem2)]
+			
+		if verbose:
+			print(self.verbose_textgenerator(action,verb='process'))
+
+		match = action.target
+		elem = reorder_element(match,remap_dict['first'],self.info['token_length'])
+		if not satisfies_canonical_ordering(elem,self.info['symmetry_checks']):
+			if verbose:
+				print('\t reject (' + ','.join(elem) + ') for symmetry reasons')
+			return self
+		
+		#if action.action=='remove':
+		#	elem = reorder_element(match,remap_dict['first'],self.info['token_length'])
+		#	removals.extend(filter_cache(self.cache,elem))
+
+		if action.action=='remove':
+			side = action.info
+			elem = reorder_element(match,self.info[side+'_remap'],self.info['token_length'])
+			records = filter_cache(self.cache,elem)
+			removals.extend(records)
+
+
+		if action.action=='insert':
+			if side_node['second'] is None:
+				insertions.append(elem)
+			else:
+				filter_elem = reorder_element(elem,remap_dict['second'],side_node['second'].info['token_length'],reverse=True)
+				elems2 = filter_cache(side_node['second'].cache,filter_elem)
+				elems2 = [convert_to_tuple(x,side_node['second'].cache.fields) for x in elems2]
+				elems2 = [reorder_element(x,remap_dict['second'],self.info['token_length']) for x in elems2]
+				if len(elems2) > 0:
+					new_elems = [interpolate(x,y) for x,y in product([elem],elems2)]
+					for x in new_elems: 
+						if satisfies_canonical_ordering(x,self.info['symmetry_checks']):
+							insertions.append(x)
+						elif verbose:
+							print('\t reject (' + ','.join(x) + ') for symmetry reasons')
+
+		self.cache.delete(removals)
+		for elem in removals:
+			if verbose:
+				print(self.verbose_textgenerator2(convert_to_tuple(elem,self.cache.fields),'remove'))
+
+		for elem in insertions:
+			self.cache.insert(*elem)
+			if verbose:
+				print(self.verbose_textgenerator2(elem,'insert'))
+
+		# propagate downstream
+		for elem in removals:
+			for side in ['lhs','rhs','scaffold']:
+				new_action = remove_match(convert_to_tuple(elem,self.cache.fields),info=side)
+				self.process_action_all_relevant_nodes(new_action,'as_'+side,verbose)
+		for elem in insertions:
+			for side in ['lhs','rhs','scaffold']:
+				new_action = insert_match(elem,info=side)
+				self.process_action_all_relevant_nodes(new_action,'as_'+side,verbose)
+				
+
+		self.cache.commit()
+
 		return self
 
 		
