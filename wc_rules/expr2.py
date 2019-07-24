@@ -6,6 +6,7 @@ from pprint import pformat, pprint
 from functools import partial
 from .utils import ValidateError
 import networkx
+
 # DO NOT USE CAPS
 grammar = """
 %import common.CNAME
@@ -49,7 +50,6 @@ COMMENT: /#.*/
     ?expression: sum
 
     boolean_expression: expression bool_op expression
-        | expression
     
     ?bool_op: ">=" -> geq | "<=" -> leq | ">" -> ge | "<" -> le | "==" -> eq | "!=" -> ne
     
@@ -683,14 +683,20 @@ class MatchLocal(AttrDict):
             return self[key]
         return None
 
+
+
 class Serializer(Transformer):
     # m for match, h for expressionhook, p for patternhook
-    allowed_functions = ['count','exists','nexists']
 
+    # strategy: wrap all function calls into a 'x.do(match=m,params=dict)' method
+    
+    allowed_functions = ['count','exists','nexists']
+    '''
     def __init__(self,h,p):
         self.expression_hook = h
         self.pattern_hook = p
-
+    '''
+    
     def join_strings(self,args): return " ".join(args)
     def constant(s): return lambda x,y: s
     def n2s(self,arg): return arg[0].__str__()
@@ -764,5 +770,117 @@ class Serializer(Transformer):
     
     boolean_expression = list
     
+space_join = lambda x: " ".join(x)
+comma_join = lambda x: ",".join(x)
+simple_join = lambda x: "".join(x)
+enclose = lambda x: "(" + x + ")"
+enclose_sq = lambda x: "[" + x + "]"
+enclose_quote = lambda x: "'" + x + "'"
+symbol_join = lambda x,y: "".join([" ",y," "]).join(x)
+has_keys = lambda d,x: all([y in d for y in x])
+not_has_keys = lambda d,x: not any([y in d for y in x])
+tuplize = lambda x: "(" + ",".join(x) + "," + ")"
+
+
+class Serializer2(Transformer):
+
+    # naming conventions for lambda parameters
+    # x: hook for rete node (x.do() is the default function called. also match related fns x.exist(), etc
+    # h: hook for builtins (h.xxx() for any xxx in builtinhook class)
+    # m: hook for current match being evaluated.
+
+    def join_strings(self,args): return " ".join(args)
+    def constant(s): return lambda x,y: s
+    def n2s(self,arg): return arg[0].__str__()
+
+    def category_pair(cat):
+        return lambda x,y: (cat,enclose_quote(y[0].__str__()))
+
+    #literals and operators, convert to strings
+    number = string = n2s    
+    geq = constant(">=")
+    leq = constant("<=")
+    ge = constant(">")
+    le = constant("<")
+    eq = constant("==")
+    ne = constant("ne")
+    true = constant("True")
+    false = constant("False")
+    flipsign = subtract = constant("-")
+    add = constant("+")
+    multiply = constant("*")
+    divide = constant("/")
+
+    
+    # things that are converted to category pairs, e.g., ('variable','x1')
+    #function_name = variable =  attribute = kw = pattern = pattern_variable = declared_variable = CNAME
+    function_name = category_pair('function_name')
+    variable = category_pair('variable')
+    attribute = category_pair('attribute')
+    #kw = category_pair('kw')
+    pattern = category_pair('pattern')
+    pattern_variable=category_pair('pattern_variable')
+    declared_variable = category_pair('declared_variable')
+
+    # things that compile
+    arg = lambda x,y:y[0].__str__()
+    kw = lambda x,y:enclose_quote(y[0].__str__())
+    kwarg = tuple
+    varpair = lambda x,y: tuplize([y[0][1],y[1][1]])
+    
+    def args(self,args):
+        return ('args',args)
+
+    def kwargs(self,args):
+        return ('kwargs',tuplize([tuplize(arg) for arg in args]))
+
+    def varpairs(self,args):
+        return ('varpairs',tuplize(args))
+
+        
+    def xdo(self,args):
+        return simple_join(['x.do',enclose(comma_join([space_join([x,"=",y]) for x,y in args + [('match','m')] ]))])
+    
+    def match_expression(self,args):
+        # match_expression is always an arg to some other function
+        return ('args',[self.xdo(args)])
+    
+    def function_call(self,args):
+        params = dict(args)
+        if has_keys(params,['function_name']) and not_has_keys(params,['variable']):
+            # is a builtin or a 
+            # strip enclosing quotes
+            name = params['function_name'].strip("'")
+            prefix = 'h.'
+            str_args = comma_join(params.get('args',[]))
+            if name in ['exists','nexists','count']:
+                # compile first get the function that gets the match object
+                prefix = 'x.'
+            return simple_join([prefix,name,enclose(str_args)])
+        # all others get processed as x.do() functions
+        return self.xdo(args)
+
+    ### mathematical and logical joining, always get strings to join
+    sum = lambda x,y: space_join(y[1:])
+    term = lambda x,y: simple_join(y[1:])
+    factor = lambda x,y: enclose(space_join(y))
+    boolean_expression = lambda x,y: space_join(y)
+
+    def assignment(self,args):
+        return (args[0][1].strip("'"),args[1])
+
+    def expressions(self,args):
+        # output, each expression has the form
+        # ('boolean', lambda), where evaluating the lambda gives True/False
+        # ('assignment',varname,lambda) where evaluating lambda gives value to be attached to varname
+        final_expressions = []
+        prefix = 'lambda x,h,m: '
+        for arg in args:
+            if isinstance(arg,str):
+                final_expressions.append(('boolean',prefix + arg))
+            else:
+                final_expressions.append(('assignment',arg[0],prefix + arg[1]))
+        return final_expressions
+
 
 

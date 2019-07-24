@@ -1,7 +1,7 @@
 from .indexer import DictLike
 from .utils import generate_id,ValidateError
 from .expr_parse import parse_expression
-from .expr2 import parser, Serializer, prune_tree, simplify_tree, BuiltinHook, PatternHook, get_dependencies, build_simple_graph, build_graph_for_symmetry_analysis
+from .expr2 import parser, Serializer2, prune_tree, simplify_tree, BuiltinHook, PatternHook, get_dependencies, build_simple_graph, build_graph_for_symmetry_analysis
 from operator import lt,le,eq,ne,ge,gt,xor
 import random
 import pprint
@@ -616,7 +616,6 @@ class Pattern(DictLike):
         'mergepath': tuple(mergepath),
         }
         
-
 class PatternCollector(object):
     def __init__(self):
         self.patterns = dict()

@@ -3,6 +3,7 @@ from obj_model import core
 from .indexer import DictLike
 from .base import BaseClass
 from .entity import Entity
+from .expr2 import Serializer2
 from . import gml
 
 from itertools import combinations,product
@@ -10,6 +11,7 @@ from collections import namedtuple,defaultdict,deque
 import pydblite as db
 import pprint
 from functools import reduce
+#from .pattern import ClassTuple,EdgeTuple, MergeTuple, PatternTuple
 
 
 ClassTuple = namedtuple("ClassTuple",["cls"])
@@ -41,7 +43,8 @@ class ReteNet(DictLike):
 			
 			# then, add merge nodes
 			for mtuple in patdict['merges']:
-				if isinstance(mtuple.lhs,ClassTuple):
+				if len(mtuple.lhs)==1:
+					# mtuple.lhs is a classtuple
 					self.add_checktype_path(mtuple.lhs.cls)
 				self.add_merge(mtuple)
 
@@ -197,6 +200,24 @@ class ReteNet(DictLike):
 					str1 += ','.join(elems) + '\n'
 				str1 += ']\n\n'
 		return str1
+
+	def create_lambdas(self):
+		seri = Serializer2()
+		for pat in self.patterns:
+			x = self.patterns[pat]
+			x._lambda_strings = []
+			x._lambdas = []
+			lambda_tuples = []
+			if x._tree is not None:
+				lambda_tuples = seri.transform(x._tree)
+				for tup in lambda_tuples:
+					x._lambda_strings.append(tup)
+					new_tup = list(tup)
+					new_tup[-1] = eval(tup[-1])
+					x._lambdas.append(tuple(new_tup))
+			#print(pat,x._lambda_strings,x._lambdas)
+		
+		return
 
         
 	def draw_as_gml(self):
