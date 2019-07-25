@@ -383,7 +383,7 @@ class Pattern(DictLike):
 
         def expand_symmetries(scaffold_symmetries,final_symmetries,path):
             ###
-            # if scaffold and final symmetries identical, do nothing
+            # if scaffold and final symmetries identical, return identity symmetry
             # if final symmetry is just the identity symmetry, give all symmetries
             # else
             # identify preserved symmetries (scaffold intersection final)
@@ -392,7 +392,7 @@ class Pattern(DictLike):
             # # # rotate current one using preserved symmetries and remove from non-preserved
 
             if len(scaffold_symmetries) == len(final_symmetries):
-                return deque()
+                return deque(maps_to_indices([scaffold_symmetries[0]],path))
             if len(final_symmetries)==1:
                 return deque(maps_to_indices(scaffold_symmetries,path))
 

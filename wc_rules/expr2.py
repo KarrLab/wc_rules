@@ -499,13 +499,20 @@ class GraphBuilder(Transformer):
         elif isinstance(args[0],str):
             # # function_call := function_name [args/match_expression]
             fname = args[0]
+            symmetric=False
+            if fname in BuiltinHook.symmetric_functions:
+                symmetric = True
             node_ref = self.node_dict['functions'][fname]
             nodes_to_return.append(node_ref)
             if len(args) > 1:
                 # does it have args/matchexpression
                 new_args_node = self.add_new_node('args')
-                for i,n in args[1]:
-                    self.graph.add_edge(n,new_args_node,label=str(i))
+                if symmetric:
+                    for i,n in args[1]:
+                        self.graph.add_edge(n,new_args_node,label='')
+                else:    
+                    for i,n in args[1]:
+                        self.graph.add_edge(n,new_args_node,label=str(i))
                 nodes_to_return.append(new_args_node)
         else:
             raise ValidateError('Function call could not be found.')
@@ -618,6 +625,10 @@ class BuiltinHook(object):
 
     allowed_constants = set([
     'pi','tau','avo',
+    ])
+
+    symmetric_functions = set([
+    'max','min','sum','any','all',
     ])
 
     abs = math.fabs
@@ -837,7 +848,6 @@ class Serializer2(Transformer):
     def varpairs(self,args):
         return ('varpairs',tuplize(args))
 
-        
     def xdo(self,args):
         return simple_join(['x.do',enclose(comma_join([space_join([x,"=",y]) for x,y in args + [('match','m')] ]))])
     
