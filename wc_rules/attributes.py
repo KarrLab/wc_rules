@@ -50,12 +50,14 @@ class BioSeqAttribute(bio.BioSeqAttribute):
 # wrapper for methods that can be called for setting pattern constraints & during simulation
 def dynamic(fn):
     fnvars = fn.__code__.co_varnames
-    @wraps(fn)
-    def outer(self_obj,**kwargs):
-        populate_this = [x for x in fnvars if x in self_obj.get_literal_attrs() and x not in kwargs]
-        for var in populate_this:
-            kwargs[var] = getattr(self_obj,var)
-        return fn(**kwargs)
-    outer._isdynamic = True
-    outer._args = fnvars
-    return outer
+    fn._isdynamic = True
+    fn._args = fnvars
+    #@wraps(fn)
+    #def outer(**kwargs):
+        #populate_this = [x for x in fnvars if x in self_obj.get_literal_attrs() and x not in kwargs]
+        #for var in populate_this:
+        #    kwargs[var] = getattr(self_obj,var)
+        #return fn(**kwargs)
+    #outer._isdynamic = True
+    #outer._args = fnvars
+    return fn

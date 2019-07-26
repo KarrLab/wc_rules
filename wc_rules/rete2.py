@@ -53,7 +53,7 @@ class ReteNet(DictLike):
 			self.add_pattern(pattern,ptuple)
 
 		self.initialize_caches()
-		self.create_lambdas()
+		self.create_lambdas(verbose=False)
 
 
 	def add_checktype_path(self,_class):
@@ -128,6 +128,13 @@ class ReteNet(DictLike):
 		self[pat.id].info['variables'] = self.pattern_variables[pat.id]
 		self[pat.id].info['token_length'] = len(self.pattern_variables[pat.id])
 
+		# compiles dynamic functions and attaches them to the Rete node
+		varmethods = dict()
+		for ind,ftuples in ptuple.varmethods:
+			for ftuple in ftuples:
+				varmethods[(ind,ftuple.function_name)] = (getattr(ftuple.cls,ftuple.function_name),ftuple.function_args)
+		self[pat.id].info['varmethods'] = varmethods
+		
 		# add pattern orbits
 		new_orbs = []
 		for orb in pat._final_orbits:
@@ -181,7 +188,7 @@ class ReteNet(DictLike):
 	def initialize_caches(self):
 		signatures = ['check_edge','check_attr','merge','pattern']
 		edge = ['node1','node2']
-		attr = ['node','value','old_value']
+		attr = ['node','value']
 		for node in self:
 			if node.signature in signatures:
 				node.cache = db.Base(':memory:')
@@ -595,9 +602,9 @@ class ReteNode(core.Model):
 	# update internal caches, then pass it to relevant patterns
 
 	def check_attr_behavior(self,action,verbose=False):
-		# cache has attr = ['node','value','old_value']
+		# cache has attr = ['node','value']
 		attrtoken = action.target
-		assert attrtoken.value != attrtoken.old_value
+		#assert attrtoken.value != attrtoken.old_value
 		condition = issubclass(attrtoken.node.cls,self.id.cls) and attrtoken.attr == self.id.attr
 
 		if verbose:
@@ -605,38 +612,38 @@ class ReteNode(core.Model):
 		
 		insertion = None
 		removal = None
+		node = attrtoken.node.id
 		if condition:
-			node = attrtoken.node.id
+			
 			value = attrtoken.value
-			old_value = attrtoken.old_value
 			current_elems = list(self.cache('node')==node)
 			
-			# checks
-			# current token's old value is existing value already stored in cache
-			# unless current token's old value is None, in which case, there shd be no
-			# matching element in the cache
-
-			assert (attrtoken.old_value is not None) == len(current_elems)
-			
 			if len(current_elems) == 1:
-				assert current_elems[0]['value'] == attrtoken.old_value
 				removal = current_elems[0]
 			if value is not None:
-				insertion = (attrtoken.node.id,value,old_value)
+				insertion = (attrtoken.node.id,value)
 			if removal is not None:
 				self.cache.delete(removal)
 				if verbose:
-					somelist = [removal[x] for x in ['node','value','old_value']]
+					somelist = [removal[x] for x in ['node','value']]
 					print(self.verbose_textgenerator2(somelist,verb='remove',tab=True))
 			if insertion is not None:
 				self.cache.insert(*insertion)
 				if verbose:
 					print(self.verbose_textgenerator2(insertion,verb='insert',tab=True))
 			self.cache.commit()
-		# forward to downstream patterns
-		new_action = verify_match([node],info=self.id)
-		self.process_action_all_relevant_nodes(new_action,'as_attrs',verbose)
-		
+			
+			# forward to downstream patterns
+			new_action = None
+			if insertion is not None and removal is not None:
+				new_action = verify_match([node],info=self.id)
+			if insertion is None and removal is not None:
+				new_action = remove_match([node],info=self.id)
+			if insertion is not None and removal is None:
+				new_action = verify_match([node],info=self.id)
+				
+			self.process_action_all_relevant_nodes(new_action,'as_attrs',verbose)
+			
 		return self
 
 
@@ -727,8 +734,10 @@ class ReteNode(core.Model):
 
 
 	def do(self,**kwargs):
+		
 		variables = self.info['variables']
-		if len(kwargs)==3 and sorted(kwargs.keys())== ['attribute','match','variable']:
+		if sorted(kwargs.keys())== ['attribute','match','variable']:
+			# case: function_call := variable.attribute
 			match = kwargs['match']
 			index = variables.index(kwargs['variable'])
 			attribute = kwargs['attribute']
@@ -737,11 +746,28 @@ class ReteNode(core.Model):
 			# this will throw an error if match[index] doesnt already exist in the attr_node's database
 			# sanity check for simulation
 			return value
-		elif len(kwargs)==2 and sorted(kwargs.keys())== ['match','variable']:
+		elif sorted(kwargs.keys())== ['match','variable']:
+			# case: function_call := variable (some computed variable)
 			match = kwargs['match']
 			index = variables.index(kwargs['variable'])
 			value = match[index]
 			return value
+		elif sorted(kwargs.keys()) in [['function_name', 'kwargs', 'match', 'variable'], ['function_name', 'match', 'variable']]:
+			# case: function_call := variable.function_name(**kwargs)
+			match = kwargs['match']
+			function_name = kwargs['function_name']
+			given_kwargs = dict()
+			if 'kwargs' in kwargs:
+				given_kwargs = dict(kwargs['kwargs'])
+			index = variables.index(kwargs['variable'])
+			fn,fn_args = self.info['varmethods'][(index,function_name)]
+			# compose kwargs and run it thru the fn
+			for attr in fn_args:
+				if attr not in given_kwargs:
+					attrnode = self.info['attr_node_maps'][(index,attr)]
+					value = filter_cache(attrnode.cache,[match[index],None,None])[0]['value']
+					given_kwargs[attr] = value
+			return fn(**given_kwargs)
 		else:
 			assert False,"Could not process some call to do() with kwargs " + str(kwargs)
 		
@@ -750,7 +776,8 @@ class ReteNode(core.Model):
 	def verify_match(self,match):
 		x = self
 		h = BuiltinHook
-		m = match.copy()
+		m = list(match).copy()
+
 		variables = self.info['variables']
 		lambda_tuples = self._lambdas
 		#lambda_tuple_strings = self._lambda_strings
@@ -758,13 +785,12 @@ class ReteNode(core.Model):
 		for tup in lambda_tuples:
 			fn = tup[-1]
 			if tup[0] == 'boolean' and not fn(x,h,m)==True:
-				print(fn(x,h,m))
 				return None
 			if tup[0] == 'assignment':
 				# sanity check
 				assert variables.index(tup[1])==len(m)
 				m.append(fn(x,h,m))
-		return m
+		return tuple(m)
 
 
 	def pattern_behavior(self,action,verbose=False):
@@ -775,6 +801,8 @@ class ReteNode(core.Model):
 		removals = []
 	
 		if action.info=='scaffold' and action.action=='insert':
+			# scaffold has a new entry
+			# check if can be included in pattern
 			target = action.target
 			token_length = len(target)
 			targets = [reorder_element(target,sym,len(target)) for sym in self.info['scaffold_symmetry_breaks']]
@@ -783,6 +811,8 @@ class ReteNode(core.Model):
 				if insert_target is not None:
 					insertions.append(insert_target)
 		if action.info=='scaffold' and action.action=='remove':
+			# scaffold has an entry deleted
+			# check if corresponding entries in pattern have to be deleted
 			target = action.target
 			token_length = len(self.info['variables'])
 			remap = [(i,i) for i in range(len(target))]
@@ -791,7 +821,80 @@ class ReteNode(core.Model):
 				filtered_target = reorder_element(target,remap,token_length)
 				elements_to_remove = filter_cache(self.cache,filtered_target)
 				removals.extend(elements_to_remove)
-		
+
+		if action.action=='verify' and action.info._fields == ('cls','attr'):
+			# an attr has changed
+			# first find out which positions are possibly affected
+			attr_node_maps = self.info['attr_node_maps']
+			attr = action.info.attr
+			affected_positions = [i for (i,x) in attr_node_maps if attr_node_maps[(i,x)].id==action.info]
+
+			# now compose scaffold filters
+			# each affected position creates a filter and each of those filters have to be symmetrically
+			# reverse-rotated
+			scaffold_filters = dict()
+			L = self.scaffold.info['token_length']
+			for i in affected_positions:
+				fil = [None]*L
+				fil[i] = action.target[0]
+				fils = [reorder_element(fil,sym,L,reverse=True) for sym in self.info['scaffold_symmetry_breaks']]
+				for x in fils:
+					scaffold_filters[tuple(x)] = True
+
+			# use scaffold filters to get scaffold elements
+			scaffold_record_tuples = []
+			for fil in scaffold_filters:
+				records = filter_cache(self.scaffold.cache,fil)
+				tuples = [convert_to_tuple(rec,self.scaffold.cache.fields) for rec in records]
+				scaffold_record_tuples.extend(tuples)
+
+			# now for each scaffold record, a corresponding elem may or may not exist in cache
+			has_records = dict()
+			has_no_records = []
+			Ldiff = self.info['token_length'] - L
+			for elem in scaffold_record_tuples:
+				elem2 = list(elem) + [None]*Ldiff
+				records = filter_cache(self.cache,elem2)
+				assert len(records) <= 1
+				if len(records) == 1:
+					rec = records[0]
+					has_records[elem] = rec
+				else:
+					has_no_records.append(elem)
+
+			# for those in has_records, verify match
+			# if identical, do nothing
+			# if not identical, tag old one for removal and new one for insertion
+			for elem,rec in has_records.items():
+				elem2 = convert_to_tuple(rec,self.cache.fields)
+				m = self.verify_match(elem)
+				if m is None:
+					removals.append(rec)
+				elif m != elem2:
+					removals.append(rec)
+					insertions.append(m)
+
+			for elem in has_no_records:
+				m = self.verify_match(elem)
+				if m is not None:
+					insertions.append(m)	
+
+		if action.action=='remove' and action.info._fields == ('cls','attr'):
+			# a scalar attr has been set to None
+			# this means that node is being scheduled for removal
+			# simply filter and remove
+			attr_node_maps = self.info['attr_node_maps']
+			attr = action.info.attr
+			affected_positions = [i for (i,x) in attr_node_maps if attr_node_maps[(i,x)].id==action.info]
+
+			L = self.info['token_length']
+			for i in affected_positions:
+				fil = [None]*L
+				fil[i] = action.target[0]
+				elements_to_remove = filter_cache(self.cache,fil)
+				removals.extend(elements_to_remove)
+				
+			
 		self.cache.delete(removals)
 		for elem in removals:
 			if verbose:
@@ -804,5 +907,9 @@ class ReteNode(core.Model):
 		#print([convert_to_tuple(x,self.cache.fields) for x in self.cache])
 
 		self.cache.commit()
+		for elem in self.cache:
+			tup = convert_to_tuple(elem,self.cache.fields)
+			print('\t(' + ",".join([str(x) for x in tup]) + ')')
+			
 		return self
 		

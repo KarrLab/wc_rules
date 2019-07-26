@@ -26,9 +26,11 @@ MergeTuple = namedtuple("MergeTuple",[
             ])
 PatternTuple = namedtuple('PatternTuple',[
     'scaffold','scaffold_symmetry_breaks', 'internal_symmetries',
-    'attrs',
+    'attrs','varmethods'
     ])
-
+AttrTuple = namedtuple("AttrTuple",['cls','attr'])
+FuncTuple = namedtuple("FuncTuple",['cls','function_name','function_args'])
+        
 class Pattern(DictLike):
     def __init__(self,idx,nodelist=None,recurse=True):
         super().__init__()
@@ -510,13 +512,16 @@ class Pattern(DictLike):
     def get_attrtuples(self):
         attrtuples = dict()
         attrtuple_set = set()
-        AttrTuple = namedtuple("AttrTuple",['cls','attr'])
+        functuples = dict()
         if self._deps is not None:
             simple_attribute_calls = set.union(*[dep['attributes'] for dep in self._deps]) 
             dynamic_attribute_calls = set()
             varmethods_to_check = set.union(*[dep['varmethods'] for dep in self._deps])
             for var,varmethod,kws in varmethods_to_check:
                 arguments = self[var].get_dynamic_methods()[varmethod]._args
+                if var not in functuples:
+                    functuples[var] = set()
+                functuples[var].add(FuncTuple(cls=self[var].__class__,function_name=varmethod,function_args=arguments))
                 attrs = self[var].get_literal_attrs()
                 attrdeps = [x for x in arguments if x in attrs]
                 for x in attrdeps:
@@ -533,7 +538,7 @@ class Pattern(DictLike):
 
             for var in attrtuples:
                 attrtuples[var] = tuple(sorted(attrtuples[var]))
-        return attrtuples,attrtuple_set
+        return attrtuples,attrtuple_set,functuples
 
     def get_computed_variables(self):
         variables = []
@@ -573,7 +578,7 @@ class Pattern(DictLike):
         def maps_to_indices(maps,path):
             return [tuple(sorted([(path.index(x),path.index(y)) for x,y in m])) for m in maps]
         
-        attrtuples, attrtuple_set = self.get_attrtuples()
+        attrtuples, attrtuple_set,functuples = self.get_attrtuples()
 
         # building internal dependency graph for pattern
         attr_dependency_table = defaultdict(list)
@@ -581,6 +586,8 @@ class Pattern(DictLike):
             for attrtuple in attrs:
                 bisect.insort(attr_dependency_table[attrtuple],mergepath.index(var))
 
+        functuple_list = sorted([(mergepath.index(x),y) for x,y in functuples.items()])
+        
         for attrtuple in attr_dependency_table.keys():
             attr_dependency_table[attrtuple] = tuple(attr_dependency_table[attrtuple])
         attr_relations = [tuple(x) for x in attr_dependency_table.items()]
@@ -604,6 +611,7 @@ class Pattern(DictLike):
             scaffold_symmetry_breaks = tuple(scaffold_symmetry_breaks),
             internal_symmetries = tuple(internal_symmetries),
             attrs = tuple(attr_relations),
+            varmethods = tuple(functuple_list),
             )
 
         # Pattern relations cannot be specified here.
