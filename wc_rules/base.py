@@ -6,7 +6,7 @@
 :License: MIT
 """
 
-from obj_model import core
+from obj_tables import core
 from . import graph_utils
 from . import utils
 from .attributes import *

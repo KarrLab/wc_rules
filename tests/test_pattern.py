@@ -1,4 +1,4 @@
-from obj_model import core
+from obj_tables import core
 from wc_rules import utils,chem
 from wc_rules.utils import ParseExpressionError
 from wc_rules import pattern

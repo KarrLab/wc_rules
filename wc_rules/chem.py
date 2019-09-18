@@ -4,7 +4,7 @@
 :Copyright: 2017, Karr Lab
 :License: MIT
 """
-from obj_model import core
+from obj_tables import core
 from . import base,entity,utils
 from .attributes import *
 

@@ -6,8 +6,8 @@
 """
 from . import rete_nodes as rn
 from . import chem, utils
-from obj_model import core
-from obj_model import bio
+from obj_tables import core
+from obj_tables import bio
 import Bio.Seq
 import Bio.Alphabet
 
