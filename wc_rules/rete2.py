@@ -52,6 +52,7 @@ class ReteNet(DictLike):
 			ptuple = patdict['pattern_tuple']
 			self.add_pattern(pattern,ptuple)
 
+		self.compile_pattern_relations()
 		self.initialize_caches()
 		self.create_lambdas(verbose=False)
 
@@ -126,7 +127,10 @@ class ReteNet(DictLike):
 		self[pat.id].info['scaffold_symmetry_breaks'] = ptuple.scaffold_symmetry_breaks
 		self[pat.id].info['internal_symmetries'] = ptuple.internal_symmetries
 		self[pat.id].info['variables'] = self.pattern_variables[pat.id]
-		self[pat.id].info['token_length'] = len(self.pattern_variables[pat.id])
+		self[pat.id].info['token_length'] = len(self.pattern_variables[pat.id])	
+
+		#print(self[pat.id].info['scaffold_symmetry_breaks'])
+		#print(self[pat.id].info['internal_symmetries'])
 
 		# compiles dynamic functions and attaches them to the Rete node
 		varmethods = dict()
@@ -146,19 +150,56 @@ class ReteNet(DictLike):
 		# add pattern relations
 		pat_remaps = dict()
 		rel_dict = self.pattern_relations.get(pat.id,dict())
-		remap_tuples = []
-		for pat2,varpairs in rel_dict.items():
+		
+		for pat2,varpairs_list in rel_dict.items():
 			self[pat2].as_patterns.append(self[pat.id])
-			for var2,var in varpairs:
-				ind = self[pat.id].info['variables'].index(var)
-				ind2 = self[pat2].info['variables'].index(var2)
-				# pat2 is the incoming, pat is the current
-				# remap_tuples are ordered (pat2.index,pat.index)
-				# see explanation of remap_tuples in pattern.py
-				remap_tuples.append([(ind2,ind)])
-			pat_remaps[pat2] = sorted(remap_tuples)
+			if pat2 not in pat_remaps:
+				pat_remaps[pat2] = []
+			for varpairs in varpairs_list:
+				remap_tuples = []
+				for var2,var in varpairs:
+					ind = self[pat.id].info['variables'].index(var)
+					ind2 = self[pat2].info['variables'].index(var2)
+					# pat2 is the incoming, pat is the current
+					# remap_tuples are ordered (pat2.index,pat.index)
+					# see explanation of remap_tuples in pattern.py
+					remap_tuples.append((ind2,ind))
+				pat_remaps[pat2].append(tuple(sorted(remap_tuples)))
+		
 		self[pat.id].info['pattern_remaps'] = pat_remaps
+		return self
 
+	def compile_pattern_relations(self):
+		for pat,pat_obj in self.patterns.items():
+			for pat2,remap_tuples in self[pat].info['pattern_remaps'].items():
+				if 'outgoing' not in self[pat2].info:
+					self[pat2].info['outgoing'] = dict()
+				if pat not in self[pat2].info['outgoing']:
+					syms = self[pat2].info['internal_symmetries']
+					remap2 = set()
+					for tuplist in remap_tuples:
+						# here, [(i,j),(k,l),]  first element from pat2, second element from pat
+						remap2.add(tuplist)
+						for sym in syms:
+							symdict = dict(sym)
+							new_tuplist = tuple(sorted([(symdict[x],y) for x,y in tuplist]))
+							remap2.add(new_tuplist)
+					self[pat2].info['outgoing'][pat] = {'length': self[pat].info['token_length'], 'remap_tuples':sorted(remap2)}
+				if 'incoming' not in self[pat].info:
+					self[pat].info['incoming'] = dict()
+				if pat2 not in self[pat].info['incoming']:
+					syms = self[pat].info['internal_symmetries']
+					for tuplist in remap_tuples:
+						inds = [y for x,y in tuplist]
+					remap2 = set()
+					for sym in syms:
+						symdict = dict(sym)
+						new_tuplist = tuple(sorted([(x,symdict[x]) for x in inds]))
+						remap2.add(new_tuplist)
+					self[pat].info['incoming'][pat2] = sorted(remap2)
+
+				#print(pat2,self[pat2].info['outgoing'])
+				#print(pat,self[pat].info['incoming'])
 		return self
 
 
@@ -215,6 +256,7 @@ class ReteNet(DictLike):
 					str1 += ','.join(elems) + '\n'
 				str1 += ']\n\n'
 		return str1
+
 
 	def create_lambdas(self,verbose=False):
 		seri = Serializer2()
@@ -294,7 +336,8 @@ def action_to_string(action):
 		return ''.join(['(',node_to_string(attr.node),'.',attr.attr,':',str(attr.old_value),'->',str(attr.value),')'])
 
 	def tuple_to_string(tup):
-		return '(' + ','.join(tup) + ')'
+		strs = [str(x) for x in tup]
+		return '(' + ','.join(strs) + ')'
 
 	if isinstance(action.target,NodeToken):
 		str1 = node_to_string(action.target)
@@ -387,7 +430,8 @@ def reorder_element(match,remap,token_length,reverse=False):
 		remap = sorted([(y,x) for (x,y) in remap])
 	elem = [None]*token_length
 	for x,y in remap:
-		elem[y] = match[x]
+		if y < len(elem):
+			elem[y] = match[x]
 	return elem
 
 def satisfies_canonical_ordering(elem,symmetry_checks):
@@ -404,6 +448,8 @@ def filter_cache(_cache,elem):
 				fil = (_cache(_cache.fields[i])==x)
 			else:
 				fil =  (_cache(_cache.fields[i])==x) & fil
+	if fil is None:
+		return []
 	return list(fil)
 
 def interpolate(elem1,elem2):
@@ -416,8 +462,8 @@ def interpolate(elem1,elem2):
 
 def interpolate_lists(list1,list2):
 	interpolated_list = [interpolate(elem1,elem2) for elem1,elem2 in product(list1,list2)]
-	final_list = [x for x in interpolated_list if len(set(x))==len(x)]
-	return final_list
+	#final_list = [x for x in interpolated_list if len(set(x))==len(x)]
+	return interpolated_list
 			
 		
 class ReteNode(core.Model):
@@ -475,6 +521,15 @@ class ReteNode(core.Model):
 			self.merge_behavior(action,verbose)
 		elif self.signature=='pattern':
 			self.pattern_behavior(action,verbose)
+		return self
+
+	def print_cache(self):
+		elems = [x for x in self.cache]
+		if len(elems)==0: 
+			print('\t[]')
+		for elem in self.cache:
+			tup = convert_to_tuple(elem,self.cache.fields)
+			print('\t('+  ",".join([str(x) for x in tup]) + ")")
 		return self
 
 	def process_action_all_relevant_nodes(self,action,attr,verbose=False):
@@ -565,6 +620,9 @@ class ReteNode(core.Model):
 			if verbose:
 				print(self.verbose_textgenerator2(elem,'insert'))
 
+		if verbose and len(insertions+removals) > 0:
+			self.print_cache()
+
 		self.cache.commit()
 		
 
@@ -635,14 +693,25 @@ class ReteNode(core.Model):
 			
 			# forward to downstream patterns
 			new_action = None
-			if insertion is not None and removal is not None:
+			if insertion is not None:
 				new_action = verify_match([node],info=self.id)
-			if insertion is None and removal is not None:
-				new_action = remove_match([node],info=self.id)
-			if insertion is not None and removal is None:
-				new_action = verify_match([node],info=self.id)
-				
-			self.process_action_all_relevant_nodes(new_action,'as_attrs',verbose)
+				self.process_action_all_relevant_nodes(new_action,'as_attrs',verbose)
+
+			if verbose and (insertion,removal) != (None,None):
+				self.print_cache()
+
+			
+			# CAVEATS
+			# here, only an insertion triggers a token pass to downstream nodes
+			# reason: when a scalar attribute is edited, it MUST always be to
+			# another valid scalar value, which will always trigger an insertion
+			# when an object is created, None->value triggers an insertion
+			# when an object is scheduled to be removed, value->None triggers only a deletion,
+			# and downstream rete nodes can be potentially holding wrong matches
+			# so, in the design of actions, there MUST be a subsequent remove_node action that
+			# will remove the wrong matches.
+			# setting attribute to None and not subsequently deleting the node is BADDDDD!	
+			
 			
 		return self
 
@@ -674,15 +743,16 @@ class ReteNode(core.Model):
 		# if it is an insert action, try to get a merge from the other side
 
 		if verbose:
-			print(self.verbose_textgenerator(action,verb='process'))
+			print(self.verbose_textgenerator(action,verb='process') +'from side '+action.info)
 
 		match = action.target
 		elem = reorder_element(match,remap_dict['first'],self.info['token_length'])
+		'''
 		if not satisfies_canonical_ordering(elem,self.info['symmetry_checks']):
 			if verbose:
 				print('\t reject (' + ','.join(elem) + ') for symmetry reasons')
 			return self
-		
+		'''		
 		if action.action=='remove':
 			side = action.info
 			elem = reorder_element(match,self.info[side+'_remap'],self.info['token_length'])
@@ -699,12 +769,21 @@ class ReteNode(core.Model):
 				elems2 = [reorder_element(x,remap_dict['second'],self.info['token_length']) for x in elems2]
 
 				if len(elems2) > 0:
+					if verbose:
+						elemx = ['('+ ','.join([str(x) for x in elem]) + ')' for elem in elems2]
+						print('\t processing elements from '+side['second']+':' + ','.join(elemx))
+
 					new_elems = interpolate_lists([elem],elems2)
-					for x in new_elems: 
-						if satisfies_canonical_ordering(x,self.info['symmetry_checks']):
+					for x in new_elems:
+						no_repeated_elems = len(set(x)) == len(x)
+						canonical = satisfies_canonical_ordering(x,self.info['symmetry_checks'])
+						if no_repeated_elems and canonical:
 							insertions.append(x)
 						elif verbose:
-							print('\t reject (' + ','.join(x) + ') for symmetry reasons')
+							if not no_repeated_elems:
+								print('\t reject (' + ','.join(x) + ') for repeated targets within match') 
+							elif not canonical:
+								print('\t reject (' + ','.join(x) + ') for symmetry reasons')
 
 		self.cache.delete(removals)
 		for elem in removals:
@@ -715,6 +794,12 @@ class ReteNode(core.Model):
 			self.cache.insert(*elem)
 			if verbose:
 				print(self.verbose_textgenerator2(elem,'insert'))
+		
+		self.cache.commit()
+
+		if verbose and len(insertions+removals) > 0:
+			self.print_cache()
+
 
 		# propagate downstream
 		for elem in removals:
@@ -725,10 +810,6 @@ class ReteNode(core.Model):
 			for side in ['lhs','rhs','scaffold']:
 				new_action = insert_match(elem,info=side)
 				self.process_action_all_relevant_nodes(new_action,'as_'+side,verbose)
-				
-
-
-		self.cache.commit()
 
 		return self
 
@@ -768,12 +849,33 @@ class ReteNode(core.Model):
 					value = filter_cache(attrnode.cache,[match[index],None,None])[0]['value']
 					given_kwargs[attr] = value
 			return fn(**given_kwargs)
+		elif sorted(kwargs.keys()) == ['match','pattern','varpairs']:
+			patnode = [x for x in self.patterns if x.id==kwargs['pattern']][0]
+			incoming_patvars = patnode.info['variables']
+			current_patvars = self.info['variables']
+			varpairs = kwargs['varpairs']
+			remap = [( incoming_patvars.index(x),current_patvars.index(y) ) for x,y in varpairs]
+			# reorder current match into check_match based on kwargs['pattern']
+			# remap_tuples are ordered (pat2.index,pat.index)
+			# pat2 is the incoming, pat is self
+			# see explanation of remap_tuples in pattern.py
+
+			syms = patnode.info['internal_symmetries']
+			toklength = patnode.info['token_length']
+			check_match = reorder_element(kwargs['match'],remap,toklength)
+			# now for every symmetry of that pattern, create a filter
+			filterlist = set()
+			for sym in syms:
+				filterlist.add(tuple(reorder_element(check_match,sym,toklength)))
+			filterlist = list(filterlist)
+			return (patnode.cache,filterlist)
+			
 		else:
 			assert False,"Could not process some call to do() with kwargs " + str(kwargs)
 		
 		return None
 
-	def verify_match(self,match):
+	def verify_match(self,match,verbose=False):
 		x = self
 		h = BuiltinHook
 		m = list(match).copy()
@@ -782,14 +884,36 @@ class ReteNode(core.Model):
 		lambda_tuples = self._lambdas
 		#lambda_tuple_strings = self._lambda_strings
 
-		for tup in lambda_tuples:
+		def tupstr(tup):
+			if isinstance(tup,tuple) or isinstance(tup,list):
+				return '(' + ",".join([str(x) for x in tup]) + ')'
+			return str(tup)
+
+		if verbose:
+			print('\tVerifying match '+ tupstr(m))
+
+
+		for i,tup in enumerate(lambda_tuples):
 			fn = tup[-1]
-			if tup[0] == 'boolean' and not fn(x,h,m)==True:
-				return None
+			
+			if verbose:
+				print('\tCompute '+self._lambda_strings[i][1],) 
+			
+			value = fn(x,h,m)
+
+			if verbose:
+				print(' returns ' + tupstr(value))
+				
 			if tup[0] == 'assignment':
 				# sanity check
 				assert variables.index(tup[1])==len(m)
-				m.append(fn(x,h,m))
+				m.append(value)
+				if verbose:
+					print('\tExtending match '+ '(' + tupstr(tuple(m)) +')' )
+					
+			if tup[0] == 'boolean' and not value:
+				return None
+			
 		return tuple(m)
 
 
@@ -807,9 +931,11 @@ class ReteNode(core.Model):
 			token_length = len(target)
 			targets = [reorder_element(target,sym,len(target)) for sym in self.info['scaffold_symmetry_breaks']]
 			for target in targets:
-				insert_target = self.verify_match(target)
+				insert_target = self.verify_match(target,verbose)
 				if insert_target is not None:
 					insertions.append(insert_target)
+
+
 		if action.info=='scaffold' and action.action=='remove':
 			# scaffold has an entry deleted
 			# check if corresponding entries in pattern have to be deleted
@@ -848,26 +974,26 @@ class ReteNode(core.Model):
 				tuples = [convert_to_tuple(rec,self.scaffold.cache.fields) for rec in records]
 				scaffold_record_tuples.extend(tuples)
 
-			# now for each scaffold record, a corresponding elem may or may not exist in cache
+			# now for each scaffold record, rotated to symmetry breaks, a corresponding elem may or may not exist in pattern cache
 			has_records = dict()
 			has_no_records = []
-			Ldiff = self.info['token_length'] - L
 			for elem in scaffold_record_tuples:
-				elem2 = list(elem) + [None]*Ldiff
-				records = filter_cache(self.cache,elem2)
-				assert len(records) <= 1
-				if len(records) == 1:
-					rec = records[0]
-					has_records[elem] = rec
-				else:
-					has_no_records.append(elem)
+				rotated_elems = [reorder_element(elem,sym,self.info['token_length']) for sym in self.info['scaffold_symmetry_breaks']]
+				for elem2 in rotated_elems:
+					records = filter_cache(self.cache,elem2)
+					assert len(records) <= 1
+					if len(records) == 1:
+						rec = records[0]
+						has_records[tuple(elem2)]= rec
+					else:
+						has_no_records.append(tuple(elem2))
 
 			# for those in has_records, verify match
 			# if identical, do nothing
 			# if not identical, tag old one for removal and new one for insertion
 			for elem,rec in has_records.items():
 				elem2 = convert_to_tuple(rec,self.cache.fields)
-				m = self.verify_match(elem)
+				m = self.verify_match(elem,verbose)
 				if m is None:
 					removals.append(rec)
 				elif m != elem2:
@@ -875,26 +1001,62 @@ class ReteNode(core.Model):
 					insertions.append(m)
 
 			for elem in has_no_records:
-				m = self.verify_match(elem)
+				m = self.verify_match(elem,verbose)
 				if m is not None:
 					insertions.append(m)	
-
-		if action.action=='remove' and action.info._fields == ('cls','attr'):
-			# a scalar attr has been set to None
-			# this means that node is being scheduled for removal
-			# simply filter and remove
-			attr_node_maps = self.info['attr_node_maps']
-			attr = action.info.attr
-			affected_positions = [i for (i,x) in attr_node_maps if attr_node_maps[(i,x)].id==action.info]
-
-			L = self.info['token_length']
-			for i in affected_positions:
-				fil = [None]*L
-				fil[i] = action.target[0]
-				elements_to_remove = filter_cache(self.cache,fil)
-				removals.extend(elements_to_remove)
-				
 			
+		
+		if action.action=='insert' and action.info[0] == 'pattern':
+			
+			from_pat_id = action.info[1]
+			from_pattern = [x for x in self.patterns if x.id==from_pat_id]
+			remap_tuples = self.info['incoming'][from_pat_id]
+			token_length = self.info['token_length']
+			# it's already coming in at the prescribed length
+
+			
+			#print(remap_tuples)
+			scaffold_tuples = dict()
+			for remap in remap_tuples:
+				#fil = list(action.target)
+				fil = reorder_element(action.target,remap,token_length)
+				#print(self.info['scaffold_symmetry_breaks'])
+				fils = [reorder_element(action.target,sym,self.info['token_length'],reverse=True) for sym in self.info['scaffold_symmetry_breaks']]
+				for fil2 in fils:
+					scaffold_tuples[tuple(fil2)] = True
+
+
+			has_records = dict()
+			has_no_records = []
+			for fil2 in scaffold_tuples:
+				records = filter_cache(self.scaffold.cache,fil2)
+				for rec in records:
+					elem = convert_to_tuple(rec,self.scaffold.cache.fields)
+					records = filter_cache(self.cache,elem)
+					assert len(records) <= 1
+					if len(records) == 1:
+						rec = records[0]
+						has_records[tuple(elem)]= rec
+					else:
+						has_no_records.append(tuple(elem))
+					print(has_records,has_no_records)
+
+			for elem,rec in has_records.items():
+				existing_elem = convert_to_tuple(rec,self.cache.fields)
+				m = self.verify_match(elem,verbose)
+				if m is None:
+					# this is to check the case that the match no longer exists
+					removals.append(rec)
+				elif m != existing_elem:
+					# this is checking the case that some match computations could have changed
+					removals.append(rec)
+					insertions.append(m)
+
+			for elem in has_no_records:
+				m = self.verify_match(elem,verbose)
+				if m is not None:
+					insertions.append(m)
+
 		self.cache.delete(removals)
 		for elem in removals:
 			if verbose:
@@ -904,12 +1066,57 @@ class ReteNode(core.Model):
 			self.cache.insert(*elem)
 			if verbose:
 				print(self.verbose_textgenerator2(elem,'insert'))
-		#print([convert_to_tuple(x,self.cache.fields) for x in self.cache])
+		
 
 		self.cache.commit()
-		for elem in self.cache:
-			tup = convert_to_tuple(elem,self.cache.fields)
-			print('\t(' + ",".join([str(x) for x in tup]) + ')')
+		if verbose and len(insertions+removals) > 0:
+			#print(insertions,removals)
+			self.print_cache()
+
+
+		# passing it on
+		for elem in removals:
+			for pat in self.as_patterns:
+				outgoing_remap_tuples= self.info['outgoing'][pat.id]['remap_tuples']
+				outgoing_length = self.info['outgoing'][pat.id]['length']
+				tups = [tuple(reorder_element(elem,remap,outgoing_length)) for remap in outgoing_remap_tuples]
+				for tup in tups:
+					action = remove_match(tup,info=('pattern',self.id))
+					pat.process_action(action,verbose)
 			
+			#elem2 = convert_to_tuple(elem,self.cache.fields)
+			#tups = [reorder_element(elem2,sym,self.info['token_length']) for sym in self.info['internal_symmetries']]
+			#for tup in tups:
+			#	action = remove_match(tup,info=('pattern',self.id))
+			#	self.process_action_all_relevant_nodes(action,'as_patterns',verbose=verbose)
+
+		for elem in insertions:
+			for pat in self.as_patterns:
+				outgoing_remap_tuples= self.info['outgoing'][pat.id]['remap_tuples']
+				outgoing_length = self.info['outgoing'][pat.id]['length']
+				tups = [tuple(reorder_element(elem,remap,outgoing_length)) for remap in outgoing_remap_tuples]
+				for tup in tups:
+					action = insert_match(tup,info=('pattern',self.id))
+					pat.process_action(action,verbose)
+					#self.process_action_all_relevant_nodes(action,'as_patterns',verbose=verbose)
+	
+				#print(self.id,pat.id,outgoing_remap_tuples,outgoing_length)
+				#remaps = pat.info['pattern_remaps'][self.id]
+			#tups = [reorder_element(elem,sym,self.info['token_length']) for sym in self.info['internal_symmetries']]
+			#for tup in tups:
+				#action = insert_match(tup,info=('pattern',self.id))
+				#self.process_action_all_relevant_nodes(action,'as_patterns',verbose=verbose)
+
+
+
 		return self
 		
+
+	def exists(self,args):
+		cache = args[0]
+		filterlist = args[1]
+		for elem in filterlist:
+			recs = filter_cache(cache,elem)
+			if len(recs) > 0:
+				return True
+		return False

@@ -385,13 +385,15 @@ class Pattern(DictLike):
 
         def expand_symmetries(scaffold_symmetries,final_symmetries,path):
             ###
+            # SCAFFOLD_SYMMETRIES IS AUT_G
             # if scaffold and final symmetries identical, return identity symmetry
             # if final symmetry is just the identity symmetry, give all symmetries
             # else
-            # identify preserved symmetries (scaffold intersection final)
+            # identify preserved symmetries (scaffold intersection final)  ### THIS IS AUT_Z
             # on the non-preserved symmetries,
             # # # pop each one and put on stack
             # # # rotate current one using preserved symmetries and remove from non-preserved
+            # THIS IS IDENTIFYING A SET OF COSET REPRESENTATIVES
 
             if len(scaffold_symmetries) == len(final_symmetries):
                 return deque(maps_to_indices([scaffold_symmetries[0]],path))
@@ -453,8 +455,10 @@ class Pattern(DictLike):
         # similarly (x,y).index(y) -> (a,b,y,x).index(x) = (1,2)
         # so the remap_tuples = ((0,3),(1,2))
 
-
+        # this is COSET REPRESENTATIVES
         scaffold_symmetry_breaks = expand_symmetries(self._scaffold_symmetries,self._final_symmetries,mergepath)
+        
+        # this is AUT_Z
         internal_symmetries = maps_to_indices(self._final_symmetries,mergepath)
 
         mergetuples = deque()
@@ -570,8 +574,8 @@ class Pattern(DictLike):
                     symmetry_checks = tuple(),
                 )
             mergetuples = deque([new_merge_node])
-            scaffold_symmetry_breaks = ()
-            internal_symmetries = ((0,0),)
+            scaffold_symmetry_breaks = (((0,0),),)
+            internal_symmetries = (((0,0),),)
         else:
             mergetuples,scaffold_symmetry_breaks, internal_symmetries = self.build_merge_sequence(edgetuples,mergepath)
         
@@ -642,16 +646,20 @@ class PatternCollector(object):
         self.pattern_variables[pat.id] = pat.variable_names + pat.get_computed_variables()
         self.pattern_lengths[pat.id] = len(self.pattern_variables[pat.id])
         
+
+
         if pat._deps:
             for dep in pat._deps:
-                if len(dep['patternvarpairs']) > 0:
-                    self.pattern_relations[pat.id] = dict()
                 for incoming_pat, varpairs in dep['patternvarpairs']:
+                    if pat.id not in self.pattern_relations:
+                        self.pattern_relations[pat.id] = dict()            
                     assert incoming_pat in self.pattern_variables, "Pattern dependency not found: "+incoming_pat
                     assert incoming_pat != pat.id, "Pattern cannot be dependent on itself: "+incoming_pat
                     for incoming_var, var in varpairs:
                         assert incoming_var in self.pattern_variables[incoming_pat]
-                    self.pattern_relations[pat.id][incoming_pat] = varpairs
+                    if incoming_pat not in self.pattern_relations[pat.id]:
+                        self.pattern_relations[pat.id][incoming_pat] = []
+                    self.pattern_relations[pat.id][incoming_pat].append(varpairs)
         
         return self
 
