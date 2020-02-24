@@ -31,11 +31,6 @@ setuptools.setup(
     license="MIT",
     keywords='whole-cell systems biology',
     packages=setuptools.find_packages(exclude=['tests', 'tests.*']),
-    package_data={
-        name: [
-            'VERSION',
-        ],
-    },
     install_requires=md.install_requires,
     extras_require=md.extras_require,
     tests_require=md.tests_require,
