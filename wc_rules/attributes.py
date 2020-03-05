@@ -1,5 +1,5 @@
 from obj_tables import core
-from obj_tables import bio
+from obj_tables.bio import seq
 from functools import wraps
 
 # scalar attributes
@@ -43,7 +43,7 @@ class OneToManyAttribute(core.OneToManyAttribute):pass
 class ManyToManyAttribute(core.ManyToManyAttribute):pass
 
 # extra_attributes
-class BioSeqAttribute(bio.BioSeqAttribute):
+class SeqAttribute(seq.SeqAttribute):
     def __init__(self):
         super().__init__(default=None)
 
