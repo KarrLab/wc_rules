@@ -5,7 +5,7 @@ from .expr2 import parser, Serializer, prune_tree, simplify_tree, BuiltinHook, P
 from operator import lt,le,eq,ne,ge,gt
 import random
 import pprint
-from collections import deque,defaultdict
+from collections import deque, defaultdict
 
 import networkx.algorithms.isomorphism as iso
 

@@ -6,7 +6,7 @@
 """
 import networkx
 import networkx.algorithms.isomorphism as iso
-from collections import namedtuple,defaultdict
+from collections import namedtuple, defaultdict
 from pprint import pformat
 from attrdict import AttrDict
 
