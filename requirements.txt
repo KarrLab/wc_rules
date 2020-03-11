@@ -5,6 +5,6 @@ networkx
 textx
 lark_parser
 numpy
-obj_tables
+obj_tables[bio]
 palettable
 setuptools
