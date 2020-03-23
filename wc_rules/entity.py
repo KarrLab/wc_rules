@@ -22,3 +22,5 @@ class Entity(base.BaseClass):
             classnames.append(x.__name__)
             x = x.__bases__[0]
         return classnames
+
+    

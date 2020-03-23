@@ -20,6 +20,15 @@ def iter_to_string(iterable):
 def generate_id():
     return str(uuid.UUID(int=idgen.getrandbits(128)))
 
+def print_as_tuple(x):
+    if isinstance(x,str):
+        return x
+    if isinstance(x,tuple):
+        return '(' + ','.join((print_as_tuple(y) for y in x)) + ')'
+    if isinstance(x,list):
+        return '[' + ','.join((print_as_tuple(y) for y in x)) + ']'
+    return str(x)
+
 ###### Error ######
 class GenericError(Exception):
 

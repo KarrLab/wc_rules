@@ -6,11 +6,13 @@ from .entity import Entity
 from .expr2 import Serializer2, BuiltinHook
 from . import gml
 
+
 from itertools import combinations,product
 from collections import namedtuple,defaultdict,deque
 import pydblite as db
 import pprint
 from functools import reduce
+
 #from .pattern import ClassTuple,EdgeTuple, MergeTuple, PatternTuple
 
 
@@ -315,100 +317,11 @@ class ReteNet(DictLike):
 			print()
 		return True
 
-NodeToken = namedtuple('NodeToken',['cls','id'])
-EdgeToken = namedtuple('EdgeToken',['node1','attr1','attr2','node2'])
-AttrToken = namedtuple('AttrToken',['node','attr','value','old_value'])
-
-Action = namedtuple('Action',['action','target_type','target','info'])
 # here, 'action'='insert'/'remove'/'verify'/'edit'
 # 'target_type' = 'node','edge','attr','match'
 # 'target' = NodeToken,EdgeToken,AttrToken,Tuple
 # 'info' = additional info needed to process target (typically signature of sender)
 
-def action_to_string(action):
-	def node_to_string(node):
-		return ''.join(['(',node.cls.__name__,',',node.id,')'])
-
-	def edge_to_string(edge):
-		return ''.join(['(',node_to_string(edge.node1),'.',edge.attr1,'-',edge.attr2,'.',node_to_string(edge.node2),')'])
-
-	def attr_to_string(attr):
-		return ''.join(['(',node_to_string(attr.node),'.',attr.attr,':',str(attr.old_value),'->',str(attr.value),')'])
-
-	def tuple_to_string(tup):
-		strs = [str(x) for x in tup]
-		return '(' + ','.join(strs) + ')'
-
-	if isinstance(action.target,NodeToken):
-		str1 = node_to_string(action.target)
-	elif isinstance(action.target,EdgeToken):
-		str1 = edge_to_string(action.target)
-	elif isinstance(action.target,AttrToken):
-		str1 = attr_to_string(action.target)
-	else:
-		str1 = tuple_to_string(action.target)
-	return '<' + action.action + ' ' + action.target_type + ' ' + str1 + '>'
-
-def insert_node(_cls,idx):
-	target = NodeToken(cls=_cls,id=idx)
-	return Action(action='insert',target=target,target_type='node',info=None)
-
-def remove_node(_cls,idx):
-	target = NodeToken(cls=_cls,id=idx)
-	return Action(action='remove',target=target,target_type='node',info=None)
-
-def edit_attr(_cls,idx,attr,value,old_value):
-	node = NodeToken(cls=_cls,id=idx)
-	target = AttrToken(node=node,attr=attr,value=value,old_value=old_value)
-	return Action(action='edit',target=target,target_type='attr',info=None)
-
-def node_action(_cls,idx,action='insert'):
-	if action=='insert':
-		return insert_node(_cls,idx)
-	if action=='remove':
-		return remove_node(_cls,idx)
-	return 
-
-def insert_edge(cls1,idx1,attr1,cls2,idx2,attr2):
-	clsdict = {cls1.__name__:cls1,cls2.__name__:cls2}
-	(attr1,clsname1,idx1),(attr2,clsname2,idx2) = sorted([(attr1,cls1.__name__,idx1),(attr2,cls2.__name__,idx2)])
-	node1 = NodeToken(cls=clsdict[clsname1],id=idx1)
-	node2 = NodeToken(cls=clsdict[clsname2],id=idx2)
-	edge = EdgeToken(node1=node1,attr1=attr1,attr2=attr2,node2=node2)
-	return Action(action='insert',target=edge,target_type='edge',info=None)
-
-def remove_edge(cls1,idx1,attr1,cls2,idx2,attr2):
-	clsdict = {cls1.__name__:cls1,cls2.__name__:cls2}
-	(attr1,clsname1,idx1),(attr2,clsname2,idx2) = sorted([(attr1,cls1.__name__,idx1),(attr2,cls2.__name__,idx2)])
-	node1 = NodeToken(cls=clsdict[clsname1],id=idx1)
-	node2 = NodeToken(cls=clsdict[clsname2],id=idx2)
-	edge = EdgeToken(node1=node1,attr1=attr1,attr2=attr2,node2=node2)
-	return Action(action='remove',target=edge,target_type='edge',info=None)
-
-def edge_action(cls1,idx1,attr1,cls2,idx2,attr2,action='insert'):
-	if action=='insert':
-		return insert_edge(cls1,idx1,attr1,cls2,idx2,attr2)
-	if action=='remove':
-		return remove_edge(cls1,idx1,attr1,cls2,idx2,attr2)
-	return
-
-def insert_match(somelist,info=None):
-	return Action(action='insert',target=tuple(somelist),target_type='match',info=info)
-
-def remove_match(somelist,info=None):
-	return Action(action='remove',target=tuple(somelist),target_type='match',info=info)
-
-def verify_match(somelist,info=None):
-	return Action(action='verify',target=tuple(somelist),target_type='match',info=info)
-
-def match_action(somelist,info=None,action='insert'):
-	if action=='insert':
-		return insert_match(somelist,info)
-	if action=='remove':
-		return remove_match(somelist,info)
-	if action=='verify':
-		return verify_match(somelist,info)
-	return 
 
 # accessory methods for rete node
 # methods to process tokens

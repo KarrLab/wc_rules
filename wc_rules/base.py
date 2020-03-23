@@ -143,3 +143,4 @@ class BaseClass(core.Model):
     @property
     def graph(self):
         return self.get_graph(recurse=True)
+

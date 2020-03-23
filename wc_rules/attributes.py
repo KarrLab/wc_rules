@@ -61,3 +61,9 @@ def dynamic(fn):
     #outer._isdynamic = True
     #outer._args = fnvars
     return fn
+
+def state_event(fn):
+    fnvars = fn.__code__.co_varnames
+    fn._isdynamic = True
+    fn._args = fnvars
+    return fn

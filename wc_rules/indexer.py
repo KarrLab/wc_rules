@@ -16,7 +16,9 @@ class DictLike(object):
         else:
             self._dict = dict()
 
-    def get(self,key):
+    def get(self,key,value):
+        if key not in self._dict:
+            return value
         return self._dict[key]
 
     def add(self,item):
@@ -35,7 +37,8 @@ class DictLike(object):
         return iter(self._dict.values())
 
     def __contains__(self,item):
-        return item.id in self._dict and item is self._dict[item.id]
+        return item.id not in self._dict
+        #return item.id in self._dict and item is self._dict[item.id]
 
     def keys(self): return list(self._dict.keys())
     def values(self): return list(self._dict.values())
