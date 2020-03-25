@@ -32,7 +32,7 @@ class Pool:
 	def fetch(self,idx,_cls=None):
 		assert idx in self._dict, "Item doesn't exist in the pool."
 		if _cls is not None:
-			assert self._dict[idx].__class__ == _cls, "Item doesn't exist in the pool."
+			assert isinstance(self._dict[idx],_cls), "Item doesn't exist in the pool."
 		return self._dict[idx]
 
 	def contains(self,_cls=None,idx=None):

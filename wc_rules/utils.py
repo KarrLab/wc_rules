@@ -29,6 +29,12 @@ def print_as_tuple(x):
         return '[' + ','.join((print_as_tuple(y) for y in x)) + ']'
     return str(x)
 
+def listify(x):
+    if isinstance(x,list): 
+        return x
+    return [x]
+
+
 ###### Error ######
 class GenericError(Exception):
 

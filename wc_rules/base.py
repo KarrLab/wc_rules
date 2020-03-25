@@ -75,6 +75,31 @@ class BaseClass(core.Model):
     def get_related_name(self,attr):
         return self.__class__.Meta.local_attributes[attr].related_name
 
+    def add_edge(self,attr1,attr2,node):
+        assert node not in utils.listify(getattr(self,attr1)), "Edge already exists."
+        local_attribute = self.__class__.Meta.local_attributes[attr1]
+        if not local_attribute.is_related_to_many:
+            assert getattr(self,attr1) is None, "Related attribute '" + attr1 + "' is maxed out."
+        if not node.__class__.Meta.local_attributes[attr2].is_related_to_many:
+            assert getattr(node,attr2) is None, "Related attribute '" + attr2 + "' is maxed out."
+        # TODO: implement max_related check here when is_related_to_many == True
+
+        if local_attribute.is_related_to_many: 
+            getattr(self,attr1).add(node)
+        else:
+            setattr(self,attr1,node)
+        return self
+
+    def remove_edge(self,attr1,attr2,node):
+        assert node in utils.listify(getattr(self,attr1)), "Edge not found."
+        local_attribute = self.__class__.Meta.local_attributes[attr1]
+        if local_attribute.is_related_to_many: 
+            getattr(self,attr1).remove(node)
+        else:
+            setattr(self,attr1,None)
+        return self        
+
+
     def get_dynamic_methods(self):
         return {x:getattr(self,x) for x in dir(self) if hasattr(getattr(self,x),'_isdynamic')}
 

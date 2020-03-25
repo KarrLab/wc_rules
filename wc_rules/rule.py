@@ -16,12 +16,8 @@ class Rule:
 		self.reactants[alias] = pattern
 		return self
 
+	
 	def fire(self,pool,idxmap):
-		concrete_actions = []
 		for action in self.actions:
-			act = action.copy_with_idxmap(idxmap)
-			concrete_actions.append(act)
-
-		for act in concrete_actions:
-			act.execute(pool)
+			action.execute(pool,idxmap)
 		return self
