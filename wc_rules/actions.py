@@ -49,7 +49,7 @@ class NodeToken(Token,namedtuple('NodeToken','cls id')):
 		# assume idxmap preserves class relations
 		if idxmap is None:
 			return self
-		return NodeToken.new(self._cls,idxmap[self.id])
+		return NodeToken(self._cls,idxmap[self.id])
 
 class AttrToken(Token,namedtuple('AttrToken','cls id attr')):
 	@staticmethod
