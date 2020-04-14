@@ -1,7 +1,7 @@
 from .indexer import DictLike
 from .utils import generate_id,ValidateError
-from .expr_parse import parse_expression
-from .expr2 import parser, Serializer2, prune_tree, simplify_tree, BuiltinHook, PatternHook, get_dependencies, build_simple_graph, build_graph_for_symmetry_analysis
+
+from .expr import parser, Serializer2, prune_tree, simplify_tree, BuiltinHook, PatternHook, get_dependencies, build_simple_graph, build_graph_for_symmetry_analysis
 from operator import lt,le,eq,ne,ge,gt,xor
 import random
 import pprint
@@ -79,6 +79,8 @@ class Pattern(DictLike):
         strings = [x for x in strings if x not in ['',"\n",None]]
         self._constraints = self._constraints + "\n".join(strings)
         return self
+
+    '''
 
     def validate_dependencies(self,builtin_hook,pattern_hook):
         # checks dependencies internal to the pattern
@@ -158,7 +160,7 @@ class Pattern(DictLike):
         # ensure pattern is fully connected
         assert sorted([x.id for x in examined])==sorted(self.keys())
         return self
-
+	'''
     def process_direct_constraints(self):
         strings = []
         for node in self:
@@ -170,7 +172,7 @@ class Pattern(DictLike):
                     val = str(val)
                 strings.append(node.id + '.' + attr + ' == ' + val)
         return "\n".join(strings)
-
+ 
     def parse_constraints(self):
         # direct constraints: attribute constraints set directly, e.g., A('a',ph=True)
         # self._constraints: constraints set using add_constraints(), e.g., A('a').add_constraints('''a.ph==True''')
@@ -187,7 +189,7 @@ class Pattern(DictLike):
         while modified:
             tree,modified = simplify_tree(tree)
         return tree
-
+    
     def compute_internal_morphisms(self,G):
 
         def nodematch(x,y):

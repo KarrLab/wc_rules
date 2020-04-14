@@ -3,7 +3,7 @@ from obj_model import core
 from .indexer import DictLike
 from .base import BaseClass
 from .entity import Entity
-from .expr2 import Serializer2, BuiltinHook
+from .expr import Serializer2, BuiltinHook
 from . import gml
 
 

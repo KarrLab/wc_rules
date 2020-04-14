@@ -7,6 +7,22 @@
 import uuid
 import random
 
+import itertools,functools,collections,operator
+
+
+############ functional programming
+def merge_lists(list_of_lists):
+    return list(itertools.chain(*list_of_lists))
+
+def merge_dicts(list_of_dicts):
+    # ensure keys dont overlap
+    return dict(collections.ChainMap(*list_of_dicts))
+
+def pipe_map(list_of_operations,list_input):
+    if len(list_of_operations)==0:
+        return list_input
+    item = list_of_operations.pop(0)
+    return pipe_map(list_of_operations,map(item,list_input))
 
 # Seed for creating ids
 # To modify this seed, load utils module, then execute utils.idgen.seed(<new_seed>)

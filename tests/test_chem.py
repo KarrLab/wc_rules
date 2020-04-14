@@ -16,8 +16,6 @@ class B(chem.Molecule):pass
 class Y(chem.Site):
     allowed_molecule_types = (B,)
 class Z(chem.Site):pass
-class NewBond(chem.Bond):
-    allowed_site_types = (X,Y,)
 
 class TestBase(unittest.TestCase):
     def test_get_classnames(self):
@@ -48,12 +46,6 @@ class TestBase(unittest.TestCase):
         self.assertEqual(A1.sites,[])
         self.assertEqual(X1.molecule,None)
 
-        Y1 = Y().set_id('Y1')
-        with self.assertRaises(utils.ValidateError):
-            A1.add_sites(Y1)
-            Y1.verify_allowed_molecule_type()
-        return
-
     def test_bond(self):
         A1 = A().set_id('A1')
         X1 = X().set_id('X1')
@@ -66,41 +58,12 @@ class TestBase(unittest.TestCase):
         B1.add_sites(Y1,Y2)
 
 
-        bnd1 = chem.Bond().add_sites(X1,Y1)
-        self.assertEqual(bnd1.get_sites(),[X1,Y1])
-        self.assertEqual(X1.get_bond(),bnd1)
-        self.assertEqual(Y1.get_bond(),bnd1)
-        bnd1.verify_maximum_number_of_sites()
+        X1.set_bond(Y1)
+        self.assertEqual(X1.get_bond(),Y1)
+        self.assertEqual(Y1.get_bond(),X1)
 
-        with self.assertRaises(utils.ValidateError):
-            bnd1.add_sites(Y2)
-            bnd1.verify_maximum_number_of_sites()
-        bnd1.remove_sites(Y2)
-        self.assertEqual(bnd1.get_sites(),[X1,Y1])
+        Y1.unset_bond()
+        self.assertEqual(X1.get_bond(),None)
+        self.assertEqual(Y1.get_bond(),None)
 
-        Z1 = Z()
-        with self.assertRaises(utils.ValidateError):
-            bnd = NewBond().add_sites(Z1)
-            bnd.verify_allowed_site_types()
-
-        return
-
-    def test_overlaps(self):
-        A1 = A().set_id('A1')
-        X1 = X().set_id('X1')
-        X2 = X().set_id('X2')
-        A1.add_sites(X1,X2)
-
-        olp1 = chem.Overlap().add_sites(X1,X2)
-        self.assertEqual(olp1.get_sites(),[X1,X2])
-        self.assertEqual(X1.get_overlaps()[0],olp1)
-        self.assertEqual(X2.get_overlaps()[0],olp1)
-        olp1.remove_sites(X1,X2)
-        self.assertEqual(len(olp1.get_sites()),0)
-        X1.add_overlaps(olp1)
-        X2.add_overlaps(olp1)
-        self.assertEqual(olp1.get_sites(),[X1,X2])
-        X1.remove_overlaps(olp1)
-        X2.remove_overlaps(olp1)
-        self.assertEqual(len(olp1.get_sites()),0)
         return

@@ -35,7 +35,6 @@ COMMENT: /#.*/
     
     function_call: variable "." function_name "(" [kwargs] ")"
         | function_name "(" [args] ")"
-        | function_name "(" match_expression ")"
         | variable "." attribute 
         | variable
         
@@ -53,17 +52,22 @@ COMMENT: /#.*/
     
     ?bool_op: ">=" -> geq | "<=" -> leq | ">" -> ge | "<" -> le | "==" -> eq | "!=" -> ne
     
+    assignment: declared_variable "=" (expression|boolean_expression)
+    declared_variable: CNAME
+
+    expressions: (assignment|boolean_expression) (NEWLINE (assignment|boolean_expression))* 
+    ?start: [NEWLINE] expressions [NEWLINE]
+"""
+
+"""
     pattern: CNAME
     pattern_variable:CNAME
     varpair: pattern_variable ":" variable
     varpairs: varpair ("," varpair)*
     match_expression: "{" varpairs "}" "in" pattern
 
-    assignment: declared_variable "=" (expression|boolean_expression)
-    declared_variable: CNAME
+    | function_name "(" match_expression ")"
 
-    expressions: (assignment|boolean_expression) (NEWLINE (assignment|boolean_expression))* 
-    ?start: [NEWLINE] expressions [NEWLINE]
 """
 
 parser = Lark(grammar, start='start')
@@ -255,6 +259,7 @@ def get_dependencies(tree):
             elif function_call_type  in [('function_name','args'),('function_name',)]:
                 function_name = node_to_str(ch[0])
                 deps['builtins'].add(function_name)
+            '''
             elif function_call_type == ('function_name','match_expression'):
                 function_name = node_to_str(ch[0])
                 node = ch[1]
@@ -269,7 +274,7 @@ def get_dependencies(tree):
                     lvar = node_to_str(varpair.children[1])
                     vpairs.append(tuple([pvar,lvar]))
                 deps['patternvarpairs'].add( tuple([pattern,tuple(vpairs)]))
-            
+            '''
         deplist.append(deps)
     return deplist
 
@@ -380,6 +385,7 @@ def build_graph_for_symmetry_analysis(G,node_dict,counter,deps,tree):
                 G,counter,new_id = add_new_node(G,counter,'function',fname,fname)
                 node_dict['functions'][fname] = new_id
         
+        '''
         for fname in dep['matchfuncs']:
             if fname not in node_dict['functions']:
                 G,counter,new_id = add_new_node(G,counter,'function',fname,fname)
@@ -389,7 +395,7 @@ def build_graph_for_symmetry_analysis(G,node_dict,counter,deps,tree):
             if pat not in node_dict['patterns']:
                 G,counter,new_id = add_new_node(G,counter,'pattern',pat,pat)
                 node_dict['patterns'][pat] = new_id
-
+        '''
     graphbuilder = GraphBuilder(G,node_dict,counter)
     G,node_dict = graphbuilder.transform(tree)
     return (G,node_dict)
@@ -441,7 +447,7 @@ class GraphBuilder(Transformer):
     kwarg = tuple
     kwargs = list
     arg = pass_on
-    pattern_variable = n2s
+    # pattern_variable = n2s
     varpair = tuple
     varpairs = list
     expression = pass_on
@@ -525,21 +531,6 @@ class GraphBuilder(Transformer):
             self.graph.add_edge(node,new_funccall_node,label='')    
         return new_funccall_node
 
-    def match_expression(self,args):
-        varpairs = args[0]
-        pattern = args[1]
-
-        new_varpairs_node = self.add_new_node('varpairs')
-        for pvar,var in varpairs:
-            self.graph.add_edge(var,new_varpairs_node,label=pvar)
-        new_matchexpr_node = self.add_new_node('match_expression')
-        
-        self.graph.add_edge(new_varpairs_node,new_matchexpr_node,label='')
-        self.graph.add_edge(pattern,new_matchexpr_node,label='')
-
-        return [(0,new_matchexpr_node)]
-
-    
     cmp_ops = ['eq','ne','ge','le','geq','leq']
     lhs_label_dict = dict(zip(cmp_ops,['']*2 + ['lhs']*4))
     rhs_label_dict = dict(zip(cmp_ops,['']*2 + ['rhs']*4))
@@ -683,30 +674,18 @@ class PatternHook(object):
         assert pattern is not None and varpairs is not None
         return True
 
-
-class MatchLocal(AttrDict):
-    # dict holding match variables and additional declared variables
-    def __init__(self,match={}):
-        super().__init__(match)
-
-    def __getattr__(self,key):
-        if key in self:
-            return self[key]
-        return None
-
-
-
+'''
 class Serializer(Transformer):
     # m for match, h for expressionhook, p for patternhook
 
     # strategy: wrap all function calls into a 'x.do(match=m,params=dict)' method
     
     allowed_functions = ['count','exists','nexists']
-    '''
+    
     def __init__(self,h,p):
         self.expression_hook = h
         self.pattern_hook = p
-    '''
+    
     
     def join_strings(self,args): return " ".join(args)
     def constant(s): return lambda x,y: s
@@ -791,7 +770,7 @@ symbol_join = lambda x,y: "".join([" ",y," "]).join(x)
 has_keys = lambda d,x: all([y in d for y in x])
 not_has_keys = lambda d,x: not any([y in d for y in x])
 tuplize = lambda x: "(" + ",".join(x) + "," + ")"
-
+'''
 
 class Serializer2(Transformer):
 
@@ -829,8 +808,10 @@ class Serializer2(Transformer):
     variable = category_pair('variable')
     attribute = category_pair('attribute')
     #kw = category_pair('kw')
+    '''
     pattern = category_pair('pattern')
     pattern_variable=category_pair('pattern_variable')
+    '''
     declared_variable = category_pair('declared_variable')
 
     # things that compile
@@ -851,10 +832,11 @@ class Serializer2(Transformer):
     def xdo(self,args):
         return simple_join(['x.do',enclose(comma_join([space_join([x,"=",y]) for x,y in args + [('match','m')] ]))])
     
+    '''
     def match_expression(self,args):
         # match_expression is always an arg to some other function
         return ('args',[self.xdo(args)])
-    
+    '''
     def function_call(self,args):
         params = dict(args)
         if has_keys(params,['function_name']) and not_has_keys(params,['variable']):
@@ -891,6 +873,4 @@ class Serializer2(Transformer):
             else:
                 final_expressions.append(('assignment',arg[0],prefix + arg[1]))
         return final_expressions
-
-
 

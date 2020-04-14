@@ -97,7 +97,12 @@ class BaseClass(core.Model):
             getattr(self,attr1).remove(node)
         else:
             setattr(self,attr1,None)
-        return self        
+        return self  
+
+    def set_attr(self,attr,value):
+        # TODO: check
+        setattr(self,attr,value)
+        return self
 
 
     def get_dynamic_methods(self):

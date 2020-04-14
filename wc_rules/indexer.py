@@ -37,7 +37,7 @@ class DictLike(object):
         return iter(self._dict.values())
 
     def __contains__(self,item):
-        return item.id not in self._dict
+        return item.id in self._dict
         #return item.id in self._dict and item is self._dict[item.id]
 
     def keys(self): return list(self._dict.keys())
