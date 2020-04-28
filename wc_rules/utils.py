@@ -24,6 +24,9 @@ def pipe_map(list_of_operations,list_input):
     item = list_of_operations.pop(0)
     return pipe_map(list_of_operations,map(item,list_input))
 
+def listmap(op,input):
+    return list(map(op,input))
+
 # Seed for creating ids
 # To modify this seed, load utils module, then execute utils.idgen.seed(<new_seed>)
 idgen = random.Random()

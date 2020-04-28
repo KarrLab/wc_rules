@@ -48,20 +48,13 @@ class BioSeqAttribute(bio.BioSeqAttribute):
         super().__init__(default=None)
 
 # wrapper for methods that can be called for setting pattern constraints & during simulation
-def matchhelper(fn):
+def localcompute(fn):
     fnvars = fn.__code__.co_varnames
-    fn._ismatchhelper = True
+    fn._is_local_compute = True
     fn._args = fnvars
     @wraps(fn)
     def outer(**kwargs):
-        populate_this = [x for x in fnvars if x in self_obj.get_literal_attrs() and x not in kwargs]
-        for var in populate_this:
-            kwargs[var] = getattr(self_obj,var)
+        populate_this = set(fnvars) & set(self_obj.get_literal_attrs()) - set(kwargs)
+        kwargs = kwargs + {var:getattr(self_obj,var) for var in populate_this}
         return fn(**kwargs)
-    return fn
-
-def state_event(fn):
-    fnvars = fn.__code__.co_varnames
-    fn._isdynamic = True
-    fn._args = fnvars
     return fn

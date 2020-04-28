@@ -1,6 +1,7 @@
 from lark import Lark, tree, Transformer,Visitor, v_args, Tree,Token
-from .utils import merge_lists, merge_dicts, pipe_map
+from .utils import merge_lists, merge_dicts, pipe_map,listmap
 from operator import itemgetter,attrgetter
+from functools import partial
 
 
 grammar = """
@@ -63,20 +64,21 @@ def process_constraint_strings(string_input):
     # parses a string input to generate a tree, prunes new lines,
     # simplifies based on basic arithmetic,
     # analyzes dependencies,
-    tree = parser.parse(string_input)
-    tree = prune_tree(tree)
-    tree,modified = simplify_tree(tree)
-    deps = Dependency_Analyzer().transform(tree=tree)
-    return tree,deps
     
-#### helper methods
-
-def prune_tree(tree):
-    ''' PURPOSE: remove newline tokens '''
+    # parse string input to generate a tree
+    tree = parser.parse(string_input)
+    # prune newline tokens
     nodes = list(filter(lambda x:x.__class__.__name__=='Token',tree.children))
     for node in list(nodes):
         tree.children.remove(node)
-    return tree
+
+    # simplify the tree
+    tree,modified = simplify_tree(tree) 
+    
+    deps = Dependency_Analyzer().transform(tree=tree)
+    return tree,deps
+
+
 
 def simplify_tree(tree): 
     '''
