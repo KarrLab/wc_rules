@@ -48,9 +48,9 @@ class BioSeqAttribute(bio.BioSeqAttribute):
         super().__init__(default=None)
 
 # wrapper for methods that can be called for setting pattern constraints & during simulation
-def localcompute(fn):
+def localfn(fn):
     fnvars = fn.__code__.co_varnames
-    fn._is_local_compute = True
+    fn._is_localfn = True
     fn._args = fnvars
     @wraps(fn)
     def outer(**kwargs):

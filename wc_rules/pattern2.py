@@ -5,18 +5,19 @@ from .expr_new import process_constraint_strings
 from .constraint import global_builtins
 from functools import wraps
 
-def matchset_method(fn):
-	fn._is_matchset_method = True
+def helperfn(fn):
+	fn._is_helperfn = True
 	return fn
 
 class Pattern(DictLike):
 
 	def __init__(self,nodelist=[],recurse=True):
 		super().__init__()
-		self._constraints = []
-		self._helpers = {}
-		self._validated = False
 		self._constraints = ''
+		self._helpers = {}
+		self._declared_variables = []	
+		self._validated = False
+
 		for node in nodelist:
 			self.add_node(node)
 
@@ -54,58 +55,89 @@ class Pattern(DictLike):
 	def validate_dependencies(self):
 		tree,deps = process_constraint_strings(self._constraints)
 		declared_variables = []
+		errs = []
 		while len(deps) > 0:
 			x = deps.pop(0)
 			if isinstance(x,list):
 				deps = x + deps
 				continue
-			assert isinstance(x,dict)
-			print(x)
-			v,a,f,p,n = None,None,None,None,None
-			is_node,is_helper = False,False
+			assert isinstance(x,dict)			
 			if 'declared_variable' in x:
-				v = x['declared_variable']
-				assert v not in declared_variables, "Cannot reuse variable name '{v}'".format(v=v)
-				assert v not in self._dict, "Cannot reuse variable name '{v}'".format(v=v)
-				assert v not in self._helpers, "Cannot reuse variable name '{v}'".format(v=v)
-				declared_variables.append(x['declared_variable'])
+				errs += self.validate_declared_variable(x)
 			if 'variable' in x:
-				v = x['variable']
-				is_node = v in self._dict
-				is_helper = v in self._helpers
-				is_declared = v in declared_variables
-				assert is_node or is_helper or is_declared, "Variable '{v}' not found!".format(v=v)
+				errs += self.validate_variable(x)
 			if 'attribute' in x:
-				a = x['attribute']
-				if is_node:
-					err = 'Attribute {a} not found!'.format(a=a)
-				elif is_helper:
-					err = "Improper function call '{a}' on helper '{v}'!".format(v=v,a=a)
-				assert is_node and a in self[v].get_literal_attrs(),err
+				errs += self.validate_attribute(x)
 			if 'function_name' in x:
-				f = x['function_name']
-				if v is None:
-					assert f in global_builtins, "Function call '{f}' not a valid builtin!".format(f=f)
-				if is_helper:
-					p = self._helpers[v]
-					assert getattr(p,f,False), "Helper function call '{v}.{f}' not a valid function!".format(f=f,v=v)
-					assert getattr(getattr(p,f),'_is_matchset_method',False), "Helper function call '{v}.{f}' not a valid function!".format(f=f,v=v)
-					if 'kws' in x:
-						assert set(x['kws']).issubset(set(p.keys())), "Helper function call '{v}.{f}' can only use keywords from variable names in helper pattern".format(f=f,v=v)
-				if is_node:
-					n = self[v]
-					assert getattr(n,f,False), "Function call '{v}.{f}' not a valid local compute function!".format(f=f,v=v)
-					assert getattr(getattr(n,f),'_is_local_compute',False), "Function call '{v}.{f}' not a valid local compute function!".format(f=f,v=v)
-					if 'kws' in x:
-						assert set(x['kws']).issubset(set(getattr(getattr(n,f),'_args',False))), "Local compute function call '{v}.{f}' can only use specified keywords!".format(f=f,v=v)
-				if 'args' in x:
-					deps = x['args'] + deps
-		self._validated = True		
+				if 'variable' not in x:
+					errs += self.validate_builtin(x)
+				elif x['variable'] in self._helpers:
+					errs += self.validate_helper_function(x)
+				elif x['variable'] in self._dict:
+					errs += self.validate_local_function(x)
 
+		assert len(errs)==0, '\n\nThe following validation errors were found:\n\t'+'\n\t'.join(errs)
+		self._validated = True
+		return True
 
-	@matchset_method
+	def validate_variable(self,x):
+		v = x['variable']
+		condition = v in self._dict or v in self._helpers or v in self._declared_variables
+		if condition==False:
+			return ["Variable '{v}' not found.".format(v=v)]
+		return []
+		
+	def validate_declared_variable(self,x):
+		v = x['declared_variable']
+		condition = v not in self._dict and v not in self._helpers and v not in self._declared_variables
+		if condition == False:
+			return ["Cannot reuse variable name '{v}'.".format(v=v)]
+		self._declared_variables.append(v)
+		return []
+
+	def validate_attribute(self,x):
+		v,a = [x[y] for y in ['variable','attribute']]
+		condition = (v in self._dict and a in self[v].get_literal_attrs()) or v in self._declared_variables
+		if condition == False:
+			return ["Could not validate attribute '{v}.{a}'".format(v=v,a=a)]
+		return []
+
+	def validate_builtin(self,x):
+		f = x['function_name']
+		condition = f in global_builtins
+		if condition == False:
+			return ["Builtin '{f}()' not found in list of approved builtins.".format(f=f)]
+		return []
+
+	def validate_local_function(self,x):
+		v,f = [x[y] for y in ['variable','function_name']]
+		fn = getattr(self[v],f,False)
+		condition = fn and fn._is_localfn
+		if condition == False:
+			return ["Function '{v}.{f}()' is not a valid local function.".format(f=f,v=v)]
+		if 'kws' in x:
+			condition = set(x['kws']).issubset(set(getattr(self[v],'_args')))
+			if condition == False:
+				return ["Function '{v}.{f}()' only takes keywords specified in the function definition.".format(f=f,v=v)]
+		return []
+
+	def validate_helper_function(self,x):
+		f,p = [x[y] for y in ['function_name','variable']]
+		pat = self._helpers[p]
+		fn = getattr(pat,f,False)
+		condition = fn and fn._is_helperfn
+		if condition == False:
+			return ["'{p}.{f}()' is not a valid helper function.".format(p=p,f=f)]
+		if 'kws' in x:
+			condition = set(x['kws']).issubset(set(pat.keys()))
+			if condition == False:
+				return ["'{p}.{f}' can only use keyword arguments specified as variables in '{p}'".format(p=p,f=f)]
+		return []
+
+	@helperfn
 	def count(self,**kwargs):
 		return 0
 
+	@helperfn
 	def contains(self,**kwargs):
 		return False
