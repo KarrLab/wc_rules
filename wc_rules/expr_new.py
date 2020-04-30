@@ -51,15 +51,17 @@ COMMENT: /#.*/
     assignment: declared_variable "=" (expression|boolean_expression)
     declared_variable: CNAME
 
-    expressions: (assignment|boolean_expression) (NEWLINE (assignment|boolean_expression))* 
-    ?start: [NEWLINE] expressions [NEWLINE]
-"""
+    ?start: (assignment|boolean_expression)
+"""    
+    #expressions: (assignment|boolean_expression) (NEWLINE (assignment|boolean_expression))* 
+    #?start: [NEWLINE] expressions [NEWLINE]
+
 
 
 parser = Lark(grammar, start='start')
 
 ### process constraint string
-def process_constraint_strings(string_input):
+def process_constraint_string(string_input):
     #### This is the main method
     # parses a string input to generate a tree, prunes new lines,
     # simplifies based on basic arithmetic,
@@ -77,6 +79,10 @@ def process_constraint_strings(string_input):
     
     deps = Dependency_Analyzer().transform(tree=tree)
     return tree,deps
+
+
+def process_helper_calls(tree,helpers):
+    return 
 
 
 
@@ -242,13 +248,13 @@ class Dependency_Analyzer(Transformer):
     geq = leq = ge = le = ne = eq = return_None
     flipsign = subtract = add = multiply = divide = return_None
 
-    def return_list_minus_None(x,y): return [i for i in y if i is not None]
-
+    #def return_list_minus_None(x,y): return [i for i in y if i is not None]
+    def return_list(x,y): return y
     # these terms return nested lists, eliminating None terms
-    sum = term = factor = return_list_minus_None
-    boolean_expression = return_list_minus_None
-    arg = kwarg = return_list_minus_None
-    assignment = return_list_minus_None
+    sum = term = factor = return_list
+    boolean_expression = return_list
+    arg = kwarg = return_list
+    assignment = return_list
 
     def return_dict(keyword): return lambda x,y: {keyword:y[0].__str__()}
 
@@ -274,8 +280,6 @@ class Dependency_Analyzer(Transformer):
     def function_call(x,y):
         return merge_dicts(y)
         
-    # this returns a nested list, with possible empty entries
-    def return_list(x,y): return y
-    expressions = return_list
+    expression = return_list
         
     
