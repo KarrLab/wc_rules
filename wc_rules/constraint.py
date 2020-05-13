@@ -1,22 +1,24 @@
 import math,builtins
+from pprint import pformat
+from collections import ChainMap
 
 
-allowed_builtins = '''
-abs ceil factorial floor exp expm1
-log log1p log2 log10 pow sqrt
-acos asin atan atan2
-cos hypot sin tan
-pi tau avo
-degrees radians
-sum any all inv max min
-'''.split()
 
 symmetric_functions = '''
 sum any all max min
 '''
+
 def unpacked(fn):
 	''' fn that takes list --> fn that takes *args'''
 	return lambda *x: fn(x)
+
+''' All builtins must be of the form fn(*x),
+i.e. take an unpacked list as an argument.
+'''
+def compute_len(x):
+	if isinstance(x,list):
+		return x.__len__()
+	return int(x is not None)
 
 global_builtins = dict(
     abs = math.fabs,
@@ -39,9 +41,9 @@ global_builtins = dict(
     hypot = math.hypot,
     sin = math.sin,
     tan = math.tan,
-    pi = math.pi,
-    tau = math.tau,
-    avo = 6.02214076e23,
+    pi = lambda : math.pi,
+    tau = lambda : math.tau,
+    avo = lambda : 6.02214076e23,
     degrees = math.degrees,
     radians = math.radians,
     max = builtins.max,
@@ -49,40 +51,47 @@ global_builtins = dict(
     sum = unpacked(math.fsum),
     any = unpacked(builtins.any),
     all = unpacked(builtins.all),
-    inv = lambda x: not x
+    inv = lambda x: not x,
+    len = compute_len
 )
 
-
-
 class Constraint:
-	def __init__(keywords,builtins,assignment,fn,code):
+	def __init__(self,keywords,builtins,assignment,fn,code):
 		self.keywords = keywords
 		self.builtins = builtins
 		self.assignment = assignment
 		self.fn = fn
 		self.code = code
 
-	def initialize(code,keywords,builtins=None,assignment=None):
-		builtins_dict = dict(__builtins__=None)
-		if builtins is not None:
-			builtins_dict.update({i:global_builtins[i] for i in builtins})
+	def to_string(self):
+		return pformat(dict(
+			keywords = self.keywords,
+			builtins = self.builtins,
+			assignment = self.assignment,
+			code = self.code,
+			fn = self.fn
+			))
+
+	@classmethod
+	def initialize(cls,deps,code):
+		keywords = list(deps.variables)
+		builtins = list(deps.builtins)
+		assignment = deps.declared_variable
+		code2 = 'lambda {vars}: {code}'.format(vars=','.join(keywords),code=code)
+		builtins = dict(__builtins__=None).update({i:global_builtins[i] for i in builtins})
 		try:
-			fn = eval(code,builtins_dict,{})
+			fn = eval(code2,builtins,{})
 		except:
 			err = "'{code}' does not generate a valid constraint function.".format(code=code)
 			raise ValueError(err)
-		return Constraint(keywords,builtins_dict,assignment,fn,code)
+		return Constraint(keywords,builtins,assignment,fn,code)
 
-	def __call__(self,kwargs):
-		v = self.fn(**{kw:kwargs[kw] for kw in self.keywords})
-		outbool = False
+	def process(self,match,builtins=global_builtins,helpers={}):
+		# match is a dict that is equivalent to a pattern match
+		d = ChainMap(match,builtins,helpers)
+		kwargs = {x:d[x] for x in self.keywords}
+		v = self.fn(**kwargs)
 		if self.assignment is None:
-			err = "'{code}' does not return a boolean value.".format(code=self.code)
-			assert isinstance(v,bool), err
-			outbool = v
-		else:
-			err = "Variable '{var}' in '{code}' already has a value.".format(var=self.assignment,code=self.code)
-			assert self.assignment not in kwargs, err
-			kwargs[self.assignment]=v
-			outbool = True
-		return (outbool,kwargs)
+			return v,match
+		match.update({self.assignment:v})
+		return True,match

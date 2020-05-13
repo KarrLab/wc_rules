@@ -49,12 +49,23 @@ class BioSeqAttribute(bio.BioSeqAttribute):
 
 # wrapper for methods that can be called for setting pattern constraints & during simulation
 def localfn(fn):
-    fnvars = fn.__code__.co_varnames
+    ''' 
+    Takes a function defined with keywords {kw1,kw2...}
+    * Makes it an instance function with the same keywords
+    * Looks at kwargs specified and sees if keywords are missing
+    * Tries to fill in missing kwargs from self's literal attributes. 
+    * Ignores other missing kwargs
+    * Attaches keyword information and _is_localfn boolean to method attributes.
+    '''
+
+    fn._kws = fn.__code__.co_varnames
     fn._is_localfn = True
-    fn._args = fnvars
+
     @wraps(fn)
-    def outer(**kwargs):
-        populate_this = set(fnvars) & set(self_obj.get_literal_attrs()) - set(kwargs)
-        kwargs = kwargs + {var:getattr(self_obj,var) for var in populate_this}
-        return fn(**kwargs)
-    return fn
+    def fn2(self,**kwargs):
+        available_attrs = [x for x in self.get_literal_attrs().keys() if x!='id' and getattr(self,x,None) is not None]
+        to_fill = [x for x in fn._kws if x not in kwargs and x in available_attrs]
+        new_kwargs = {x:getattr(self,x) for x in to_fill}
+        return fn(**new_kwargs,**kwargs)
+        
+    return fn2

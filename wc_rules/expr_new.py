@@ -81,9 +81,6 @@ def process_constraint_string(string_input):
     return tree,deps
 
 
-def process_helper_calls(tree,helpers):
-    return 
-
 
 
 def simplify_tree(tree): 
@@ -281,5 +278,68 @@ class Dependency_Analyzer(Transformer):
         return merge_dicts(y)
         
     expression = return_list
+
+class Serializer(Transformer):
+
+    def n2s(self,arg): return arg[0].__str__()
+    def constant(s): return lambda x,y: s
         
+    # literals and operators, convert to string
+    number = string = n2s
+    geq = constant('>=')
+    leq = constant('<=')
+    ge = constant('>')
+    le = constant('<')
+    ne = constant('ne')
+    eq = constant('==')
+    true = constant("True")
+    false = constant("False")
+    flipsign = subtract = constant("-")
+    add = constant("+")
+    multiply = constant("*")
+    divide = constant("/")
+
+    # declared vars
+    declared_variable = constant('')
+    assignment = lambda x,y:y[1]
+
+    # algebraic and boolean expressions
+    sum  = lambda x,y: ' '.join(y[1:])
+    term  = lambda x,y: ''.join(y[1:])
+    factor = lambda x,y: '({z})'.format(z=''.join(y))
+    boolean_expression = lambda x,y: ' '.join(y)
+
+    # variables, attributes, function_name
+    def category_pair(cat):
+        return lambda x,y: (cat,y[0].__str__())
+    variable = category_pair('variable')
+    attribute = category_pair('attribute')
+    function_name = category_pair('function_name')
+
+    arg = lambda x,y: y[0]
+    args = lambda x,y: ('args',','.join(y))
+    kw = n2s
+    kwarg = lambda x,y: '='.join(y)
+    kwargs = args
+    
+    def function_call(self,args):
+        d,s = dict(args), ''
+        if 'function_name' in d and 'args' not in d:
+            d['args'] = ''
+        keys = sorted(d.keys())
+        if keys==['variable']:
+            s = '{variable}'.format(**d)
+        elif keys==['attribute','variable']:
+            s = '{variable}.{attribute}'.format(**d)
+        elif keys== ['args','function_name']:
+            s = '{function_name}({args})'.format(**d)
+        elif keys== ['args','function_name','variable']:
+            s = '{variable}.{function_name}({args})'.format(**d)
+        return s
+
+
+def serialize(tree):
+    s = Serializer().transform(tree=tree)
+    return s
+    
     
