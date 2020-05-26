@@ -58,7 +58,10 @@ class BaseClass(core.Model):
         return list(self.get_related_attrs().keys())        
 
     def get_literal_attributes(self):
-        return list(self.get_literal_attrs().keys())        
+        return list(self.get_literal_attrs().keys()) 
+
+    def get_related_name(self,attr):
+        return self.__class__.Meta.local_attributes[attr].related_name       
 
     def listget(self,attr):
         x = getattr(self,attr)
@@ -71,9 +74,6 @@ class BaseClass(core.Model):
         for attr in self.get_nonempty_related_attributes():
             x.update(self.listget(attr))
         return list(x)
-
-    def get_related_name(self,attr):
-        return self.__class__.Meta.local_attributes[attr].related_name
 
     def add_edge(self,attr1,attr2,node):
         assert node not in utils.listify(getattr(self,attr1)), "Edge already exists."

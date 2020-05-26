@@ -1,12 +1,15 @@
 from .indexer import DictLike
 from .utils import generate_id,ValidateError,listmap
+from .canonical import *
 from functools import partial
 from .expr_new import process_constraint_string, serialize
 from .dependency import DependencyCollector
 from .constraint import global_builtins, Constraint
 from functools import wraps
 from .entity import Entity
+
 from pprint import pformat
+#from attrdict import AttrDict
 
 
 
@@ -18,7 +21,8 @@ class Scaffold(DictLike):
 		assert isinstance(node,Entity), "Scaffold can only be initialized from some node of an entity graph."
 		super().__init__()
 		self.__add_node(node)
-
+		self.properties = dict()
+		x = canonize(self)
 		self.simulation_node = None
 		
 	def __add_node(self,node):
@@ -40,6 +44,10 @@ class Scaffold(DictLike):
 		if as_list:
 			return self.keys()
 		return {x.id:x.__class__ for i,x in self._dict.items()}
+
+	def compute_orbits(self):
+		self.properties
+
 
 def helperfn(fn):
 	fn._is_helperfn = True
