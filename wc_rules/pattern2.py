@@ -34,10 +34,12 @@ class Scaffold(DictLike):
 			self.__add_node(new_node)
 		return self
 
-	def get_namespace(self,as_string=False):
+	def get_namespace(self,as_string=False,as_list=False):
 		if as_string:
 			return pformat(self.get_namespace())
-		return {x:x.__class__ for i,x in self._dict.items()}
+		if as_list:
+			return self.keys()
+		return {x.id:x.__class__ for i,x in self._dict.items()}
 
 def helperfn(fn):
 	fn._is_helperfn = True
@@ -66,21 +68,27 @@ class Pattern:
 	def add_helpers(self,_dict):
 		for variable,pattern in _dict.items():
 			err = 'Error adding helper: '
-			assert variable not in self.variables and variable not in self.declared_variables, err+'Variable {v} already exists in this pattern.'.format(v=variable)
+			assert variable not in self.final_match_variables(), err+'Variable {v} already exists in this pattern.'.format(v=variable)
 			assert isinstance(pattern,Pattern), err+"'{p}' is not a pattern.".format(p=pattern)
 			assert pattern not in self.helpers.values(), err+'Pattern added to variable {v} has already been added as a helper.'.format(v=variable)
 			assert pattern is not self, err+'Cannot add a pattern as its own helper.'
 			self.helpers[variable] = pattern
 		return self
 
-	def get_namespace(self,as_string=False):
+	def get_namespace(self,as_string=False,as_list=False):
 		if as_string:
 			return pformat(self.get_namespace())
-		return {'scaffold':self.scaffold.get_namespace(),
+		d= {'scaffold':self.scaffold.get_namespace(),
 		'helpers':self.helpers,
 		'declared_variables':self.declared_variables,
 		'constraints':self.constraints
 		}
+		if as_list:
+			v1 = d['scaffold'].get_namespace(as_list=True)
+			v2 = d['helpers'].keys()
+			v3 = [c.assignment for c in self.constraints if c.assignment is not None]
+			return v1 + v2 + v3
+		return d
 
 	def add_constraints(self,string_input):
 		strings = listmap(str.strip,string_input.split('\n'))
@@ -91,8 +99,6 @@ class Pattern:
 			constraint = Constraint.initialize(DependencyCollector(deps),serialize(tree))
 			self.constraints.append(constraint)
 		return self
-
-	def validate(self):
 
 	
 	@helperfn

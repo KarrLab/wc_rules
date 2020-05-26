@@ -20,6 +20,7 @@ def compute_len(x):
 		return x.__len__()
 	return int(x is not None)
 
+
 global_builtins = dict(
     abs = math.fabs,
     ceil = math.ceil,
@@ -75,10 +76,11 @@ class Constraint:
 	@classmethod
 	def initialize(cls,deps,code):
 		keywords = list(deps.variables)
-		builtins = list(deps.builtins)
+		builtins = {'__builtins__':None}
+		builtins.update({i:global_builtins[i] for i in list(deps.builtins)})
 		assignment = deps.declared_variable
 		code2 = 'lambda {vars}: {code}'.format(vars=','.join(keywords),code=code)
-		builtins = dict(__builtins__=None).update({i:global_builtins[i] for i in builtins})
+		
 		try:
 			fn = eval(code2,builtins,{})
 		except:
