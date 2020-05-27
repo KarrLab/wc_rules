@@ -1,86 +1,66 @@
-from functools import reduce
+from functools import partial
 from collections import defaultdict,deque
 from pprint import pformat
-from copy import deepcopy
+
+class CertificateCounter(defaultdict):
+	def __init__(self,fn,_list):
+		# applies fn to each element of _list to create a certificate
+		# then collects groups with the same certificate
+		# maintains sorting order of _list
+		super().__init__(list)
+		for elem in _list:
+			self[fn(elem)].append(elem)
+
+	def groups(self):
+		return [self[key] for key in sorted(self)]
+
 
 def canonize(g):
+	partition = canonical_partition(g)
+	print(partition)	
 
-	partition = compute_initial_partition(g)
-	if len(partition)!=len(g):
-		new_partition = deque()
-		old_length = len(partition)
-		while partition:
-			cell = partition.popleft()
-			celldeque = partition_current_cell(new_partition,cell,g)
-			print(new_partition,celldeque,partition)
-			if len(celldeque)==1:
-				new_partition += celldeque
-			else:
-				partition += celldeque
-			if len(partition)==0 and len(new_partition) > old_length:
-				partition = new_partition
-				old_length=len(partition)
-				new_partition = deque()
-			print(partition)		
-		partition = new_partition
-	print(partition)
-	return True
-
-def partition_current_cell(partition,cell,g):
-	# if cell is compatible and doesn't need to be subdivided,
-	# return deque([cell])
-	# else: partition into smaller cells and return deque([cell1,cell2,cell3])
-	if len(cell)==1:
-		return deque([cell])
-
-	indexes = index_partition(partition+deque([cell]))
-	certs = defaultdict(list)
-	for node in cell:
-		sgn = get_neighbor_signature(node,indexes,g)
-		certs[ sgn ].append(node)
-	
-	cells = [certs[sgn] for sgn in sorted(certs)]
-	return deque(cells)
-
-def get_neighbor_signature(node,indexes,g):
-	neighbors = []
-	for attr in g[node].get_nonempty_related_attributes():
-		for neighbor in g[node].listget(attr):
-			if neighbor.id in indexes:
-				neighbors.append((attr,indexes[neighbor.id]))
-	return tuple(sorted(neighbors))
+def canonical_partition(g):
+	rhs, lhs, modified = initial_partition(g), deque(), False
+	indexes = index_partition(rhs)
+	while rhs:
+		prev_length = len(lhs)
+		lhs += partition_cell(rhs.popleft(),indexes,g)
+		if len(lhs) > prev_length+1:
+			indexes, modified  = index_partition(lhs+rhs), True
+		if len(rhs)==0 and modified:
+			rhs, lhs, modified = lhs, deque(), False
+	return lhs
 
 def index_partition(partition):
-	indexes = dict()
-	for i,cell in enumerate(partition):
-		for node in cell:
-			indexes[node] = i
-	return indexes	
+	# maps each idx in g -> index of cell containing idx in partition
+	return dict([(x,i) for i,cell in enumerate(partition) for x in cell])
+
+def partition_cell(cell,indexes,g):
+	# returns a singleton deque or a deque further partitioning cell
+	if len(cell)==1:
+		return deque([cell])
+	fn = partial(node_certificate,d=indexes,g=g)
+	cert = CertificateCounter(fn,cell)
+	return deque( cert.groups() )
+
+def node_certificate(idx,d,g):
+	# idx in g -> edges_sorted_by_indexes_of_targets_in_partition
+	node = g[idx]
+	attrs = node.get_nonempty_related_attributes()
+	cert = [(d[x.id],a) for a in attrs for x in node.listget(a)]
+	return tuple(sorted(cert))
+
+def initial_partition(g):
+	# partition g using initial_node_certificate
+	fn = partial(initial_node_certificate,g=g)
+	cert = CertificateCounter(fn,sorted(g.keys()))
+	return deque( cert.groups() )
+
+def initial_node_certificate(idx,g):
+	# idx in g -> <degree, class_name, sorted_edges>
+	node = g[idx]
+	attrs = node.get_nonempty_related_attributes()
+	edges = [(a,x.__class__.__name__) for a in attrs for x in node.listget(a)]	
+	return (len(edges),node.__class__.__name__,tuple(sorted(edges)))
 
 
-
-def compute_initial_partition(g):
-	# create a signature for each node
-	# (degree,class_name,sorted_edge_tuples)
-	# .... sorted_edge_tuples = (attr,destination_class), (attr,destination_class), ...
-	# collect nodes with same signature
-	eqv = defaultdict(list)
-	for node in g:
-		edges = [(attr,x.__class__.__name__) for attr in node.get_nonempty_related_attributes() for x in node.listget(attr)]
-		edges = tuple(sorted(edges))
-		sgn = (len(edges),node.__class__.__name__,edges) 
-		eqv[ sgn ].append(node.id)
-	return deque([ sorted(eqv[sgn]) for sgn in sorted(eqv) ])
-
-
-
-def invert_map(d):
-	# {v:[k1,k2..] for k:v}
-	out = dict({v:[] for v in set(d.values())})
-	for k,v in d.items():
-		out[v].append(k)
-	return dict(out)
-
-def invert_bmap(d):
-	# {v:k for k:v} use carefully
-	return {v:k for k,v in b.items()}

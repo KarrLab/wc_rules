@@ -31,6 +31,8 @@ class Scaffold(DictLike):
 			if attr == 'id':
 				continue
 			assert getattr(node,attr) is None, "Scaffold should not have attributes."
+		assert node not in self or (node.id in self._dict and self[node.id] == node), "Id {0} duplicated".format(node.id)
+	
 		if node in self:
 			return self
 		self.add(node)	
