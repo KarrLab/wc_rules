@@ -45,6 +45,9 @@ class DictLike(object):
 
     def __getitem__(self,item): return self._dict[item]
 
+    def __str__(self):
+        return pprint.pformat(self._dict)
+
 class SetLike(object):
     def __init__(self,iterable=None):
         ''' Container of objects that behaves like a set'''

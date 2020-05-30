@@ -1,6 +1,8 @@
 from functools import partial
+from itertools import product
 from collections import defaultdict,deque
 from pprint import pformat
+import math
 
 class CertificateCounter(defaultdict):
 	def __init__(self,fn,_list):
@@ -12,13 +14,27 @@ class CertificateCounter(defaultdict):
 			self[fn(elem)].append(elem)
 
 	def groups(self):
+		# returns groups in sorted order of certificates
 		return [self[key] for key in sorted(self)]
+
 
 
 def canonize(g):
 	partition = canonical_partition(g)
-	print(partition)	
+	labels = [x for cell in partition for x in cell]
+	relabeling =  generate_relabeling(labels)
+	new_partition = [[relabeling[x] for x in cell] for cell in partition]
+	return (new_partition,relabeling)
 
+
+####### methods for generating a canonical label from a canonical partition
+def generate_relabeling(_list):
+	n = len(_list)
+	relabels = list(map(lambda x:''.join(x),list(product('abcdefgh',repeat = math.ceil(n/8)))[0:n]))
+	return dict(zip(_list,relabels))
+
+
+####### methods for generating a canonical partition of a scaffold graph
 def canonical_partition(g):
 	rhs, lhs, modified = initial_partition(g), deque(), False
 	indexes = index_partition(rhs)
@@ -50,6 +66,7 @@ def node_certificate(idx,d,g):
 	cert = [(d[x.id],a) for a in attrs for x in node.listget(a)]
 	return tuple(sorted(cert))
 
+### methods for seeding the canonical partition algorithm
 def initial_partition(g):
 	# partition g using initial_node_certificate
 	fn = partial(initial_node_certificate,g=g)
@@ -63,4 +80,8 @@ def initial_node_certificate(idx,g):
 	edges = [(a,x.__class__.__name__) for a in attrs for x in node.listget(a)]	
 	return (len(edges),node.__class__.__name__,tuple(sorted(edges)))
 
+
+def invert_map(d):
+	# assume map is one to one
+	return {y:x for x,y in d.items()}
 

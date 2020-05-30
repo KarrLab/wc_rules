@@ -12,6 +12,8 @@ from . import utils
 from .attributes import *
 import uuid
 import random
+from collections import deque
+from .indexer import DictLike
 
 # Seed for creating ids
 # To modify this seed, load base module, then execute base.idgen.seed(<new_seed>)
@@ -65,8 +67,10 @@ class BaseClass(core.Model):
 
     def listget(self,attr):
         x = getattr(self,attr)
+        if x is None:
+            return []
         if not isinstance(x,list):
-            x = [x]
+            return [x]
         return x
 
     def listget_all_related(self):
@@ -174,3 +178,21 @@ class BaseClass(core.Model):
     def graph(self):
         return self.get_graph(recurse=True)
 
+    def get_connected_nodes_and_edges(self):
+        nodes = DictLike()
+        edges= set()
+        examine_stack = deque([self])
+        while examine_stack:
+            node = examine_stack.popleft()
+            if node not in nodes:
+                nodes.add(node)
+                attrs = node.get_related_attributes()
+                for attr in attrs:
+                    related_attr = self.get_related_name(attr)
+                    for x in node.listget(attr):
+                        edges.add(tuple(sorted([(node.id,attr), (x.id,related_attr)])))
+                        examine_stack.append(x)
+        return nodes,edges
+
+    
+        

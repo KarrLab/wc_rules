@@ -7,49 +7,8 @@ from .dependency import DependencyCollector
 from .constraint import global_builtins, Constraint
 from functools import wraps
 from .entity import Entity
-
 from pprint import pformat
 #from attrdict import AttrDict
-
-
-
-class Scaffold(DictLike):
-	# scaffold, a graph with nodes and edges
-	# nodes have all literal attrs set to None,except id attribute
-	# namespace of scaffold = ids of nodes
-	def __init__(self,node):
-		assert isinstance(node,Entity), "Scaffold can only be initialized from some node of an entity graph."
-		super().__init__()
-		self.__add_node(node)
-		self.properties = dict()
-		x = canonize(self)
-		self.simulation_node = None
-		
-	def __add_node(self,node):
-		# always recurse through graph and add everything
-		for attr in node.get_literal_attrs().keys():
-			if attr == 'id':
-				continue
-			assert getattr(node,attr) is None, "Scaffold should not have attributes."
-		assert node not in self or (node.id in self._dict and self[node.id] == node), "Id {0} duplicated".format(node.id)
-	
-		if node in self:
-			return self
-		self.add(node)	
-		for new_node in node.listget_all_related():
-			self.__add_node(new_node)
-		return self
-
-	def get_namespace(self,as_string=False,as_list=False):
-		if as_string:
-			return pformat(self.get_namespace())
-		if as_list:
-			return self.keys()
-		return {x.id:x.__class__ for i,x in self._dict.items()}
-
-	def compute_orbits(self):
-		self.properties
-
 
 def helperfn(fn):
 	fn._is_helperfn = True
@@ -58,9 +17,6 @@ def helperfn(fn):
 class Pattern:
 
 	def __init__(self,scaffold,helpers=dict(),constraints=''):
-		assert isinstance(scaffold,Scaffold), "Scaffold keyword argument must be a scaffold."
-		assert isinstance(helpers,dict), "Helpers keyword argument must be a dict."
-		assert isinstance(constraints,str), "Constraints keyword argument must be a str."
 		self.scaffold = scaffold
 		self.variables = scaffold.keys()
 		
@@ -72,6 +28,10 @@ class Pattern:
 
 		self.simulation_node = None
 
+	@classmethod
+	def build(cls,graphnode,helpers={},constraints=[]):
+		nodes,edges = graphnode.get_connected_nodes_and_edges()
+		
 	def final_match_variables(self):
 		return self.variables + [c.assignment for c in self.constraints if c.assignment is not None]
 
