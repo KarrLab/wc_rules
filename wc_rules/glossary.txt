@@ -1,6 +1,0 @@
-Scaffold	A connected graph composed of nodes and edges, where all literal attributes of nodes except id are set to None.
-Namespace	The variables of a scaffold or a pattern. Scaffold namespace is the ids of all nodes.
-Pattern		A query object with namespace imported from a scaffold or another pattern.
-Constraint	A string denoting mathematical/boolean expressions composed from variables and function calls.
-		Can be parsed into (a) a tree for simplifying expressions, (b) a tree for checking symmetries
-		(c) a list of constraint objects that can be used to verify matches.

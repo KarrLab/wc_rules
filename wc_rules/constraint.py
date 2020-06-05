@@ -24,22 +24,25 @@ def compute_len(x):
 
 global_builtins = dict(
 	__builtins__ = None,
-	# arithmetic
+	# arithmetic single input
     abs = math.fabs,
     ceil = math.ceil,
     floor = math.floor,
-    mod = lambda x,y: x % y,
-    div = lambda x,y: x // y,
     factorial = math.factorial,
     exp = math.exp,
     expm1 = math.expm1,
-    log = math.log,
     log1p = math.log1p,
     log2 = math.log2,
     log10 = math.log10,
-    pow = math.pow,
     sqrt = math.sqrt,
-    # trigonometric
+    
+    # arithmetic double input
+    mod = lambda x,y: x % y,
+    div = lambda x,y: x // y,
+    log = math.log,
+    pow = math.pow,
+
+    # trigonometric single input
     acos = math.acos,
     asin = math.asin,
     atan = math.atan,

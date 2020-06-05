@@ -34,7 +34,7 @@ def generate_relabeling(_list):
 	return dict(zip(_list,relabels))
 
 
-####### methods for generating a canonical partition of a scaffold graph
+####### methods for generating a canonical partition of a graph container
 def canonical_partition(g):
 	rhs, lhs, modified = initial_partition(g), deque(), False
 	indexes = index_partition(rhs)

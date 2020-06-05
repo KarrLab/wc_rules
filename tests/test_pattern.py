@@ -89,15 +89,13 @@ class TestPattern(unittest.TestCase):
 
 		self.assertEqual(computed_values,expected_values)
 
-	def test_list_constraints(self):
-		
+	def test_list_constraints(self):		
 		px = Pattern.build(X('x'),constraints='''
 			max(x.i,x.j,x.k) == 30
 			min(x.i,x.j,x.k) == 10
     		sum(x.i,x.j,x.k) == 60
     		len(x.y) == 2
-    		'''
-			)
+    		''')
 
 		match = dict(x = X(y=[Y(),Y()],i=10,j=20,k=30))
 		for c in px.constraints:
@@ -105,12 +103,8 @@ class TestPattern(unittest.TestCase):
 
 		pz = Pattern.build(Z('z'),constraints='''len(z.z) > 0''')
 		c = pz.constraints[0]
-		self.assertEqual(c.exec(match=dict( z=Z())), False )
-		self.assertEqual(c.exec(match=dict( z=Z(z=Z()))), True)
+		self.assertEqual(c.exec(match=dict( z=Z() )), False)
+		self.assertEqual(c.exec(match=dict( z=Z(z=Z()) )), True)
 
-
-
-
-
-
-
+	def test_canonical_partition(self):
+		
