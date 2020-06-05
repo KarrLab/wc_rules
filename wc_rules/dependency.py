@@ -1,6 +1,5 @@
 
 from collections import defaultdict
-from .constraint import global_builtins
 from pprint import pformat
 
 class DependencyCollector:

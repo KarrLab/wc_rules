@@ -27,6 +27,9 @@ def pipe_map(list_of_operations,list_input):
 def listmap(op,input):
     return list(map(op,input))
 
+def split_string(s,sep='\n'):
+    return [y for y in [x.strip() for x in s.split(sep)] if len(y)>0]
+
 # Seed for creating ids
 # To modify this seed, load utils module, then execute utils.idgen.seed(<new_seed>)
 idgen = random.Random()
@@ -52,6 +55,9 @@ def listify(x):
     if isinstance(x,list): 
         return x
     return [x]
+
+def subdict(d,keys):
+    return {k:d[k] for k in keys}
 
 
 ###### Error ######

@@ -1,8 +1,10 @@
+from .expr_new import process_constraint_string, serialize
+from .dependency import DependencyCollector
+from .utils import subdict
 import math,builtins
 from pprint import pformat
 from collections import ChainMap
-
-
+from operator import xor
 
 symmetric_functions = '''
 sum any all max min
@@ -20,12 +22,15 @@ def compute_len(x):
 		return x.__len__()
 	return int(x is not None)
 
-
 global_builtins = dict(
+	__builtins__ = None,
+	# arithmetic
     abs = math.fabs,
     ceil = math.ceil,
-    factorial = math.factorial,
     floor = math.floor,
+    mod = lambda x,y: x % y,
+    div = lambda x,y: x // y,
+    factorial = math.factorial,
     exp = math.exp,
     expm1 = math.expm1,
     log = math.log,
@@ -34,6 +39,7 @@ global_builtins = dict(
     log10 = math.log10,
     pow = math.pow,
     sqrt = math.sqrt,
+    # trigonometric
     acos = math.acos,
     asin = math.asin,
     atan = math.atan,
@@ -42,43 +48,52 @@ global_builtins = dict(
     hypot = math.hypot,
     sin = math.sin,
     tan = math.tan,
+	degrees = math.degrees,
+    radians = math.radians,
+    # famous constants
     pi = lambda : math.pi,
     tau = lambda : math.tau,
     avo = lambda : 6.02214076e23,
-    degrees = math.degrees,
-    radians = math.radians,
+    
+    # operations on lists
     max = builtins.max,
     min = builtins.min,
     sum = unpacked(math.fsum),
+	len = lambda x: x.__len__() if isinstance(x,list) else int(x is not None),
+    
+    # operations on booleans
     any = unpacked(builtins.any),
     all = unpacked(builtins.all),
+    only_one_true = lambda *x: x.count(True)==1,
+    only_one_false = lambda *x: x.count(False)==1,
     inv = lambda x: not x,
-    len = compute_len
+    
 )
 
 class Constraint:
-	def __init__(self,keywords,builtins,assignment,fn,code):
+	def __init__(self,keywords,builtins,fn,code,deps):
 		self.keywords = keywords
 		self.builtins = builtins
-		self.assignment = assignment
 		self.fn = fn
 		self.code = code
+		self.deps = deps
 
 	def to_string(self):
 		return pformat(dict(
 			keywords = self.keywords,
 			builtins = self.builtins,
-			assignment = self.assignment,
 			code = self.code,
 			fn = self.fn
 			))
 
 	@classmethod
-	def initialize(cls,deps,code):
+	def initialize(cls,s):
+		tree, depdict = process_constraint_string(s)
+		deps, code = DependencyCollector(depdict),serialize(tree)
+
 		keywords = list(deps.variables)
-		builtins = {'__builtins__':None}
-		builtins.update({i:global_builtins[i] for i in list(deps.builtins)})
-		assignment = deps.declared_variable
+		builtins = subdict(global_builtins, ['__builtins__'] + list(deps.builtins)) 
+		
 		code2 = 'lambda {vars}: {code}'.format(vars=','.join(keywords),code=code)
 		
 		try:
@@ -86,14 +101,13 @@ class Constraint:
 		except:
 			err = "'{code}' does not generate a valid constraint function.".format(code=code)
 			raise ValueError(err)
-		return Constraint(keywords,builtins,assignment,fn,code)
+			
+		return Constraint(keywords,builtins,fn,code,deps), deps.declared_variable
 
-	def process(self,match,builtins=global_builtins,helpers={}):
+	def exec(self,match,helpers={}):
 		# match is a dict that is equivalent to a pattern match
-		d = ChainMap(match,builtins,helpers)
-		kwargs = {x:d[x] for x in self.keywords}
+		d = ChainMap(match,helpers)
+		kwargs = subdict(d,self.keywords)
 		v = self.fn(**kwargs)
-		if self.assignment is None:
-			return v,match
-		match.update({self.assignment:v})
-		return True,match
+		return v
+		

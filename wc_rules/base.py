@@ -73,11 +73,22 @@ class BaseClass(core.Model):
             return [x]
         return x
 
+    def get(self,attr):
+        return getattr(self,attr)
+
     def listget_all_related(self):
         x = set()
         for attr in self.get_nonempty_related_attributes():
             x.update(self.listget(attr))
         return list(x)
+
+    def get_edge_tuples(self):
+        # returns list of tuples (attr,related_attr,x)
+        attrs = self.get_nonempty_related_attributes()
+        related = {a:self.get_related_name() for a in attrs}
+        lists = [self.listget(a) for a in attrs]
+        return [ tuple(sorted([(self.id,a), (x.id,related[a])])) for a,y in zip(attrs,lists) for x in y ]
+
 
     def add_edge(self,attr1,attr2,node):
         assert node not in utils.listify(getattr(self,attr1)), "Edge already exists."
@@ -178,21 +189,14 @@ class BaseClass(core.Model):
     def graph(self):
         return self.get_graph(recurse=True)
 
-    def get_connected_nodes_and_edges(self):
-        nodes = DictLike()
-        edges= set()
-        examine_stack = deque([self])
+    def get_connected(self):
+        nodes, examine_stack = set(), deque([self])
         while examine_stack:
             node = examine_stack.popleft()
             if node not in nodes:
                 nodes.add(node)
-                attrs = node.get_related_attributes()
-                for attr in attrs:
-                    related_attr = self.get_related_name(attr)
-                    for x in node.listget(attr):
-                        edges.add(tuple(sorted([(node.id,attr), (x.id,related_attr)])))
-                        examine_stack.append(x)
-        return nodes,edges
+                examine_stack.extend(self.listget_all_related())
+        return list(nodes)
 
     
         

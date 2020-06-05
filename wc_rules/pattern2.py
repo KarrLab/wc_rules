@@ -1,76 +1,95 @@
 from .indexer import DictLike
-from .utils import generate_id,ValidateError,listmap
+from .utils import generate_id,ValidateError,listmap, split_string, merge_dicts
 from .canonical import *
 from functools import partial
-from .expr_new import process_constraint_string, serialize
-from .dependency import DependencyCollector
 from .constraint import global_builtins, Constraint
 from functools import wraps
 from .entity import Entity
 from pprint import pformat
+from collections import ChainMap
 #from attrdict import AttrDict
 
 def helperfn(fn):
 	fn._is_helperfn = True
 	return fn
-		
+
+class GraphContainer(DictLike):
+
+	def __init__(self,_list):
+		super().__init__()
+		assert len(set([x.id for x in _list]))==len(_list),"Duplicate ids detected on graph."
+		assert all([isinstance(x.id,str) for x in _list]), "Graph node ids must be strings."
+		for x in _list:
+			self.add(x)
+
+	def iternodes(self):
+		return self._dict.items()
+
+	def get_namespace(self):
+		return {x.id:x.__class__ for x in self}
+	
 class Pattern:
 
-	def __init__(self,scaffold,helpers=dict(),constraints=''):
-		self.scaffold = scaffold
-		self.variables = scaffold.keys()
+	def __init__(self,parent,helpers=dict(),constraints=[],assignments=dict()):
+		self.parent = parent
+		self.helpers = helpers
+		self.constraints = constraints
+		self.assignments = assignments
+
+	def get_namespace(self):
+		assignments = {x:y.code for x,y in self.assignments.items()}
 		
-		self.helpers = dict()
-		self.constraints = []
-		
-		self.add_helpers(helpers)
-		self.add_constraints(constraints)
-
-		self.simulation_node = None
-
-	@classmethod
-	def build(cls,graphnode,helpers={},constraints=[]):
-		nodes,edges = graphnode.get_connected_nodes_and_edges()
-		
-	def final_match_variables(self):
-		return self.variables + [c.assignment for c in self.constraints if c.assignment is not None]
-
-	def add_helpers(self,_dict):
-		for variable,pattern in _dict.items():
-			err = 'Error adding helper: '
-			assert variable not in self.final_match_variables(), err+'Variable {v} already exists in this pattern.'.format(v=variable)
-			assert isinstance(pattern,Pattern), err+"'{p}' is not a pattern.".format(p=pattern)
-			assert pattern not in self.helpers.values(), err+'Pattern added to variable {v} has already been added as a helper.'.format(v=variable)
-			assert pattern is not self, err+'Cannot add a pattern as its own helper.'
-			self.helpers[variable] = pattern
-		return self
-
-	def get_namespace(self,as_string=False,as_list=False):
-		if as_string:
-			return pformat(self.get_namespace())
-		d= {'scaffold':self.scaffold.get_namespace(),
-		'helpers':self.helpers,
-		'declared_variables':self.declared_variables,
-		'constraints':self.constraints
-		}
-		if as_list:
-			v1 = d['scaffold'].get_namespace(as_list=True)
-			v2 = d['helpers'].keys()
-			v3 = [c.assignment for c in self.constraints if c.assignment is not None]
-			return v1 + v2 + v3
-		return d
-
-	def add_constraints(self,string_input):
-		strings = listmap(str.strip,string_input.split('\n'))
-		for string in strings:
-			if len(string)==0:
-				continue
-			tree,deps = process_constraint_string(string)
-			constraint = Constraint.initialize(DependencyCollector(deps),serialize(tree))
-			self.constraints.append(constraint)
-		return self
+		pspace = self.parent.get_namespace()
+		intmax = max([int(x[1:]) for x in pspace if x[0]=='_'],default=0) + 1
+		constraints = {'_{0}'.format(i+intmax):c.code for i,c in enumerate(self.constraints)}
+		return merge_dicts([pspace, self.helpers, assignments, constraints])
 
 	
+	@classmethod
+	def build(cls,parent,helpers={},constraints=''):
+		err = "Argument for 'parent' keyword must be an entity node to recurse from or an existing pattern."
+		assert isinstance(parent, (Entity,Pattern)), err
+		
+		constraint_strings = split_string(constraints)
+
+		if isinstance(parent,Entity):
+			d = GraphContainer(parent.get_connected())
+			for idx,node in d.iternodes():
+				for attr in node.get_nonempty_scalar_attributes():
+					constraint_strings.append('{x}.{a}=={v}'.format(x=node.id,a=attr,v=node.get(attr)))
+					setattr(node,attr,None)
+			parent = d
+
+		
+		assert all([isinstance(x,cls) for x in helpers.values()]), "Helper variables must be assigned to other patterns."
+		assert len(set(helpers.values())) == len(helpers), "The same helper pattern cannot be mapped to different helper variables."
+						
+		constraints,assignments = [],dict()
+		for s in constraint_strings:
+			c,var = Constraint.initialize(s)
+			if var is not None:
+				assignments[var] = c
+			else:
+				constraints.append(c)
+			
+		# checking consistent namespace
+		r = set(parent.get_namespace())
+		s = set(helpers.keys())
+		t = set(assignments.keys())
+		all_names = r|s|t
+
+		assert len(all_names)==len(r) + len(s) + len(t), "Duplicate variables detected."
+		for c in [*constraints,*assignments.values()]:
+			assert set(c.keywords).issubset(all_names), "Unknown variables present in constraint '{0}'.".format(c.code)
+
+		return Pattern(parent,helpers,constraints,assignments)
+
+	def process_constraints(self,match=dict()):
+		for var,c in self.assignments.items():
+			match[var] = c.exec(match=match,helpers=self.helpers)
+		outbool = all(c.exec(match,self.helpers) for c in self.constraints)
+		return outbool, match
+
 	@helperfn
 	def count(self,**kwargs):
 		return 0
