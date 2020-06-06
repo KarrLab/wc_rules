@@ -15,16 +15,22 @@ class CertificateCounter(defaultdict):
 
 	def groups(self):
 		# returns groups in sorted order of certificates
+		#print([[key,self[key]] for key in sorted(self)])
 		return [self[key] for key in sorted(self)]
-
 
 
 def canonize(g):
 	partition = canonical_partition(g)
-	labels = [x for cell in partition for x in cell]
-	relabeling =  generate_relabeling(labels)
-	new_partition = [[relabeling[x] for x in cell] for cell in partition]
-	return (new_partition,relabeling)
+	order,leaders = canonical_ordering(partition,g)
+	for x in partition:
+		x.sort(key=lambda x: order.index(x))
+	return partition,leaders
+	
+	#labels = [x for cell in partition for x in cell]
+	#relabeling =  generate_relabeling(labels)
+	#new_partition = [[relabeling[x] for x in cell] for cell in partition]
+	#return (new_partition,relabeling)
+
 
 
 ####### methods for generating a canonical label from a canonical partition
@@ -32,6 +38,29 @@ def generate_relabeling(_list):
 	n = len(_list)
 	relabels = list(map(lambda x:''.join(x),list(product('abcdefgh',repeat = math.ceil(n/8)))[0:n]))
 	return dict(zip(_list,relabels))
+
+####### method for ordering elements of an orbit within a canonical partition
+def canonical_ordering(p,g): 
+	# given a canonical partition
+	# break each orbit by selecting a leader and making it its own cell,
+	# then repartition remaining elements of the orbit by sorted node certificates
+	rhs, lhs, modified, leaders = p.copy(), deque(), False, dict()
+	while rhs:
+		elem = rhs.popleft()
+		if len(elem) > 1:
+			leader,remaining = elem[0], elem[1:]
+			leaders[leader] = remaining
+			lhs.append([leader])
+			rhs.appendleft(remaining)
+			indexes = index_partition(lhs+rhs)
+			lhs += partition_cell(rhs.popleft(),indexes,g)
+			modified = True
+		else:
+			lhs.append(elem)
+		if len(rhs)==0 and modified:
+			rhs, lhs, modified = lhs, deque(), False
+	order = [x for y in lhs for x in y]
+	return order,leaders
 
 
 ####### methods for generating a canonical partition of a graph container
