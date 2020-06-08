@@ -59,3 +59,12 @@ class TestBase(unittest.TestCase):
     def test_duplicate(self):
         John2 = self.John.duplicate()
         self.assertEqual(John2.name,self.John.name)
+
+    def test_get_connected(self):
+        self.Sherlock.parents = [self.Mary, self.John]
+        self.Sherlock.pets = [self.Dog001]
+        self.Sherlock.children = [self.Kid001, self.Kid002]
+
+        L = self.John.get_connected()
+        self.assertEqual(len(L),6)
+        self.assertEqual(set(L),set([self.Mary, self.John, self.Sherlock, self.Kid001, self.Kid002, self.Dog001]))

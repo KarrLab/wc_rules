@@ -195,7 +195,7 @@ class BaseClass(core.Model):
             node = examine_stack.popleft()
             if node not in nodes:
                 nodes.add(node)
-                examine_stack.extend(self.listget_all_related())
+                examine_stack.extend(node.listget_all_related())
         return list(nodes)
 
     

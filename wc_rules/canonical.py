@@ -19,62 +19,50 @@ class CertificateCounter(defaultdict):
 		return [self[key] for key in sorted(self)]
 
 
-def canonize(g):
-	partition = canonical_partition(g)
-	order,leaders = canonical_ordering(partition,g)
-	for x in partition:
-		x.sort(key=lambda x: order.index(x))
-	return partition,leaders
-	
-	#labels = [x for cell in partition for x in cell]
-	#relabeling =  generate_relabeling(labels)
-	#new_partition = [[relabeling[x] for x in cell] for cell in partition]
-	#return (new_partition,relabeling)
-
-
-
-####### methods for generating a canonical label from a canonical partition
-def generate_relabeling(_list):
-	n = len(_list)
-	relabels = list(map(lambda x:''.join(x),list(product('abcdefgh',repeat = math.ceil(n/8)))[0:n]))
-	return dict(zip(_list,relabels))
-
-####### method for ordering elements of an orbit within a canonical partition
-def canonical_ordering(p,g): 
-	# given a canonical partition
-	# break each orbit by selecting a leader and making it its own cell,
-	# then repartition remaining elements of the orbit by sorted node certificates
-	rhs, lhs, modified, leaders = p.copy(), deque(), False, dict()
-	while rhs:
-		elem = rhs.popleft()
-		if len(elem) > 1:
-			leader,remaining = elem[0], elem[1:]
-			leaders[leader] = remaining
-			lhs.append([leader])
-			rhs.appendleft(remaining)
-			indexes = index_partition(lhs+rhs)
-			lhs += partition_cell(rhs.popleft(),indexes,g)
-			modified = True
-		else:
-			lhs.append(elem)
-		if len(rhs)==0 and modified:
-			rhs, lhs, modified = lhs, deque(), False
-	order = [x for y in lhs for x in y]
-	return order,leaders
-
 
 ####### methods for generating a canonical partition of a graph container
-def canonical_partition(g):
-	rhs, lhs, modified = initial_partition(g), deque(), False
+def refine_partition(g,p):
+	# g is a graph, p is an ordered partition
+	rhs,lhs,modified = deque(p), deque(), False
 	indexes = index_partition(rhs)
 	while rhs:
-		prev_length = len(lhs)
-		lhs += partition_cell(rhs.popleft(),indexes,g)
-		if len(lhs) > prev_length+1:
+		elem = rhs.popleft()
+		cells = partition_cell(elem,indexes,g)
+		lhs += cells
+		if len(cells) > 1:
 			indexes, modified  = index_partition(lhs+rhs), True
 		if len(rhs)==0 and modified:
 			rhs, lhs, modified = lhs, deque(), False
-	return lhs
+	return list(lhs)
+
+
+def canonical_ordering(g):
+	# initially partition based on node classes and degrees
+	# then refine until valid
+	partition = refine_partition(g,initial_partition(g))
+	# now cells == orbits, but individual orbits need to be ordered
+
+	p, leaders = partition.copy(), dict()
+	# until all orbits broken
+	while len(p) < len(g):
+		# find first non-trivial orbit
+		# separate its lexicographic leader
+		# refine until valid
+		idx = [i for i,x in enumerate(p) if len(x)>1][0]
+		leader, remaining = p[idx][0], p[idx][1:]
+		leaders[leader] = remaining
+		p[idx:idx+1] = [ [leader], remaining ]  
+		p = refine_partition(g,p)
+
+	order = [x for y in p for x in y]
+
+	# use acquired order to sort partition cells
+	for x in partition:
+		x.sort(key = lambda x: order.index(x))
+
+	return partition,leaders
+
+
 
 def index_partition(partition):
 	# maps each idx in g -> index of cell containing idx in partition

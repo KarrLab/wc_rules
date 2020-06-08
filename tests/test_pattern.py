@@ -2,7 +2,6 @@ from wc_rules.attributes import *
 from wc_rules.entity import Entity
 from wc_rules.pattern2 import Pattern, GraphContainer
 from wc_rules.constraint import Constraint
-from wc_rules.canonical import canonical_partition
 import math
 import unittest
 
@@ -109,15 +108,3 @@ class TestPattern(unittest.TestCase):
 		c = pz.constraints[0]
 		self.assertEqual(c.exec(match=dict( z=Z() )), False)
 		self.assertEqual(c.exec(match=dict( z=Z(z=Z()) )), True)
-	'''
-	def test_canonical_partition(self):
-		x = X('x',y=[Y('c'),Y('b'),Y('a')])
-		p = canonical_partition(GraphContainer(x.get_connected()))
-		self.assertTrue(list(p),[['a','b','c'],'x'])
-
-		k = K('b',x=K('a',x=K('c')))
-		k.x.x.x = K
-		p = canoncial_partition(GraphContainer(k.get_connected()))
-		self.assertTrue(list(p),[['a','b','c']])		
-	'''
-
