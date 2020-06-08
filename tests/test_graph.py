@@ -30,7 +30,7 @@ def format_L(L):
 class TestPattern(unittest.TestCase):
 
 	def test_spoke(self):
-		# a-b, a-c, a-d, a-e, a-f
+		#edges: a-b, a-c, a-d, a-e, a-f
 		x = X('a')
 		x.y = [Y(z) for z in random.sample('bcdef',5)]
 		
@@ -41,7 +41,7 @@ class TestPattern(unittest.TestCase):
 		self.assertEqual(format_L(L),['b:cdef','c:def','d:ef','e:f'])
 
 	def test_directed_wheel(self):
-		# a->b->c->d->e->a
+		#edges: a->b->c->d->e->a
 		k = [K(x) for x in 'abcde']
 		for i in range(-1,len(k)-1):
 			k[i].x = k[i+1]
@@ -53,7 +53,7 @@ class TestPattern(unittest.TestCase):
 		self.assertEqual(format_L(L),['a:bcde'])
 
 	def test_undirected_wheel(self):
-		# a-b-c-d-e-a
+		#edges: a-b-c-d-e-a
 		m = [M(x) for x in 'abcde']
 		for i in range(-1,len(m)-1):
 			m[i].x.add(m[i+1])
@@ -65,7 +65,7 @@ class TestPattern(unittest.TestCase):
 		self.assertEqual(format_L(L),['a:bcde','b:e'])
 
 	def test_directed_cube(self):
-		# a->[b,c,d], [b,c]->e, [b,d]->f, [c,d]->g, [e,f,g]->h
+		#edges: a->[b,c,d], [b,c]->e, [b,d]->f, [c,d]->g, [e,f,g]->h
 		n = [N(x) for x in 'abcdefgh']
 
 		n[0].x = [n[1], n[2], n[3]]
@@ -82,7 +82,7 @@ class TestPattern(unittest.TestCase):
 
 
 	def test_undirected_cube(self):
-		# a-[b,c,d], [b,c]-e, [b,d]-f, [c,d]-g, [e,f,g]-h
+		#edges: a-[b,c,d], [b,c]-e, [b,d]-f, [c,d]-g, [e,f,g]-h
 		m = [M(x) for x in 'abcdefgh']
 
 		m[0].x = [m[1], m[2], m[3]]
@@ -97,3 +97,16 @@ class TestPattern(unittest.TestCase):
 		self.assertEqual(format_p(p),['abcdefgh'])
 		self.assertEqual(format_L(L),['a:bcdefgh','b:cd','c:d'])
 
+
+	def test_clique(self):
+		#edges: a-[b,c,d,e], b-[c,d,e], c-[d,e], d-e
+		m = [M(x) for x in 'abcde']
+		for i in range(len(m)):
+			for j in range(i+1,len(m)):
+				m[i].x.add(m[j])
+
+		g = GraphContainer(m[0].get_connected())
+		p,L = canonical_ordering(g)
+
+		self.assertEqual(format_p(p),['abcde'])
+		self.assertEqual(format_L(L),['a:bcde','b:cde','c:de','d:e'])
