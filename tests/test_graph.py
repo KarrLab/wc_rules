@@ -27,7 +27,7 @@ def format_L(L):
 	# leader - a dict of id:[ids]
 	return ['{x}:{y}'.format(x=x,y=''.join(y)) for x,y in sorted(L.items())]
 
-class TestPattern(unittest.TestCase):
+class TestGraph(unittest.TestCase):
 
 	def test_spoke(self):
 		#edges: a-b, a-c, a-d, a-e, a-f

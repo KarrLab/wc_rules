@@ -27,6 +27,9 @@ class GraphContainer(DictLike):
 
 	def get_namespace(self):
 		return {x.id:x.__class__ for x in self}
+
+	def get_canonical_form(self):
+		return canonical_ordering(self)
 	
 class Pattern:
 
