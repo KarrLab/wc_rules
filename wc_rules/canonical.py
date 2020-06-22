@@ -7,10 +7,7 @@ from .indexer import BiMap
 
 def canonical_label(g):
 	partition,order,leaders = canonical_ordering(g)
-	v = BiMap(order,strgen())
-	print(v)
-	
-	
+	v = BiMap.create(order,strgen(len(order)))
 	return partition,leaders
 
 def strgen(n):
@@ -63,6 +60,7 @@ def strgen(n):
 def canonical_ordering(g):
 	# partition = coarsest equitable partition
 	partition = refine_partition(g,initial_partition(g))
+	print(partition)
 	p, leaders = partition.copy(), dict()	
 	while len(p) < len(g):
 		p, leader, remaining = break_and_refine(g,p)
@@ -115,16 +113,16 @@ def initial_partition(g):
 def node_certificate(idx,d,g):
 	# idx in g -> edges_sorted_by_indexes_of_targets_in_partition
 	node = g[idx]
-	attrs = node.get_nonempty_related_attributes()
+	attrs = sorted(node.get_nonempty_related_attributes())
 	cert = [(d[x.id],a) for a in attrs for x in node.listget(a)]
 	return tuple(sorted(cert))
 	
 def initial_node_certificate(idx,g):
 	# idx in g -> <degree, class_name, sorted_edges>
 	node = g[idx]
-	attrs = node.get_nonempty_related_attributes()
+	attrs = sorted(node.get_nonempty_related_attributes())
 	edges = [(a,x.__class__.__name__) for a in attrs for x in node.listget(a)]	
-	return (len(edges),node.__class__.__name__,tuple(sorted(edges)))
+	return (-len(edges),node.__class__.__name__,tuple(sorted(edges)))
 
 def group_by_node_certificates(certificate_function,elems,**kwargs):
 	if len(elems)==1:

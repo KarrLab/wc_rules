@@ -35,9 +35,9 @@ class TestGraph(unittest.TestCase):
 		x.y = [Y(z) for z in random.sample('bcdef',5)]
 		
 		g = GraphContainer(x.get_connected())
-		p,L = canonical_ordering(g)
+		p,order,L = canonical_ordering(g)
 
-		self.assertEqual(format_p(p),['bcdef','a'])
+		self.assertEqual(format_p(p),['a','bcdef'])
 		self.assertEqual(format_L(L),['b:cdef','c:def','d:ef','e:f'])
 
 	def test_directed_wheel(self):
@@ -47,7 +47,7 @@ class TestGraph(unittest.TestCase):
 			k[i].x = k[i+1]
 		
 		g = GraphContainer(k[0].get_connected())
-		p,L = canonical_ordering(g)
+		p,order,L = canonical_ordering(g)
 		
 		self.assertEqual(format_p(p),['aebdc'])
 		self.assertEqual(format_L(L),['a:bcde'])
@@ -59,7 +59,7 @@ class TestGraph(unittest.TestCase):
 			m[i].x.add(m[i+1])
 		
 		g = GraphContainer(m[0].get_connected())
-		p,L = canonical_ordering(g)
+		p,order,L = canonical_ordering(g)
 		
 		self.assertEqual(format_p(p),['abecd'])
 		self.assertEqual(format_L(L),['a:bcde','b:e'])
@@ -75,7 +75,7 @@ class TestGraph(unittest.TestCase):
 		n[7].x = [n[6], n[5], n[4]]
 				
 		g = GraphContainer(n[0].get_connected())
-		p,L = canonical_ordering(g)
+		p,order,L = canonical_ordering(g)
 
 		self.assertEqual(format_p(p),['h','a','efg','bcd'])
 		self.assertEqual(format_L(L),['e:fg','f:g'])
@@ -92,7 +92,7 @@ class TestGraph(unittest.TestCase):
 		m[7].x = [m[6], m[5], m[4]]
 
 		g = GraphContainer(m[0].get_connected())
-		p,L = canonical_ordering(g)
+		p,order,L = canonical_ordering(g)
 
 		self.assertEqual(format_p(p),['abcdefgh'])
 		self.assertEqual(format_L(L),['a:bcdefgh','b:cd','c:d'])
@@ -106,7 +106,7 @@ class TestGraph(unittest.TestCase):
 				m[i].x.add(m[j])
 
 		g = GraphContainer(m[0].get_connected())
-		p,L = canonical_ordering(g)
+		p,order,L = canonical_ordering(g)
 
 		self.assertEqual(format_p(p),['abcde'])
 		self.assertEqual(format_L(L),['a:bcde','b:cde','c:de','d:e'])
