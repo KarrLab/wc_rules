@@ -1,6 +1,25 @@
 from collections import defaultdict,deque
+import math
+from itertools import product
+from .indexer import BiMap
 
-##### DESCRIPTION ####################
+
+
+def canonical_label(g):
+	partition,order,leaders = canonical_ordering(g)
+	v = BiMap(order,strgen())
+	print(v)
+	
+	
+	return partition,leaders
+
+def strgen(n):
+	template = 'abcdefgh'
+	digits = math.ceil(math.log(n)/math.log(len(template)))
+	enumerator = enumerate(product(template,repeat=digits))
+	return list(''.join(x) for i,x in enumerator if i<n)
+	
+##### DESCRIPTION OF CANONICAL ORDERING ALGORITHM ####################
 # An ordered partition is a list of cells of nodes of a graph: 
 # {de}{abc}{f} is an OP of a graph {abcdef} with edges ad, ae, bd, be, cd, ce, df, ef.
 # An OP is "equitable" if each cell's nodes have identical relationships to other cells:
@@ -11,6 +30,9 @@ from collections import defaultdict,deque
 # The finest equitable partition FEP == an ordering of nodes {d}{e}{a}{b}{c}{f}.
 # To find CEP, refine an initial deterministically ordered partition until its equitable.
 # To find FEP, sequentially break-and-refine cells in a CEP until all cells are singletons.
+# The canonical ordering algorithm sorts nodes by some initial deterministic order,
+# computes CEP, then FEP, while tracking lexicographic leaders that were used to break ties.
+# The outputs are CEP, FEP, leaders
 
 ##### DETAILS ##########################
 # index_partition() 
@@ -51,7 +73,7 @@ def canonical_ordering(g):
 	for x in partition:
 		x.sort(key = lambda x: order.index(x))
 
-	return partition,leaders
+	return partition, order, leaders
 
 def break_and_refine(g,p):
 	# identify first non-singleton cell idx, 

@@ -8,6 +8,42 @@ from . import utils
 import inspect
 import pprint
 
+class BiMap:
+    __slots__ = '_dict'
+
+    def __init__(self,_dict):
+        self._dict = _dict
+
+    @classmethod
+    def create(cls,sources,targets=None):
+        if targets is None:
+            targets = sources
+        return BiMap(dict(zip(sources,targets)))
+
+    @property
+    def sources(self):
+        return list(self._dict.keys())
+
+    @property
+    def targets(self):
+        return list(self._dict.values())
+
+    @property
+    def items(self):
+        return list(self._dict.items())
+
+    def get(self,elem):
+        return self._dict.__getitem__(elem)
+
+    def __mul__(self,other):
+        return BiMap({x:self.get(y) for x,y in other.items})
+
+    def __eq__(self,other):
+        return isinstance(other,BiMap) and self._dict == other._dict
+
+    def __str__(self):
+        return '\n'.join('{x} -> {y}'.format(x=x,y=y) for x,y in self._dict.items())
+
 class DictLike(object):
     def __init__(self,iterable=None):
         ''' Container of objects that enables referencing by id '''
