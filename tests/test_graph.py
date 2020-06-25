@@ -1,7 +1,8 @@
 from wc_rules.attributes import *
 from wc_rules.entity import Entity
 from wc_rules.pattern2 import Pattern, GraphContainer
-from wc_rules.canonical import canonical_ordering
+from wc_rules.canonical import canonical_ordering, compute_symmetries
+import math
 import random
 import unittest
 
@@ -32,13 +33,15 @@ class TestGraph(unittest.TestCase):
 	def test_spoke(self):
 		#edges: a-b, a-c, a-d, a-e, a-f
 		x = X('a')
-		x.y = [Y(z) for z in random.sample('bcdef',5)]
+		x.y = [Y(z) for z in random.sample('bcdef',len('bcdef'))]
 		
 		g = GraphContainer(x.get_connected())
 		p,order,L = canonical_ordering(g)
+		syms = compute_symmetries(g,p,order)
 
 		self.assertEqual(format_p(p),['a','bcdef'])
 		self.assertEqual(format_L(L),['b:cdef','c:def','d:ef','e:f'])
+		self.assertEqual(len(syms),math.factorial(len('bcdef')))
 
 	def test_directed_wheel(self):
 		#edges: a->b->c->d->e->a
@@ -48,9 +51,11 @@ class TestGraph(unittest.TestCase):
 		
 		g = GraphContainer(k[0].get_connected())
 		p,order,L = canonical_ordering(g)
+		syms = compute_symmetries(g,p,order)
 		
 		self.assertEqual(format_p(p),['aebdc'])
 		self.assertEqual(format_L(L),['a:bcde'])
+		self.assertEqual(len(syms),len('abcde'))
 
 	def test_undirected_wheel(self):
 		#edges: a-b-c-d-e-a
@@ -60,9 +65,11 @@ class TestGraph(unittest.TestCase):
 		
 		g = GraphContainer(m[0].get_connected())
 		p,order,L = canonical_ordering(g)
+		syms = compute_symmetries(g,p,order)
 		
 		self.assertEqual(format_p(p),['abecd'])
 		self.assertEqual(format_L(L),['a:bcde','b:e'])
+		self.assertEqual(len(syms),2*len('abcde'))
 
 	def test_directed_cube(self):
 		#edges: a->[b,c,d], [b,c]->e, [b,d]->f, [c,d]->g, [e,f,g]->h
@@ -76,9 +83,11 @@ class TestGraph(unittest.TestCase):
 				
 		g = GraphContainer(n[0].get_connected())
 		p,order,L = canonical_ordering(g)
+		syms = compute_symmetries(g,p,order)
 
 		self.assertEqual(format_p(p),['h','a','efg','bcd'])
 		self.assertEqual(format_L(L),['e:fg','f:g'])
+		self.assertEqual(len(syms),6)
 
 
 	def test_undirected_cube(self):
@@ -93,10 +102,11 @@ class TestGraph(unittest.TestCase):
 
 		g = GraphContainer(m[0].get_connected())
 		p,order,L = canonical_ordering(g)
+		syms = compute_symmetries(g,p,order)
 
 		self.assertEqual(format_p(p),['abcdefgh'])
 		self.assertEqual(format_L(L),['a:bcdefgh','b:cd','c:d'])
-
+		self.assertEqual(len(syms),48)
 
 	def test_clique(self):
 		#edges: a-[b,c,d,e], b-[c,d,e], c-[d,e], d-e
@@ -107,6 +117,8 @@ class TestGraph(unittest.TestCase):
 
 		g = GraphContainer(m[0].get_connected())
 		p,order,L = canonical_ordering(g)
+		syms = compute_symmetries(g,p,order)
 
 		self.assertEqual(format_p(p),['abcde'])
 		self.assertEqual(format_L(L),['a:bcde','b:cde','c:de','d:e'])
+		self.assertEqual(len(syms),math.factorial(len('abcde')))

@@ -7,42 +7,57 @@
 from . import utils
 import inspect
 import pprint
+from dataclasses import dataclass, field
 
+@dataclass(unsafe_hash=True)
 class BiMap:
-    __slots__ = '_dict'
+    # create and copy_from class methods sort items before creation
+    #__slots__ = '_dict sources targets'.split()
+    _dict: dict = field(compare=False)
+    sources: tuple = field(init=False)
+    targets: tuple = field(init=False)
 
-    def __init__(self,_dict):
-        self._dict = _dict
+    def __post_init__(self):
+        self.sources = tuple(self._dict.keys())
+        self.targets = tuple(self._dict.values())
 
     @classmethod
     def create(cls,sources,targets=None):
         if targets is None:
             targets = sources
-        return BiMap(dict(zip(sources,targets)))
+        return BiMap(dict(sorted(zip(sources,targets))))
 
-    @property
-    def sources(self):
-        return list(self._dict.keys())
-
-    @property
-    def targets(self):
-        return list(self._dict.values())
-
-    @property
+    # overloaded dict behaviors
     def items(self):
-        return list(self._dict.items())
+        return self._dict.items()
 
     def get(self,elem):
         return self._dict.__getitem__(elem)
 
+    def __str__(self,format='dict'):
+        s =  ', '.join('{x}->{y}'.format(x=x,y=y) for x,y in self.items())
+        return '{{ {s} }}'.format(s=s)
+    
+    # BiMap behaviors
     def __mul__(self,other):
-        return BiMap({x:self.get(y) for x,y in other.items})
+        # other can be just a dict
+        # other = {x:y,y:z,z:x}, self = {x:0,y:1,z:2}, out = {x:1,y:2,z:0}
+        # equivalent to other(self) in function form
+        return BiMap({x:self.get(y) for x,y in other.items()})
 
-    def __eq__(self,other):
-        return isinstance(other,BiMap) and self._dict == other._dict
+    def __lt__(self,other):
+        assert self.sources == other.sources
+        return self.targets < other.targets
 
-    def __str__(self):
-        return '\n'.join('{x} -> {y}'.format(x=x,y=y) for x,y in self._dict.items())
+    def replace(self,item):
+        if isinstance(item,(list,tuple,set)):
+            return item.__class__(self.replace(x) for x in item)
+        if isinstance(item,dict):
+            return {self.replace(x):self.replace(y) for x,y in item.items()}
+        if isinstance(item,BiMap):
+            return BiMap(dict( sorted((self.replace(x),self.replace(y)) for x,y in item.items()) ))
+        return self.get(item)
+
 
 class DictLike(object):
     def __init__(self,iterable=None):

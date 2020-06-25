@@ -60,6 +60,21 @@ def subdict(d,keys):
     return {k:d[k] for k in keys}
 
 
+def strgen(n):
+    template = 'abcdefgh'
+    digits = math.ceil(math.log(n)/math.log(len(template)))
+    enumerator = enumerate(product(template,repeat=digits))
+    return list(''.join(x) for i,x in enumerator if i<n)
+
+def concat(LL):
+    return [x for L in LL for x in L]
+
+def printvars(vars,vals,sep=',',breakline=False):
+    strs = ['{x}={y}'.format(x=x,y=y) for x,y in zip(vars,vals)]
+    return sep.join(strs)
+    
+
+
 ###### Error ######
 class GenericError(Exception):
 

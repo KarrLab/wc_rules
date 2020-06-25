@@ -1,21 +1,76 @@
 from collections import defaultdict,deque
 import math
 from itertools import product
+from functools import partial
 from .indexer import BiMap
+from .utils import strgen, concat, printvars
+from operator import itemgetter
+from sortedcontainers import SortedSet
 
 
 
 def canonical_label(g):
 	partition,order,leaders = canonical_ordering(g)
-	v = BiMap.create(order,strgen(len(order)))
+	syms = compute_symmetries(g,partition,order)
+
+	
+	#v = BiMap.create(order,strgen(len(order)))
+	#print(partition)
+	#print(v)
 	return partition,leaders
 
-def strgen(n):
-	template = 'abcdefgh'
-	digits = math.ceil(math.log(n)/math.log(len(template)))
-	enumerator = enumerate(product(template,repeat=digits))
-	return list(''.join(x) for i,x in enumerator if i<n)
+def compute_symmetries(g,partition,order):
+	# input: canonical partition, empty generator set
+	# make a stack with initial element being the canonical partition
+	# at each step, pick a candidate from the stack and do:
+	# 	check if fully refined, if so update generator set
+	#	else, make two copies of the partition
+	#		first one is intact, second one flips first two elements of first non-trivial cell
+	#		e.g. [x][abc][d] -> [x][abc][d], [x][bac][d]
+	#		run break-and-refine on the copies 
+	#		update stack with the generated partitions
+	# output: set of generators
+
+	# input: set of generators, empty set of symmetries
+	# for each generator, 
+	#	generate cyclic group by self applying the generator on itself
+	#	generate coset group by applying each elem of cyclic group to each elem of existing symmetries
+	#	update symmetries
+	# output: set of all symmetries
+
+	generators,candidates = SortedSet(), deque([copy_partition(partition)])
+	while candidates:
+		L = candidates.popleft()
+		if len(L) == len(g):
+			generators.add(tuple(concat(L)))
+			continue
+		R,idx = copy_partition(L), first_nontrivial_cell(L)
+		R[idx][0], R[idx][1] = R[idx][1], R[idx][0]
+		get_refined_partition = lambda x: break_and_refine(g,x)[0]
+		candidates.extend(map(get_refined_partition,[L,R]))
+
+	symmetries = SortedSet()
+	for x in generators:
+		perm = BiMap.create(order,x)
+		cycle_group = generate_cycle_group(perm)
+		coset_group = generate_coset_product(symmetries,cycle_group)
+		symmetries.update(cycle_group,coset_group)
+			
+	return list(symmetries)
 	
+def generate_cycle_group(generator):
+	cycle_group, last_x = SortedSet(), generator
+	while last_x not in cycle_group:
+		cycle_group.add(last_x)
+		last_x = generator*last_x
+	return list(cycle_group)
+
+def generate_coset_product(all_x,all_y):
+	return [x*y for x in all_x for y in all_y]
+
+def copy_partition(partition):
+	return [x.copy() for x in partition]
+
 ##### DESCRIPTION OF CANONICAL ORDERING ALGORITHM ####################
 # An ordered partition is a list of cells of nodes of a graph: 
 # {de}{abc}{f} is an OP of a graph {abcdef} with edges ad, ae, bd, be, cd, ce, df, ef.
@@ -60,7 +115,6 @@ def strgen(n):
 def canonical_ordering(g):
 	# partition = coarsest equitable partition
 	partition = refine_partition(g,initial_partition(g))
-	print(partition)
 	p, leaders = partition.copy(), dict()	
 	while len(p) < len(g):
 		p, leader, remaining = break_and_refine(g,p)
@@ -76,11 +130,12 @@ def canonical_ordering(g):
 def break_and_refine(g,p):
 	# identify first non-singleton cell idx, 
 	# separate its lexicographic leader and call refine_partition
-	idx = [i for i,x in enumerate(p) if len(x)>1][0]
+	idx = first_nontrivial_cell(p)
 	leader, remaining = p[idx][0], p[idx][1:]
 	p[idx:idx+1] = [ [leader], remaining ]
 	p = refine_partition(g,p)
-	return p, leader, remaining  
+	return p, leader, remaining
+  
 		
 def refine_partition(g,p):
 	# g is a graph, p is an ordered partition
@@ -97,6 +152,9 @@ def refine_partition(g,p):
 	return list(lhs)
 
 # methods to index and create partitions
+def first_nontrivial_cell(partition):
+	return [i for i,x in enumerate(partition) if len(x)>1][0]
+
 def index_partition(partition):
 	# maps each idx in g -> index of cell containing idx in partition
 	return dict([(x,i) for i,cell in enumerate(partition) for x in cell])
