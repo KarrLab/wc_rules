@@ -25,7 +25,7 @@ def compute_symmetries(g,partition,order):
 	# at each step, pick a candidate from the stack and do:
 	# 	check if fully refined, if so update generator set
 	#	else, make two copies of the partition
-	#		first one is intact, second one flips first two elements of first non-trivial cell
+	#		first one is intact, second one swaps leaders of first non-trivial cell
 	#		e.g. [x][abc][d] -> [x][abc][d], [x][bac][d]
 	#		run break-and-refine on the copies 
 	#		update stack with the generated partitions
@@ -34,8 +34,8 @@ def compute_symmetries(g,partition,order):
 	# input: set of generators, empty set of symmetries
 	# for each generator, 
 	#	generate cyclic group by self applying the generator on itself
-	#	generate coset group by applying each elem of cyclic group to each elem of existing symmetries
-	#	update symmetries
+	#	generate group product by applying each elem of cyclic group to each elem of existing symmetries
+	#	update symmetries from both cyclic group and coset group
 	# output: set of all symmetries
 
 	generators,candidates = SortedSet(), deque([copy_partition(partition)])
@@ -44,29 +44,33 @@ def compute_symmetries(g,partition,order):
 		if len(L) == len(g):
 			generators.add(tuple(concat(L)))
 			continue
-		R,idx = copy_partition(L), first_nontrivial_cell(L)
-		R[idx][0], R[idx][1] = R[idx][1], R[idx][0]
-		get_refined_partition = lambda x: break_and_refine(g,x)[0]
-		candidates.extend(map(get_refined_partition,[L,R]))
+		A = break_and_refine(g,	copy_partition(L))[0]
+		B = break_and_refine(g, swap_leaders(L))[0]
+		candidates.extend([A, B])
 
 	symmetries = SortedSet()
 	for x in generators:
 		perm = BiMap.create(order,x)
 		cycle_group = generate_cycle_group(perm)
-		coset_group = generate_coset_product(symmetries,cycle_group)
-		symmetries.update(cycle_group,coset_group)
+		cartesian_product = generate_cartesian_product(symmetries,cycle_group)
+		symmetries.update(cycle_group,cartesian_product)
 			
 	return list(symmetries)
+
+def swap_leaders(partition):
+	idx, R = first_nontrivial_cell(partition), copy_partition(partition)
+	R[idx][0], R[idx][1] = R[idx][1], R[idx][0]
+	return R
 	
 def generate_cycle_group(generator):
-	cycle_group, last_x = SortedSet(), generator
-	while last_x not in cycle_group:
-		cycle_group.add(last_x)
-		last_x = generator*last_x
+	cycle_group, x = SortedSet(), generator
+	while x not in cycle_group:
+		cycle_group.add(x)
+		x = generator*x
 	return list(cycle_group)
 
-def generate_coset_product(all_x,all_y):
-	return [x*y for x in all_x for y in all_y]
+def generate_cartesian_product(X,Y):
+	return [x*y for x in X for y in Y]
 
 def copy_partition(partition):
 	return [x.copy() for x in partition]
