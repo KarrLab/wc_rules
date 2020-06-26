@@ -7,4 +7,3 @@ lark_parser
 numpy
 obj_tables[bio]
 palettable
-setuptools
