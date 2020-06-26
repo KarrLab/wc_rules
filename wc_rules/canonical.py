@@ -20,24 +20,9 @@ def canonical_label(g):
 	return partition,leaders
 
 def compute_symmetries(g,partition,order):
-	# input: canonical partition, empty generator set
-	# make a stack with initial element being the canonical partition
-	# at each step, pick a candidate from the stack and do:
-	# 	check if fully refined, if so update generator set
-	#	else, make two copies of the partition
-	#		first one is intact, second one swaps leaders of first non-trivial cell
-	#		e.g. [x][abc][d] -> [x][abc][d], [x][bac][d]
-	#		run break-and-refine on the copies 
-	#		update stack with the generated partitions
-	# output: set of generators
-
-	# input: set of generators, empty set of symmetries
-	# for each generator, 
-	#	generate cyclic group by self applying the generator on itself
-	#	generate group product by applying each elem of cyclic group to each elem of existing symmetries
-	#	update symmetries from both cyclic group and coset group
-	# output: set of all symmetries
-
+	# Key Idea: Within each node orbit in the partition, 
+	# one can map the leader to itself or to another node (second-leader).
+	# This choice creates a bifurcation in the search tree for generators.
 	generators,candidates = SortedSet(), deque([copy_partition(partition)])
 	while candidates:
 		L = candidates.popleft()
@@ -48,13 +33,16 @@ def compute_symmetries(g,partition,order):
 		B = break_and_refine(g, swap_leaders(L))[0]
 		candidates.extend([A, B])
 
+	# Key Idea: A generator produces symmetries in two ways.
+	# A cyclic group by self-applying the generator as many times as needed.
+	# A coset by composing its cyclic group with an existing set of symmetries.
 	symmetries = SortedSet()
 	for x in generators:
 		perm = BiMap.create(order,x)
 		cycle_group = generate_cycle_group(perm)
-		cartesian_product = generate_cartesian_product(symmetries,cycle_group)
-		symmetries.update(cycle_group,cartesian_product)
-			
+		coset = generate_cartesian_product(symmetries,cycle_group)
+		symmetries.update(cycle_group,coset)
+		
 	return list(symmetries)
 
 def swap_leaders(partition):
@@ -76,44 +64,44 @@ def copy_partition(partition):
 	return [x.copy() for x in partition]
 
 ##### DESCRIPTION OF CANONICAL ORDERING ALGORITHM ####################
-# An ordered partition is a list of cells of nodes of a graph: 
-# {de}{abc}{f} is an OP of a graph {abcdef} with edges ad, ae, bd, be, cd, ce, df, ef.
-# An OP is "equitable" if each cell's nodes have identical relationships to other cells:
-# 	nodes in {de} each have 3 edges to {abc} and 1 to {f}
-# 	nodes in {abc} each have 2 edges to {de} 
-# 	node in {f} has 2 edges to {de}.
-# The coarsest equitable partition CEP == each cell is a node orbit {de}{abc}{f}.
-# The finest equitable partition FEP == an ordering of nodes {d}{e}{a}{b}{c}{f}.
-# To find CEP, refine an initial deterministically ordered partition until its equitable.
-# To find FEP, sequentially break-and-refine cells in a CEP until all cells are singletons.
-# The canonical ordering algorithm sorts nodes by some initial deterministic order,
-# computes CEP, then FEP, while tracking lexicographic leaders that were used to break ties.
-# The outputs are CEP, FEP, leaders
-
-##### DETAILS ##########################
-# index_partition() 
-#	input: a partition
-#	output: each node receives the index of its cell in the partition
-# node_certificate()
-#	input: a node, a partition's index, graph
-#	output: a certificate characterizing the node's relationship to nodes in other cells
-# group_by_node_certificates()
-# 	input: a list of nodes, a certificate function, additional kwargs for certfn.
-#	output: partitions nodes into groups with matching certificates
-# partition_cell()
-# 	input: a cell in a partition, graph
-#	output: breaks the cell into smaller cells if cell nodes have non-matching certificates
-# refine_partition()
-#	input: initial partition
-#	output: sequentially calls partition_cell and reindexing until all cells have matching certificates
-# break_and_refine()
-# 	input: an partition with at least one non-singleton cell 
-# 	output: separates lexicographic leader {abc}->{a},{bc}, refines until equitable,
-#	(tracks breaking procedure using a leaders dict a:{bc})
-# canonical_ordering()
-#	input: graph
-#	ouput: CEP (ordered by FEP), leaders
-
+# Definitions: (a) An ordered partition (OP) partitions a graph's nodes into ordered cells.
+# (b) A node certificate (NC) for a node characterizes its edges to each cell in an OP.
+# (c) An equitable partition (EP) is an OP where each cell's nodes have identical NCs.
+# (d) A coarsest EP (CEP) is an EP with the least number of cells. Equivalent to a node orbit partition.
+# (e) A finest EP (FEP) is an EP with the most number of cells. Equivalent to a node ordering.
+#
+# # Canonical ordering procedure:
+# input: 
+#	graph G, initial deterministic OP
+# procedure:
+#	CEP <- refine OP till equitable
+# 	FEP <- break and refine CEP 
+# output:
+# 	orbits = CEP, order = FEP, leaders = lexicographic leaders used to break CEP
+#
+# Example: 
+# input:
+#	an undirected square graph with nodes a,b,c,d
+#	an initial deterministic OP {a,b,c,d}
+# procedure:
+#	{a,b,c,d} --refine--> {a,b,c,d} a CEP
+# 	{a,b,c,d} --break(a)--> {a}{b,c,d} --refine--> {a}{b,c}{d}
+# 	{a}{b,c}{d} --break(b)--> {a}{b}{c}{d} --refine--> {a}{b}{c}{d} a FEP
+# output:
+#	orbits = {a,b,c,d}
+#	order = {a}{b}{c}{d}
+#	leaders = a->{b,c,d}, b->{c}
+#
+# # Helper methods
+#	compute node certificates
+#		given OP, for each node, count number and type
+#		of edges to "any" node in cell i for all cells i.
+#	refine partition
+#		given OP, iteratively compute certificates on non-singleton cells,
+# 		and subdivide them if multiple certificate values detected.
+#	break and refine: 
+#		given CEP, separate lexicographic leader into its own cell,
+#		then call refine.
 
 ####### methods for generating a canonical partition/ordering of a graph container
 def canonical_ordering(g):
