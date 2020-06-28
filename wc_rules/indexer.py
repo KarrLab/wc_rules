@@ -16,11 +16,11 @@ class BiMap:
     _dict: dict = field(compare=False)
     sources: tuple = field(init=False)
     targets: tuple = field(init=False)
-
+    
     def __post_init__(self):
         self.sources = tuple(self._dict.keys())
         self.targets = tuple(self._dict.values())
-
+    
     @classmethod
     def create(cls,sources,targets=None):
         if targets is None:
@@ -36,13 +36,16 @@ class BiMap:
 
     def __str__(self,format='dict'):
         s =  ', '.join('{x}->{y}'.format(x=x,y=y) for x,y in self.items())
-        return '{{ {s} }}'.format(s=s)
+        return '{{{s}}}'.format(s=s)
+
+    def __repr__(self):
+        return str(self)
     
     # BiMap behaviors
     def __mul__(self,other):
         # other can be just a dict
-        # other = {x:y,y:z,z:x}, self = {x:0,y:1,z:2}, out = {x:1,y:2,z:0}
-        # equivalent to other(self) in function form
+        # self = {x:0,y:1,z:2}, other = {x:y,y:z,z:x}, out = {x:1,y:2,z:0}
+        # out(_) = self(other(_))
         return BiMap({x:self.get(y) for x,y in other.items()})
 
     def __lt__(self,other):

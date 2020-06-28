@@ -30,6 +30,7 @@ class GraphContainer(DictLike):
 
 	def get_canonical_label(self):
 		return canonical_label(self)
+
 	
 class Pattern:
 

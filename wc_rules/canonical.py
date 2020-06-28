@@ -7,19 +7,7 @@ from .utils import strgen, concat, printvars
 from operator import itemgetter
 from sortedcontainers import SortedSet
 
-
-
-def canonical_label(g):
-	partition,order,leaders = canonical_ordering(g)
-	syms = compute_symmetries(g,partition,order)
-
-	
-	#v = BiMap.create(order,strgen(len(order)))
-	#print(partition)
-	#print(v)
-	return partition,leaders
-
-def compute_symmetries(g,partition,order):
+def compute_symmetry_generators(g,partition,order):
 	# Key Idea: Within each node orbit in the partition, 
 	# one can map the leader to itself or to another node (second-leader).
 	# This choice creates a bifurcation in the search tree for generators.
@@ -32,17 +20,17 @@ def compute_symmetries(g,partition,order):
 		A = break_and_refine(g,	copy_partition(L))[0]
 		B = break_and_refine(g, swap_leaders(L))[0]
 		candidates.extend([A, B])
+	return [BiMap.create(order,x) for x in generators]
 
+def compute_symmetries(generators):
 	# Key Idea: A generator produces symmetries in two ways.
 	# A cyclic group by self-applying the generator as many times as needed.
 	# A coset by composing its cyclic group with an existing set of symmetries.
 	symmetries = SortedSet()
 	for x in generators:
-		perm = BiMap.create(order,x)
-		cycle = generate_cycle_group(perm)
+		cycle = generate_cycle_group(x)
 		coset = generate_cartesian_product(symmetries,cycle)
 		symmetries.update(cycle,coset)
-		
 	return list(symmetries)
 
 def swap_leaders(partition):
@@ -107,11 +95,11 @@ def copy_partition(partition):
 def canonical_ordering(g):
 	# partition = coarsest equitable partition
 	partition = refine_partition(g,initial_partition(g))
-	p, leaders = partition.copy(), dict()	
+	p, leaders = partition.copy(), list()	
 	while len(p) < len(g):
 		p, leader, remaining = break_and_refine(g,p)
-		leaders[leader] = remaining
-
+		leaders.extend([(leader,x) for x in remaining])
+		
 	order = [x for y in p for x in y]
 	#order = canonical ordering
 	for x in partition:

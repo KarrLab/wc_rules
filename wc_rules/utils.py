@@ -6,6 +6,7 @@
 """
 import uuid
 import random
+import math
 
 import itertools,functools,collections,operator
 
@@ -60,10 +61,9 @@ def subdict(d,keys):
     return {k:d[k] for k in keys}
 
 
-def strgen(n):
-    template = 'abcdefgh'
+def strgen(n,template='abcdefgh'):
     digits = math.ceil(math.log(n)/math.log(len(template)))
-    enumerator = enumerate(product(template,repeat=digits))
+    enumerator = enumerate(itertools.product(template,repeat=digits))
     return list(''.join(x) for i,x in enumerator if i<n)
 
 def concat(LL):

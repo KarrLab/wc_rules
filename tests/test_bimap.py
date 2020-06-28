@@ -27,3 +27,10 @@ class TestBiMap(unittest.TestCase):
 		self.assertEqual(v1._dict,dict(zip('xyz','zxy')))
 		v2 = v*v*v
 		self.assertEqual(v2, BiMap.create('xyz'))
+
+	def test_bimap_sorting(self):
+		u = BiMap.create('zyx','zyx')
+		v = BiMap.create('xyz','yzx')
+		w = BiMap.create('xyz','zxy')
+		x = [''.join(k.targets) for k in sorted([w,v,u])]
+		self.assertEqual(x,['xyz','yzx','zxy'])

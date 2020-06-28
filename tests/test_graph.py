@@ -1,9 +1,10 @@
 from wc_rules.attributes import *
 from wc_rules.entity import Entity
 from wc_rules.pattern2 import Pattern, GraphContainer
-from wc_rules.canonical import canonical_ordering, compute_symmetries
+from wc_rules.canonical import canonical_ordering, compute_symmetries, compute_symmetry_generators
 import math
 import random
+from collections import defaultdict
 import unittest
 
 class X(Entity): 
@@ -25,8 +26,19 @@ def format_p(p):
 	return [''.join(x) for x in p]
 
 def format_L(L):
+	d = defaultdict(list)
+	for x,y in L:
+		d[x].append(y)
 	# leader - a dict of id:[ids]
-	return ['{x}:{y}'.format(x=x,y=''.join(y)) for x,y in sorted(L.items())]
+	return ['{x}:{y}'.format(x=x,y=''.join(y)) for x,y in sorted(d.items())]
+
+def do_computations(seed_node):
+	g = GraphContainer(seed_node.get_connected())
+	p,order,L = canonical_ordering(g)
+	generators = compute_symmetry_generators(g,p,order)
+	syms = compute_symmetries(generators)
+	return p,L,syms
+
 
 class TestGraph(unittest.TestCase):
 
@@ -34,11 +46,10 @@ class TestGraph(unittest.TestCase):
 		#edges: a-b, a-c, a-d, a-e, a-f
 		x = X('a')
 		x.y = [Y(z) for z in random.sample('bcdef',len('bcdef'))]
-		
-		g = GraphContainer(x.get_connected())
-		p,order,L = canonical_ordering(g)
-		syms = compute_symmetries(g,p,order)
 
+		seed_node= x
+		p,L,syms = do_computations(seed_node)
+		
 		self.assertEqual(format_p(p),['a','bcdef'])
 		self.assertEqual(format_L(L),['b:cdef','c:def','d:ef','e:f'])
 		self.assertEqual(len(syms),math.factorial(len('bcdef')))
@@ -49,9 +60,8 @@ class TestGraph(unittest.TestCase):
 		for i in range(-1,len(k)-1):
 			k[i].x = k[i+1]
 		
-		g = GraphContainer(k[0].get_connected())
-		p,order,L = canonical_ordering(g)
-		syms = compute_symmetries(g,p,order)
+		seed_node = k[0]
+		p,L,syms = do_computations(seed_node)
 		
 		self.assertEqual(format_p(p),['aebdc'])
 		self.assertEqual(format_L(L),['a:bcde'])
@@ -63,10 +73,9 @@ class TestGraph(unittest.TestCase):
 		for i in range(-1,len(m)-1):
 			m[i].x.add(m[i+1])
 		
-		g = GraphContainer(m[0].get_connected())
-		p,order,L = canonical_ordering(g)
-		syms = compute_symmetries(g,p,order)
-		
+		seed_node = m[0]
+		p,L,syms = do_computations(seed_node)
+
 		self.assertEqual(format_p(p),['abecd'])
 		self.assertEqual(format_L(L),['a:bcde','b:e'])
 		self.assertEqual(len(syms),2*len('abcde'))
@@ -81,9 +90,8 @@ class TestGraph(unittest.TestCase):
 		n[6].x = [n[2], n[3]]
 		n[7].x = [n[6], n[5], n[4]]
 				
-		g = GraphContainer(n[0].get_connected())
-		p,order,L = canonical_ordering(g)
-		syms = compute_symmetries(g,p,order)
+		seed_node = n[0]
+		p,L,syms = do_computations(seed_node)
 
 		self.assertEqual(format_p(p),['h','a','efg','bcd'])
 		self.assertEqual(format_L(L),['e:fg','f:g'])
@@ -100,9 +108,8 @@ class TestGraph(unittest.TestCase):
 		m[6].x = [m[2], m[3]]
 		m[7].x = [m[6], m[5], m[4]]
 
-		g = GraphContainer(m[0].get_connected())
-		p,order,L = canonical_ordering(g)
-		syms = compute_symmetries(g,p,order)
+		seed_node = m[0]
+		p,L,syms = do_computations(seed_node)
 
 		self.assertEqual(format_p(p),['abcdefgh'])
 		self.assertEqual(format_L(L),['a:bcdefgh','b:cd','c:d'])
@@ -115,9 +122,8 @@ class TestGraph(unittest.TestCase):
 			for j in range(i+1,len(m)):
 				m[i].x.add(m[j])
 
-		g = GraphContainer(m[0].get_connected())
-		p,order,L = canonical_ordering(g)
-		syms = compute_symmetries(g,p,order)
+		seed_node = m[0]
+		p,L,syms = do_computations(seed_node)
 
 		self.assertEqual(format_p(p),['abcde'])
 		self.assertEqual(format_L(L),['a:bcde','b:cde','c:de','d:e'])

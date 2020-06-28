@@ -85,7 +85,7 @@ class BaseClass(core.Model):
     def get_edge_tuples(self):
         # returns list of tuples (attr,related_attr,x)
         attrs = self.get_nonempty_related_attributes()
-        related = {a:self.get_related_name() for a in attrs}
+        related = {a:self.get_related_name(a) for a in attrs}
         lists = [self.listget(a) for a in attrs]
         return [ tuple(sorted([(self.id,a), (x.id,related[a])])) for a,y in zip(attrs,lists) for x in y ]
 
