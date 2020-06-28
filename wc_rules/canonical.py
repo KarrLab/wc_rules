@@ -39,9 +39,9 @@ def compute_symmetries(g,partition,order):
 	symmetries = SortedSet()
 	for x in generators:
 		perm = BiMap.create(order,x)
-		cycle_group = generate_cycle_group(perm)
-		coset = generate_cartesian_product(symmetries,cycle_group)
-		symmetries.update(cycle_group,coset)
+		cycle = generate_cycle_group(perm)
+		coset = generate_cartesian_product(symmetries,cycle)
+		symmetries.update(cycle,coset)
 		
 	return list(symmetries)
 
