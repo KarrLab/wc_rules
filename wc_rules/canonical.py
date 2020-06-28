@@ -6,6 +6,49 @@ from .indexer import BiMap
 from .utils import strgen, concat, printvars
 from operator import itemgetter
 from sortedcontainers import SortedSet
+from dataclasses import dataclass
+
+@dataclass(unsafe_hash=True)
+class CanonicalForm:
+	partition: tuple
+	classes: tuple
+	edges: tuple
+	leaders: tuple
+	symmetry_generators: tuple
+
+	def get_symmetries(self):
+		order = [y for x in self.partition for y in x]
+		return compute_symmetries(self.symmetry_generators)
+	
+def canonical_label(g,calculate_symmetries=True):
+	partition,order,leaders = canonical_ordering(g)
+	syms = []
+	if calculate_symmetries:
+		syms = compute_symmetry_generators(g,partition,order)
+	else:
+		leaders = dict()
+
+	label_map = BiMap.create(order,strgen(len(order)))
+	new_data = {
+		'partition': tuple(tuple(x) for x in label_map.replace(partition)),
+		'classes': tuple(g[x].__class__ for x in order),
+		'edges': canonical_edges(g,label_map),
+		'leaders': tuple(sorted( label_map.replace(leaders) )),
+		'symmetry_generators': tuple(sorted(label_map.replace(sym) for sym in syms)),
+	}
+
+	return CanonicalForm(*new_data.values())
+
+
+def canonical_edges(g,label_map):
+	edges = SortedSet()
+	for node in g:
+		for attr in node.get_nonempty_related_attributes():
+			related_attr = node.get_related_name(attr)
+			for related_node in node.listget(attr):
+				edge = tuple(sorted( [(node.id,attr), (related_node.id,related_attr)] ))
+				edges.add(edge)
+	return tuple(edges)
 
 def compute_symmetry_generators(g,partition,order):
 	# Key Idea: Within each node orbit in the partition, 
