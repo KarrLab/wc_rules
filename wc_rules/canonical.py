@@ -12,7 +12,13 @@ from dataclasses import dataclass
 class CanonicalForm:
 	partition: tuple
 	classes: tuple
+	leaders: tuple
 	edges: tuple
+
+@dataclass(unsafe_hash=True)
+class SymmetryGenerator:
+	source: tuple
+	targets: tuple
 	
 def canonical_label(g):
 	partition,order,leaders = canonical_ordering(g)
@@ -21,6 +27,7 @@ def canonical_label(g):
 	new_data = {
 		'partition': tuple(tuple(x) for x in label_map.replace(partition)),
 		'classes': tuple(g[x].__class__ for x in order),
+		'leaders': tuple(sorted(label_map.replace(leaders))),
 		'edges': tuple(SortedSet(relabel_edge(e,label_map) for e in collect_edges(g)))
 	}
 
@@ -62,13 +69,14 @@ def compute_symmetry_generators(g,partition,order):
 		A = break_and_refine(g,	copy_partition(L))[0]
 		B = break_and_refine(g, swap_leaders(L))[0]
 		candidates.extend([A, B])
-	return [BiMap.create(order,x) for x in generators]
+	return SymmetryGenerator(order,generators)
 
-def compute_symmetries(generators):
+def compute_symmetries(generator_object):
 	# Key Idea: A generator produces symmetries in two ways.
 	# A cyclic group by self-applying the generator as many times as needed.
 	# A coset by composing its cyclic group with an existing set of symmetries.
 	symmetries = SortedSet()
+	generators = [BiMap.create(generator_object.source,x) for x in generator_object.targets]
 	for x in generators:
 		cycle = generate_cycle_group(x)
 		coset = generate_cartesian_product(symmetries,cycle)
