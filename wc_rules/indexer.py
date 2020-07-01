@@ -27,6 +27,9 @@ class BiMap:
             targets = sources
         return BiMap(dict(sorted(zip(sources,targets))))
 
+    def reverse(self):
+        return BiMap(dict(sorted(zip(self.targets,self.sources))))
+
     # overloaded dict behaviors
     def items(self):
         return self._dict.items()
@@ -96,6 +99,7 @@ class DictLike(object):
 
     def keys(self): return list(self._dict.keys())
     def values(self): return list(self._dict.values())
+    def items(self): return list(self._dict.items())
 
     def __getitem__(self,item): return self._dict[item]
 

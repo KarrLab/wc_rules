@@ -1,6 +1,6 @@
 from .indexer import DictLike
 from .utils import generate_id,ValidateError,listmap, split_string, merge_dicts
-from .canonical import *
+from .canonical import canonical_label
 from functools import partial
 from .constraint import global_builtins, Constraint
 from functools import wraps
@@ -23,13 +23,40 @@ class GraphContainer(DictLike):
 			self.add(x)
 
 	def iternodes(self):
-		return self._dict.items()
+		for idx, node in self._dict.items():
+			yield idx,node
 
-	def get_namespace(self):
-		return {x.id:x.__class__ for x in self}
+	def iteredges(self):
+		nodes_visited = set()
+		for idx,node in self.iternodes():
+			nodes_visited.add(node)
+			for attr in node.get_nonempty_related_attributes():
+				related_attr = node.get_related_name(attr)
+				for related_node in node.listget(attr):
+					if related_node not in nodes_visited:
+						yield (node.id, attr), (related_node.id,related_attr)
+
+	def iter_scalar_attrs(self):
+		for idx,node in self.iternodes():
+			for attr in node.get_nonempty_scalar_attributes():
+				value = node.get(attr)
+				yield idx, attr, value
 
 	def get_canonical_label(self):
 		return canonical_label(self)
+
+class Parent:
+
+	def __init__(self,canonical_form,variable_map):
+		self.canonical_form = canonical_form
+		self.variable_map = variable_map
+
+	def get_namespace(self):
+		d = dict()
+		order = [x for y in self.canonical_form.partition for x in y]
+		for i,source in enumerate(order):
+			d[self.variable_map.get(source)]= self.canonical_form.classes[i]
+		return d
 
 	
 class Pattern:
@@ -42,7 +69,6 @@ class Pattern:
 
 	def get_namespace(self):
 		assignments = {x:y.code for x,y in self.assignments.items()}
-		
 		pspace = self.parent.get_namespace()
 		intmax = max([int(x[1:]) for x in pspace if x[0]=='_'],default=0) + 1
 		constraints = {'_{0}'.format(i+intmax):c.code for i,c in enumerate(self.constraints)}
@@ -58,11 +84,10 @@ class Pattern:
 
 		if isinstance(parent,Entity):
 			d = GraphContainer(parent.get_connected())
-			for idx,node in d.iternodes():
-				for attr in node.get_nonempty_scalar_attributes():
-					constraint_strings.append('{x}.{a}=={v}'.format(x=node.id,a=attr,v=node.get(attr)))
-					setattr(node,attr,None)
-			parent = d
+			for idx, attr,value in d.iter_scalar_attrs():
+				constraint_strings.append('{x}.{a}=={v}'.format(x=idx,a=attr,v=value))
+				setattr(d[idx],attr,None)
+			parent = Parent(*d.get_canonical_label())
 
 		
 		assert all([isinstance(x,cls) for x in helpers.values()]), "Helper variables must be assigned to other patterns."

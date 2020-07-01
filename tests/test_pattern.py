@@ -34,7 +34,7 @@ class TestPattern(unittest.TestCase):
 
 		x = X('x',y=[Y('y1'),Y('y2')])
 		g = GraphContainer(x.get_connected())
-		self.assertEqual(g.get_namespace(),dict(x=X,y1=Y,y2=Y))
+		self.assertEqual([g[elem].__class__ for elem in ['x','y1','y2']], [X,Y,Y])
 
 	def test_pattern_build(self):
 

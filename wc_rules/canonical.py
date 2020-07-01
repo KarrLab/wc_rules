@@ -28,10 +28,10 @@ def canonical_label(g):
 		'partition': tuple(tuple(x) for x in label_map.replace(partition)),
 		'classes': tuple(g[x].__class__ for x in order),
 		'leaders': tuple(sorted(label_map.replace(leaders))),
-		'edges': tuple(SortedSet(relabel_edge(e,label_map) for e in collect_edges(g)))
+		'edges': tuple(SortedSet(relabel_edge(e,label_map) for e in g.iteredges()))
 	}
 
-	return CanonicalForm(*new_data.values())
+	return CanonicalForm(*new_data.values()), label_map.reverse()
 
 
 def relabel_edge(edge,label_map):
@@ -39,13 +39,6 @@ def relabel_edge(edge,label_map):
 	x1,y1 = sorted(map(label_map.replace, [x,y]))
 	return tuple([(x1,a),(y1,b)])
 
-def collect_edges(g):
-	for node in g:
-		for attr in node.get_nonempty_related_attributes():
-			related_attr = node.get_related_name(attr)
-			for related_node in node.listget(attr):
-				yield (node.id, attr), (related_node.id,related_attr)
-	return 
 def canonical_edges(g,label_map):
 	edges = SortedSet()
 	for node in g:
