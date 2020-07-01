@@ -42,6 +42,13 @@ def do_computations(seed_node):
 
 class TestGraph(unittest.TestCase):
 
+	def test_single_node(self):
+		seed_node = X('x')
+		p,L,syms = do_computations(seed_node)
+		self.assertEqual(format_p(p),['x'])
+		self.assertEqual(format_L(L),[])
+		self.assertEqual(len(syms),1)
+
 	def test_spoke(self):
 		#edges: a-b, a-c, a-d, a-e, a-f
 		x = X('a')

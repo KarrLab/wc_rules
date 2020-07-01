@@ -14,6 +14,8 @@ def helperfn(fn):
 	return fn
 
 class GraphContainer(DictLike):
+	# A temporary container for a graph that can be used to create
+	# canonical forms or iterate over a graph
 
 	def __init__(self,_list):
 		super().__init__()
@@ -39,25 +41,27 @@ class GraphContainer(DictLike):
 	def iter_scalar_attrs(self):
 		for idx,node in self.iternodes():
 			for attr in node.get_nonempty_scalar_attributes():
-				value = node.get(attr)
-				yield idx, attr, value
-
-	def get_canonical_label(self):
-		return canonical_label(self)
+				yield idx, attr, node.get(attr)
 
 class Parent:
-
+	# Wrapper class for canonical form to be used for parent patterns
 	def __init__(self,canonical_form,variable_map):
 		self.canonical_form = canonical_form
 		self.variable_map = variable_map
+		order = [x for y in self.canonical_form.partition for x in y]
+		d = dict()
+		for i,source in enumerate(order):
+			d[variable_map.get(source)]= canonical_form.classes[i]
+		self.namespace = d
+
+	@classmethod
+	def create(cls,g):
+		# create a parent class from a graphcontainer
+		return cls(*canonical_label(g))
 
 	def get_namespace(self):
-		d = dict()
-		order = [x for y in self.canonical_form.partition for x in y]
-		for i,source in enumerate(order):
-			d[self.variable_map.get(source)]= self.canonical_form.classes[i]
-		return d
-
+		return self.namespace
+		
 	
 class Pattern:
 
@@ -87,7 +91,7 @@ class Pattern:
 			for idx, attr,value in d.iter_scalar_attrs():
 				constraint_strings.append('{x}.{a}=={v}'.format(x=idx,a=attr,v=value))
 				setattr(d[idx],attr,None)
-			parent = Parent(*d.get_canonical_label())
+			parent = Parent.create(d)
 
 		
 		assert all([isinstance(x,cls) for x in helpers.values()]), "Helper variables must be assigned to other patterns."

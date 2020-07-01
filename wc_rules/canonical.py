@@ -21,14 +21,18 @@ class SymmetryGenerator:
 	targets: tuple
 	
 def canonical_label(g):
-	partition,order,leaders = canonical_ordering(g)
-	syms = []
+	if len(g)==1:
+		idx,node = next(g.iternodes())
+		partition, order, leaders = [[idx,]], [idx,], []	
+	else:
+		partition,order,leaders = canonical_ordering(g)
 	label_map = BiMap.create(order,strgen(len(order)))
+	
 	new_data = {
-		'partition': tuple(tuple(x) for x in label_map.replace(partition)),
-		'classes': tuple(g[x].__class__ for x in order),
-		'leaders': tuple(sorted(label_map.replace(leaders))),
-		'edges': tuple(SortedSet(relabel_edge(e,label_map) for e in g.iteredges()))
+	'partition': tuple(tuple(x) for x in label_map.replace(partition)),
+	'classes': 	 tuple(g[x].__class__ for x in order),
+	'leaders':   tuple(sorted(label_map.replace(leaders))),
+	'edges': 	 tuple(SortedSet(relabel_edge(e,label_map) for e in g.iteredges()))
 	}
 
 	return CanonicalForm(*new_data.values()), label_map.reverse()
