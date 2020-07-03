@@ -1,12 +1,12 @@
 from .indexer import GraphContainer
-from .utils import generate_id,ValidateError,listmap, split_string, merge_dicts, no_overlaps
+from .utils import generate_id,ValidateError,listmap, split_string, merge_dicts, no_overlaps, invert_dict
 from .canonical import canonical_label
 from functools import partial
 from .constraint import global_builtins, Constraint
 from functools import wraps
 from .entity import Entity
 from pprint import pformat
-from collections import ChainMap
+from collections import ChainMap, Counter, deque
 #from attrdict import AttrDict
 
 def helperfn(fn):
@@ -29,7 +29,7 @@ class Parent:
 		# create a parent class from a graphcontainer
 		return cls(*canonical_label(g))
 
-	
+
 class Pattern:
 
 	def __init__(self,parent,helpers=dict(),constraints=dict(),namespace=dict()):
@@ -37,37 +37,7 @@ class Pattern:
 		self.helpers = helpers
 		self.constraints = constraints
 		self.namespace = namespace
-	'''
-	def get_namespace(self):
-		return merge_dicts([self.parent.get_namespace(), self.helpers, self.constraints])
-	'''
-
-	@classmethod
-	def verify_helpers(cls,parent,helpers):
-		err = "Helper variables must be assigned to Pattern instances."
-		assert all([isinstance(x,cls) for x in helpers.values()]), err	
-		err = 'In a pattern namespace, helper patterns must be assigned to variables uniquely'
-		parent_helpers = parent.helpers.values() if isinstance(parent,Pattern) else []
-		assert no_overlaps([parent_helpers,helpers.values()]), err
 		
-
-	@classmethod
-	def verify_constraint_keywords(cls,namespace,constraints):
-		for var,constraint in constraints.items():
-			for keyword in constraint.keywords:
-				err = "Variable '{v}' in '{c}' not found.".format(v=keyword,c=constraint.code)
-				assert keyword in namespace,  err
-		# TODO: check cycles:
-		# as long as parent namespace was already consistent, it is sufficient
-		# to just check cycles within constraints dict
-
-
-	@classmethod
-	def verify_namespace(cls,list_of_dicts):
-		err = "Duplicate variables detected."
-		assert no_overlaps(list_of_dicts), err
-		
-
 	@classmethod
 	def build(cls,parent,helpers={},constraints=''):
 		err = "Argument for 'parent' keyword must be an entity node to recurse from or an existing pattern."
@@ -84,21 +54,11 @@ class Pattern:
 			# parent is already a pattern, just update current_cmax
 			cmax = len([x for x in parent.constraints if x[0]=='_'])
 
-		# checking helpers
-		cls.verify_helpers(parent,helpers)
-		
 		constraint_strings.extend(split_string(constraints))
 		constraints = Constraint.initialize_strings(constraint_strings,cmax)
-		
-		# checking consistent namespace
-		_dicts = [parent.namespace,helpers,{x:y.code for x,y in constraints.items()}]
-		cls.verify_namespace(_dicts)
-		namespace = merge_dicts(_dicts)
-		
-		# INCOMPLETE: checking if constraint keywords are compatible with namespace
-		# and there are no cycles
-		cls.verify_constraint_keywords(namespace,constraints)
 
+		namespace,errs = verify_and_compile_namespace(parent,helpers,constraints)
+		assert len(errs)==0, "Errors in namespace:\n{0}".format('\n'.join(errs))
 		return Pattern(parent,helpers,constraints,namespace)
 
 	def process_constraints(self,match=dict()):
@@ -113,8 +73,56 @@ class Pattern:
 
 	@helperfn
 	def contains(self,**kwargs):
-		
 		return False
+
+def check_cycle(gdict):
+	# gdict is a directed graph represented as a dict
+	nodes,paths = deque(gdict), deque()
+	while nodes or paths:
+		if not paths:
+			paths.append([nodes.popleft()])
+		path = paths.popleft()
+		if len(path)>1 and path[0]==path[-1]:
+			pathstr = '->'.join(path)
+			return pathstr 
+		next_steps = gdict.get(path[-1],[])
+		if len(next_steps)>0:
+			paths.extend([path + [x] for x in next_steps])
+	return ''
+
+def verify_and_compile_namespace(parent,helpers,constraints):
+	errs = []
+
+	varcount = Counter()
+	for d in [parent.namespace,helpers,constraints]:
+		varcount.update(d.keys())
+	for var in varcount:
+		if varcount[var]>1:
+			errs += "Variable {0} assigned multiple times.".format(var)
+	
+	parent_helpers = parent.helpers if hasattr(parent,'helpers') else dict()
+	inv_helpers = invert_dict(merge_dicts([parent_helpers,helpers]))
+	for h,v in inv_helpers.items():
+		if not isinstance(h,Pattern):
+			errs += "Helper variable '{0}' must be assigned to a Pattern instance.".format(v)
+		if len(v)>1:
+			errs += "Multiple variables {0} assigned to the same helper.".format(str(v))
+
+	for v,c in constraints.items():
+		for kw in c.keywords:
+			if kw not in ChainMap(parent.namespace,helpers,constraints):
+				errs += "Variable '{0}' not found.".format(kw)
+	cycle = check_cycle({v:c.keywords for v,c in constraints.items()})
+	if len(cycle)>0:
+		errs += 'Cyclical dependency found: {0}.'.format(cycle)
+
+	namespace=dict()
+	if len(errs)==0:
+		namespace = merge_dicts([parent.namespace,helpers,{v:c.code for v,c in constraints.items()}])
+
+	return namespace,errs
+		
+
 
 
 

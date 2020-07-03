@@ -77,6 +77,12 @@ def concat(LL):
 def printvars(vars,vals,sep=',',breakline=False):
     strs = ['{x}={y}'.format(x=x,y=y) for x,y in zip(vars,vals)]
     return sep.join(strs)
+
+def invert_dict(_dict):
+    out = collections.defaultdict(list)
+    for k,v in _dict.items():
+        out[v].append(k)
+    return dict(out)
     
 
 
