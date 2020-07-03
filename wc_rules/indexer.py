@@ -64,7 +64,6 @@ class BiMap:
             return BiMap(dict( sorted((self.replace(x),self.replace(y)) for x,y in item.items()) ))
         return self.get(item)
 
-
 class DictLike(object):
     def __init__(self,iterable=None):
         ''' Container of objects that enables referencing by id '''
@@ -105,6 +104,47 @@ class DictLike(object):
 
     def __str__(self):
         return pprint.pformat(self._dict)
+
+class GraphContainer(DictLike):
+    # A temporary container for a graph that can be used to create
+    # canonical forms or iterate over a graph
+
+    def __init__(self,_list):
+        super().__init__()
+        assert len(set([x.id for x in _list]))==len(_list),"Duplicate ids detected on graph."
+        assert all([isinstance(x.id,str) for x in _list]), "Graph node ids must be strings."
+        for x in _list:
+            self.add(x)
+
+    def iternodes(self):
+        for idx, node in self._dict.items():
+            yield idx,node
+
+    def iteredges(self):
+        nodes_visited = set()
+        for idx,node in self.iternodes():
+            nodes_visited.add(node)
+            for attr in node.get_nonempty_related_attributes():
+                related_attr = node.get_related_name(attr)
+                for related_node in node.listget(attr):
+                    if related_node not in nodes_visited:
+                        yield (node.id, attr), (related_node.id,related_attr)
+
+    @classmethod
+    def build(cls,nodes,strip_attrs=False):
+        stripped_attrs = []
+        for node in nodes:
+            idx = node.id
+            for attr in node.get_nonempty_scalar_attributes():
+                value = node.get(attr)
+                stripped_attrs.append((idx,attr,value,))
+                setattr(node,attr,None)
+        return GraphContainer(nodes), stripped_attrs
+
+
+            
+
+
 
 class SetLike(object):
     def __init__(self,iterable=None):

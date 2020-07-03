@@ -44,18 +44,18 @@ class TestPattern(unittest.TestCase):
 		
 		x = X('x',y=[Y('y1'),Y('y2')])
 		px = Pattern.build(x)
-		self.assertEqual(px.get_namespace(), dict(x=X,y1=Y,y2=Y))
+		self.assertEqual(px.namespace, dict(x=X,y1=Y,y2=Y))
 
 		pxx = Pattern.build(px)
-		self.assertEqual(pxx.get_namespace(), dict(x=X,y1=Y,y2=Y))
+		self.assertEqual(pxx.namespace, dict(x=X,y1=Y,y2=Y))
 		del px,pxx
 		
 
 		px = Pattern.build(X('x',i=10))
-		self.assertEqual(px.get_namespace(), dict(x=X,_1='x.i == 10'))
+		self.assertEqual(px.namespace, dict(x=X,_0='x.i == 10'))
 
 		pxx = Pattern.build(px, helpers={'px':px}, constraints='px.contains(x=x)==True')
-		self.assertEqual(pxx.get_namespace(), dict(x=X,px=px,_1='x.i == 10',_2='px.contains(x=x) == True'))
+		self.assertEqual(pxx.namespace, dict(x=X,px=px,_0='x.i == 10',_1='px.contains(x=x) == True'))
 		del pxx
 
 		with self.assertRaises(AssertionError):
@@ -88,7 +88,7 @@ class TestPattern(unittest.TestCase):
 		[False, False, True, False ],
 		]
 
-		computed_values = [[c.exec(match) for match in matches] for c in pz.constraints]
+		computed_values = [[c.exec(match) for match in matches] for c in pz.constraints.values()]
 
 		self.assertEqual(computed_values,expected_values)
 
@@ -101,10 +101,10 @@ class TestPattern(unittest.TestCase):
     		''')
 
 		match = dict(x = X(y=[Y(),Y()],i=10,j=20,k=30))
-		for c in px.constraints:
+		for c in px.constraints.values():
 			self.assertTrue(c.exec(match))
 
 		pz = Pattern.build(Z('z'),constraints='''len(z.z) > 0''')
-		c = pz.constraints[0]
+		c = list(pz.constraints.values())[0]
 		self.assertEqual(c.exec(match=dict( z=Z() )), False)
 		self.assertEqual(c.exec(match=dict( z=Z(z=Z()) )), True)

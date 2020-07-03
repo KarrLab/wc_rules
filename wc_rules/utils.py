@@ -19,6 +19,10 @@ def merge_dicts(list_of_dicts):
     # ensure keys dont overlap
     return dict(collections.ChainMap(*list_of_dicts))
 
+def no_overlaps(list_of_iters):
+    joint_set = set.union(*[set(x) for x in list_of_iters])
+    return len(joint_set) == len(merge_lists(list_of_iters))
+
 def pipe_map(list_of_operations,list_input):
     if len(list_of_operations)==0:
         return list_input

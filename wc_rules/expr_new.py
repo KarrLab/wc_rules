@@ -290,7 +290,7 @@ class Serializer(Transformer):
     leq = constant('<=')
     ge = constant('>')
     le = constant('<')
-    ne = constant('ne')
+    ne = constant('!=')
     eq = constant('==')
     true = constant("True")
     false = constant("False")

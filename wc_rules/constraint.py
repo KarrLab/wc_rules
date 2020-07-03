@@ -107,10 +107,21 @@ class Constraint:
 			
 		return Constraint(keywords,builtins,fn,code,deps), deps.declared_variable
 
+
+	@classmethod
+	def initialize_strings(cls,strs,cmax=0):
+		constraints = dict()
+		for s in strs:
+			c,var = cls.initialize(s)
+			if var is None:
+				var = '_'+str(cmax)
+				cmax += 1
+			constraints[var]= c
+		return constraints
+		
 	def exec(self,match,helpers={}):
 		# match is a dict that is equivalent to a pattern match
 		d = ChainMap(match,helpers)
 		kwargs = subdict(d,self.keywords)
 		v = self.fn(**kwargs)
 		return v
-		

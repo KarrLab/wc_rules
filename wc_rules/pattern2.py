@@ -1,5 +1,5 @@
-from .indexer import DictLike
-from .utils import generate_id,ValidateError,listmap, split_string, merge_dicts
+from .indexer import GraphContainer
+from .utils import generate_id,ValidateError,listmap, split_string, merge_dicts, no_overlaps
 from .canonical import canonical_label
 from functools import partial
 from .constraint import global_builtins, Constraint
@@ -12,36 +12,6 @@ from collections import ChainMap
 def helperfn(fn):
 	fn._is_helperfn = True
 	return fn
-
-class GraphContainer(DictLike):
-	# A temporary container for a graph that can be used to create
-	# canonical forms or iterate over a graph
-
-	def __init__(self,_list):
-		super().__init__()
-		assert len(set([x.id for x in _list]))==len(_list),"Duplicate ids detected on graph."
-		assert all([isinstance(x.id,str) for x in _list]), "Graph node ids must be strings."
-		for x in _list:
-			self.add(x)
-
-	def iternodes(self):
-		for idx, node in self._dict.items():
-			yield idx,node
-
-	def iteredges(self):
-		nodes_visited = set()
-		for idx,node in self.iternodes():
-			nodes_visited.add(node)
-			for attr in node.get_nonempty_related_attributes():
-				related_attr = node.get_related_name(attr)
-				for related_node in node.listget(attr):
-					if related_node not in nodes_visited:
-						yield (node.id, attr), (related_node.id,related_attr)
-
-	def iter_scalar_attrs(self):
-		for idx,node in self.iternodes():
-			for attr in node.get_nonempty_scalar_attributes():
-				yield idx, attr, node.get(attr)
 
 class Parent:
 	# Wrapper class for canonical form to be used for parent patterns
@@ -59,63 +29,77 @@ class Parent:
 		# create a parent class from a graphcontainer
 		return cls(*canonical_label(g))
 
-	def get_namespace(self):
-		return self.namespace
-		
 	
 class Pattern:
 
-	def __init__(self,parent,helpers=dict(),constraints=[],assignments=dict()):
+	def __init__(self,parent,helpers=dict(),constraints=dict(),namespace=dict()):
 		self.parent = parent
 		self.helpers = helpers
 		self.constraints = constraints
-		self.assignments = assignments
-
+		self.namespace = namespace
+	'''
 	def get_namespace(self):
-		assignments = {x:y.code for x,y in self.assignments.items()}
-		pspace = self.parent.get_namespace()
-		intmax = max([int(x[1:]) for x in pspace if x[0]=='_'],default=0) + 1
-		constraints = {'_{0}'.format(i+intmax):c.code for i,c in enumerate(self.constraints)}
-		return merge_dicts([pspace, self.helpers, assignments, constraints])
+		return merge_dicts([self.parent.get_namespace(), self.helpers, self.constraints])
+	'''
 
-	
+	@classmethod
+	def verify_helpers(cls,parent,helpers):
+		err = "Helper variables must be assigned to Pattern instances."
+		assert all([isinstance(x,cls) for x in helpers.values()]), err	
+		err = 'In a pattern namespace, helper patterns must be assigned to variables uniquely'
+		parent_helpers = parent.helpers.values() if isinstance(parent,Pattern) else []
+		assert no_overlaps([parent_helpers,helpers.values()]), err
+		
+
+	@classmethod
+	def verify_constraint_keywords(cls,namespace,constraints):
+		for var,constraint in constraints.items():
+			for keyword in constraint.keywords:
+				err = "Variable '{v}' in '{c}' not found.".format(v=keyword,c=constraint.code)
+				assert keyword in namespace,  err
+		# TODO: check cycles:
+		# as long as parent namespace was already consistent, it is sufficient
+		# to just check cycles within constraints dict
+
+
+	@classmethod
+	def verify_namespace(cls,list_of_dicts):
+		err = "Duplicate variables detected."
+		assert no_overlaps(list_of_dicts), err
+		
+
 	@classmethod
 	def build(cls,parent,helpers={},constraints=''):
 		err = "Argument for 'parent' keyword must be an entity node to recurse from or an existing pattern."
 		assert isinstance(parent, (Entity,Pattern)), err
 		
-		constraint_strings = split_string(constraints)
-
+		# building parent if Entity and updating constraint_strings
+		cmax, constraint_strings = 0,[]
+		# stripping parent graph of attrs and creating a Parent(CanonicalForm()) object
 		if isinstance(parent,Entity):
-			d = GraphContainer(parent.get_connected())
-			for idx, attr,value in d.iter_scalar_attrs():
-				constraint_strings.append('{x}.{a}=={v}'.format(x=idx,a=attr,v=value))
-				setattr(d[idx],attr,None)
+			d,stripped_attrs = GraphContainer.build(parent.get_connected(),strip_attrs=True)
 			parent = Parent.create(d)
+			constraint_strings.extend(['{0}.{1}=={2}'.format(*x) for x in stripped_attrs])
+		else:
+			# parent is already a pattern, just update current_cmax
+			cmax = len([x for x in parent.constraints if x[0]=='_'])
 
+		# checking helpers
+		cls.verify_helpers(parent,helpers)
 		
-		assert all([isinstance(x,cls) for x in helpers.values()]), "Helper variables must be assigned to other patterns."
-		assert len(set(helpers.values())) == len(helpers), "The same helper pattern cannot be mapped to different helper variables."
-						
-		constraints,assignments = [],dict()
-		for s in constraint_strings:
-			c,var = Constraint.initialize(s)
-			if var is not None:
-				assignments[var] = c
-			else:
-				constraints.append(c)
-			
+		constraint_strings.extend(split_string(constraints))
+		constraints = Constraint.initialize_strings(constraint_strings,cmax)
+		
 		# checking consistent namespace
-		r = set(parent.get_namespace())
-		s = set(helpers.keys())
-		t = set(assignments.keys())
-		all_names = r|s|t
+		_dicts = [parent.namespace,helpers,{x:y.code for x,y in constraints.items()}]
+		cls.verify_namespace(_dicts)
+		namespace = merge_dicts(_dicts)
+		
+		# INCOMPLETE: checking if constraint keywords are compatible with namespace
+		# and there are no cycles
+		cls.verify_constraint_keywords(namespace,constraints)
 
-		assert len(all_names)==len(r) + len(s) + len(t), "Duplicate variables detected."
-		for c in [*constraints,*assignments.values()]:
-			assert set(c.keywords).issubset(all_names), "Unknown variables present in constraint '{0}'.".format(c.code)
-
-		return Pattern(parent,helpers,constraints,assignments)
+		return Pattern(parent,helpers,constraints,namespace)
 
 	def process_constraints(self,match=dict()):
 		for var,c in self.assignments.items():
@@ -129,6 +113,7 @@ class Pattern:
 
 	@helperfn
 	def contains(self,**kwargs):
+		
 		return False
 
 
