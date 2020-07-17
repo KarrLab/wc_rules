@@ -1,6 +1,7 @@
 from .indexer import GraphContainer
 from .utils import generate_id,ValidateError,listmap, split_string, merge_dicts, no_overlaps, invert_dict
 from .canonical import canonical_label
+from .canonical_expr import canonical_expression_ordering
 from functools import partial
 from .constraint import global_builtins, Constraint
 from functools import wraps
@@ -29,15 +30,28 @@ class Parent:
 		# create a parent class from a graphcontainer
 		return cls(*canonical_label(g))
 
+	def get_canonical_form_partition(self):
+		return self.variable_map.replace(self.canonical_form.partition)
+
+	def get_canonical_form_leaders(self):
+		return self.variable_map.replace(self.canonical_form.leaders)
 
 class Pattern:
 
-	def __init__(self,parent,helpers=dict(),constraints=dict(),namespace=dict()):
+	def __init__(self,parent,helpers=dict(),constraints=dict(),namespace=dict(),partition=tuple(),leaders=tuple()):
 		self.parent = parent
 		self.helpers = helpers
 		self.constraints = constraints
 		self.namespace = namespace
-		
+		self.partition = partition
+		self.leaders = leaders
+
+	def get_canonical_form_partition(self):
+		return self.parent.get_canonical_form_partition()
+
+	def get_canonical_form_leaders(self):
+		return self.parent.get_canonical_form_leaders()
+
 	@classmethod
 	def build(cls,parent,helpers={},constraints=''):
 		err = "Argument for 'parent' keyword must be an entity node to recurse from or an existing pattern."
@@ -59,7 +73,10 @@ class Pattern:
 
 		namespace,errs = verify_and_compile_namespace(parent,helpers,constraints)
 		assert len(errs)==0, "Errors in namespace:\n{0}".format('\n'.join(errs))
-		return Pattern(parent,helpers,constraints,namespace)
+
+		seed = parent.get_canonical_form_partition()
+		partition, leaders = canonical_expression_ordering(seed,namespace,constraints)
+		return Pattern(parent,helpers,constraints,namespace,partition,leaders)
 
 	def process_constraints(self,match=dict()):
 		for var,c in self.assignments.items():
@@ -98,25 +115,25 @@ def verify_and_compile_namespace(parent,helpers,constraints):
 		varcount.update(d.keys())
 	for var in varcount:
 		if varcount[var]>1:
-			errs += "Variable {0} assigned multiple times.".format(var)
+			errs.append("Variable {0} assigned multiple times.".format(var))
 	
 	parent_helpers = parent.helpers if hasattr(parent,'helpers') else dict()
 	inv_helpers = invert_dict(merge_dicts([parent_helpers,helpers]))
 	for h,v in inv_helpers.items():
 		if not isinstance(h,Pattern):
-			errs += "Helper variable '{0}' must be assigned to a Pattern instance.".format(v)
+			errs.append("Helper variable '{0}' must be assigned to a Pattern instance.".format(v))
 		if len(v)>1:
-			errs += "Multiple variables {0} assigned to the same helper.".format(str(v))
+			errs.append("Multiple variables {0} assigned to the same helper.".format(str(v)))
 
 	for v,c in constraints.items():
 		for kw in c.keywords:
 			if kw not in ChainMap(parent.namespace,helpers,constraints):
-				errs += "Variable '{0}' not found.".format(kw)
+				errs.append("Variable '{0}' not found.".format(kw))
 	cycle = check_cycle({v:c.keywords for v,c in constraints.items()})
 	if len(cycle)>0:
-		errs += 'Cyclical dependency found: {0}.'.format(cycle)
+		errs.append('Cyclical dependency found: {0}.'.format(cycle))
 
-	namespace=dict()
+	namespace = dict()
 	if len(errs)==0:
 		namespace = merge_dicts([parent.namespace,helpers,{v:c.code for v,c in constraints.items()}])
 

@@ -141,6 +141,10 @@ class GraphContainer(DictLike):
                 setattr(node,attr,None)
         return GraphContainer(nodes), stripped_attrs
 
+    def update(self):
+        idx,root = list(self._dict.items())[0]
+        for node in root.get_connected():
+            self.add(node)
 
             
 

@@ -108,3 +108,32 @@ class TestPattern(unittest.TestCase):
 		c = list(pz.constraints.values())[0]
 		self.assertEqual(c.exec(match=dict( z=Z() )), False)
 		self.assertEqual(c.exec(match=dict( z=Z(z=Z()) )), True)
+
+	def test_canonical_expr(self):
+		z = Z('z1',z=Z('z2'))
+		pz = Pattern.build(z)
+
+		cP, cL = (('z1','z2'),), (('z1','z2'),)
+		self.assertEqual(pz.partition,cP)
+		self.assertEqual(pz.leaders,cL)
+
+		# symmetry preserving
+		pzz = Pattern.build(pz, constraints='''
+			a = any(z1.a,z2.a)
+			b = all(z1.b,z2.b)
+			c = any(z1.a,z1.b)
+			d = any(z2.a,z2.b)
+			any(a,b,c,d) == True
+			''')
+
+		self.assertEqual(pzz.partition,cP)
+		self.assertEqual(pzz.leaders,cL)
+
+		# symmetry breaking
+		cP, cL = (('z2',),('z1',),), tuple()
+		pzzz = Pattern.build(pz,constraints='''
+			a = any(z1.a,z1.b,z2.a)
+			''')
+
+		self.assertEqual(pzzz.partition,cP)
+		self.assertEqual(pzzz.leaders,cL)

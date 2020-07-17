@@ -22,6 +22,8 @@ def compute_len(x):
 		return x.__len__()
 	return int(x is not None)
 
+ordered_builtins = 'mod div log pow'.split()
+
 global_builtins = dict(
 	__builtins__ = None,
 	# arithmetic single input
@@ -36,7 +38,8 @@ global_builtins = dict(
     log10 = math.log10,
     sqrt = math.sqrt,
     
-    # arithmetic double input
+    # arithmetic double input 
+    # order matters
     mod = lambda x,y: x % y,
     div = lambda x,y: x // y,
     log = math.log,

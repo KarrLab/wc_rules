@@ -82,6 +82,9 @@ class BaseClass(core.Model):
             x.update(self.listget(attr))
         return list(x)
 
+    def degree(self):
+        return len(self.listget_all_related())
+
     def get_edge_tuples(self):
         # returns list of tuples (attr,related_attr,x)
         attrs = self.get_nonempty_related_attributes()

@@ -23,17 +23,22 @@ def no_overlaps(list_of_iters):
     joint_set = set.union(*[set(x) for x in list_of_iters])
     return len(joint_set) == len(merge_lists(list_of_iters))
 
-def pipe_map(list_of_operations,list_input):
-    if len(list_of_operations)==0:
-        return list_input
-    item = list_of_operations.pop(0)
-    return pipe_map(list_of_operations,map(item,list_input))
+def pipe_map(operations,inputs):
+    if len(operations)==0:
+        return inputs
+    #item = list_of_operations.pop(0)
+    return pipe_map(operations[1:],map(operations[0],inputs))
 
-def listmap(op,input):
-    return list(map(op,input))
+def listmap(op,inputs):
+    return list(map(op,inputs))
 
 def split_string(s,sep='\n'):
     return [y for y in [x.strip() for x in s.split(sep)] if len(y)>0]
+
+def grouper(n,inputs):
+    # assume len(input) is a multiple of n:
+    # grouper(2,[1,2,3,4,5,6]) -> [[1,2],[3,4],[5,6]]
+    return [inputs[n*i:n*i+n] for i in range(0,len(inputs)//n)]
 
 # Seed for creating ids
 # To modify this seed, load utils module, then execute utils.idgen.seed(<new_seed>)
@@ -72,7 +77,7 @@ def strgen(n,template='abcdefgh'):
     return list(''.join(x) for i,x in enumerator if i<n)
 
 def concat(LL):
-    return [x for L in LL for x in L]
+    return [x for L in LL for x in L if x]
 
 def printvars(vars,vals,sep=',',breakline=False):
     strs = ['{x}={y}'.format(x=x,y=y) for x,y in zip(vars,vals)]
@@ -83,7 +88,7 @@ def invert_dict(_dict):
     for k,v in _dict.items():
         out[v].append(k)
     return dict(out)
-    
+
 
 
 ###### Error ######
