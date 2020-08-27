@@ -7,17 +7,15 @@ from copy import deepcopy
 
 
 class Rule:
-	def __init__(self,id,reactants={},actions=[]):
+	def __init__(self,id,reactants={},expressions=[],actions=[]):
 		self.id = id
 		self.reactants = reactants
+		self.expression = expressions
 		self.actions = actions
-
-	def add_reactant(self,alias,pattern):
-		self.reactants[alias] = pattern
-		return self
-
 	
 	def fire(self,pool,idxmap):
 		for action in self.actions:
 			action.execute(pool,idxmap)
 		return self
+
+	

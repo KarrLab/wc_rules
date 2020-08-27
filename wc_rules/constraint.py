@@ -93,13 +93,23 @@ class Constraint:
 			))
 
 	@classmethod
-	def initialize(cls,s):
+	def initialize(cls,s,has_subvariables=False):
+		# has_subvariables behavior
+		# for patterns, the node variable is the top level, e.g. a.x, a.f(), etc.
+		# for rules, the pattern variable is the top level, e.g., p.a.x, p.a.f(), etc.
+		# Constraint objects are common to both patterns and rules
+		# but only rules can have subvariables (see grammar in expr_new.py)
+
 		tree, depdict = process_constraint_string(s)
 		deps, code = DependencyCollector(depdict),serialize(tree)
 
 		keywords = list(deps.variables)
-		builtins = subdict(global_builtins, ['__builtins__'] + list(deps.builtins)) 
-		
+		builtins = subdict(global_builtins, ['__builtins__'] + list(deps.builtins))
+
+		if deps.has_subvariables != has_subvariables:
+			err = "'{code}' has too many nested variables. Disallowed here.".format(code=code)
+			raise ValueError(err)
+
 		code2 = 'lambda {vars}: {code}'.format(vars=','.join(keywords),code=code)
 		
 		try:

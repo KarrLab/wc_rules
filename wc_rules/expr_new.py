@@ -17,9 +17,8 @@ COMMENT: /#.*/
 %ignore NEWLINE
 
     ?literal.1: NUMBER -> number | "True"-> true | "False" -> false | ESCAPED_STRING -> string
-    ?atom: literal | function_call | "(" expression ")" 
-
-    function_name: CNAME
+    ?atom: literal | function_call |  "(" expression ")" 
+    
     variable: CNAME
     attribute: CNAME
 
@@ -29,10 +28,12 @@ COMMENT: /#.*/
     args: arg ("," arg )*
     kwargs: kwarg ("," kwarg)*
     
-    function_call: variable "." function_name "(" [kwargs] ")"
+    function_name: CNAME
+    subvariable: CNAME
+    function_call: variable ["." subvariable] "." function_name  "(" [kwargs] ")"
+        | variable ["." subvariable] "." attribute
         | function_name "(" [args] ")"
-        | variable "." attribute 
-        | variable
+        | variable 
         
     ?sum: term (add_op term)*
     ?term: factor (mul_op factor)* 
@@ -79,8 +80,6 @@ def process_constraint_string(string_input):
     
     deps = Dependency_Analyzer().transform(tree=tree)
     return tree,deps
-
-
 
 
 def simplify_tree(tree): 
@@ -260,8 +259,9 @@ class Dependency_Analyzer(Transformer):
     declared_variable = return_dict('declared_variable')
     attribute = return_dict('attribute')
     function_name = return_dict('function_name')
+    subvariable = return_dict('subvariable')
     kw = return_dict('kw')
-
+    
     def args(x,y): 
         # joins a list of lists
         #return dict(args=list(chain(*y)))
@@ -315,13 +315,15 @@ class Serializer(Transformer):
     variable = category_pair('variable')
     attribute = category_pair('attribute')
     function_name = category_pair('function_name')
-
+    subvariable = category_pair('subvariable')
+    
     arg = lambda x,y: y[0]
     args = lambda x,y: ('args',','.join(y))
     kw = n2s
     kwarg = lambda x,y: '='.join(y)
     kwargs = args
     
+
     def function_call(self,args):
         d,s = dict(args), ''
         if 'function_name' in d and 'args' not in d:
@@ -331,12 +333,15 @@ class Serializer(Transformer):
             s = '{variable}'.format(**d)
         elif keys==['attribute','variable']:
             s = '{variable}.{attribute}'.format(**d)
+        elif keys==['attribute','subvariable','variable']:
+            s = '{variable}.{subvariable}.{attribute}'.format(**d)
         elif keys== ['args','function_name']:
             s = '{function_name}({args})'.format(**d)
         elif keys== ['args','function_name','variable']:
             s = '{variable}.{function_name}({args})'.format(**d)
+        elif keys== ['args','function_name','subvariable','variable']:
+            s = '{variable}.{subvariable}.{function_name}({args})'.format(**d)
         return s
-
 
 def serialize(tree):
     s = Serializer().transform(tree=tree)

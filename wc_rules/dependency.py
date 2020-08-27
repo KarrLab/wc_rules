@@ -9,6 +9,7 @@ class DependencyCollector:
 		self.builtins = set()
 		self.function_calls = defaultdict(dict)
 		self.variables = set()
+		self.has_subvariables = False
 		self.collect_dependencies(deps)
 
 	def to_string(self):
@@ -35,6 +36,7 @@ class DependencyCollector:
 		self.process_builtin(x)
 		self.process_attribute_call(x)
 		self.process_function_call(x)
+		self.process_subvariable(x)
 		return 
 
 	def process_declared_variable(self,x):
@@ -68,6 +70,11 @@ class DependencyCollector:
 				if isinstance(arg,dict) and len(arg.keys())==1 and 'variable' in arg:
 					kwpairs.add((kw,arg['variable']))
 			self.function_calls[x['variable']]['function_name'] = dict(kws=kws,kwpairs=kwpairs)
+		return self
+
+	def process_subvariable(self,x):
+		if 'subvariable' in x:
+			self.has_subvariables = True
 		return self
 
 
