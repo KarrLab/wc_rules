@@ -126,7 +126,6 @@ def canonical_expression_ordering(seed,namespace,constraints):
 	excludes = concat(init_partition)
 	remaining_nodes = [x for x in g.keys() if x not in excludes]
 	init_partition += initial_partition(remaining_nodes,g)
-	print(init_partition)
 
 	partition = refine_partition(g,init_partition)
 	p, leaders = partition.copy(), list()	

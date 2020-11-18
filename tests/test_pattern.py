@@ -137,3 +137,26 @@ class TestPattern(unittest.TestCase):
 
 		self.assertEqual(pzzz.partition,cP)
 		self.assertEqual(pzzz.leaders,cL)
+
+
+		# symmetry preserving + using helpers
+		z = Z('z',a=True,b=False)
+		pz = Pattern.build(z)
+
+		zz = Z('z1',z=Z('z2'))
+		pzz = Pattern.build(zz,
+			helpers = {'pz':pz},
+			constraints = 'pz.contains(z=z1)==True \n pz.contains(z=z2)==True',
+			)
+		cP, cL = (('z1','z2'),), (('z1','z2'),)
+		self.assertEqual(pzz.partition,cP)
+		self.assertEqual(pzz.leaders,cL)
+
+		# symmetry breaking + using helpers
+		pzz = Pattern.build(zz,
+			helpers = {'pz':pz},
+			constraints = 'pz.contains(z=z1)==True',
+			)
+		cP, cL = (('z2',),('z1',),), tuple()
+		self.assertEqual(pzz.partition,cP)
+		self.assertEqual(pzz.leaders,cL)
