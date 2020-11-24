@@ -41,7 +41,8 @@ class TestRule(unittest.TestCase):
 
 	def test_action_grammar(self):
 		t1 = "p.a.add_molecule(q.b)"
-		t2 = "p.a.set_phospho(5)"
+		t2 = "p.a.set_phospho(True)"
+		t21 = "p.a.set_nloops(5)"
 		t3 = "p.a.add_molecule(v)"
 		t4 = "p_x.a.add_sites(q.b,r.c)"
 		t5 = "p.a.set_phospho(q.contains(x=z))"
@@ -71,7 +72,7 @@ class TestRule(unittest.TestCase):
 		### NOTABLE FAILURE and RESULTANT AMBIGUITY
 		### To resolve set complicated expressions as v=expr
 		### then use v as v==True or p.a.action(v)
-		
+
 		# s6 = "p.a.compute(x=y,p=q) != all(a.x,p.contains(x=z))"
 		# u1 = "p.a.set_ph({0})".format(s6) 
 		# In both cases, the parser is matching "q) != all(..."
