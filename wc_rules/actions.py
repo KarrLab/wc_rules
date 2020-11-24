@@ -3,7 +3,6 @@ from .utils import merge_lists, merge_dicts, pipe_map,listmap
 from operator import itemgetter,attrgetter
 from functools import partial
 
-
 action_grammar = """
 %import common.CNAME
 %import common.WS_INLINE
@@ -16,47 +15,36 @@ COMMENT: /#.*/
 %ignore COMMENT
 %ignore NEWLINE
 
-    ?literal.1: NUMBER -> number | "True"-> true | "False" -> false | ESCAPED_STRING -> string
-    ?atom: literal | function_call  | "(" expression ")" 
 
-    function_name: CNAME
-    attribute: CNAME
-    declared_variable: CNAME
-    pattern: CNAME
-    node: CNAME
+    LITERAL.1: NUMBER | "True" | "False" | ESCAPED_STRING
+    SYMBOL:  "==" | "!=" |"<="| ">=" | "<" | ">" | "=" | "," | "+" | "-" | "*" | "/" | "." | "(" | ")"
 
-    arg: expression
+    variable.1: CNAME
+    subvariable: CNAME
+    attribute: CNAME    
+    action_name: CNAME
+    GRAPH_ACTION_NAME: "add" | "remove" | "set"
+    
+    ?graph_target.1: variable ["." subvariable]
+    arg:  graph_target | LITERAL  | expression
+    args: arg ("," arg)*
+    graph_action.2: variable ["." subvariable]  "." GRAPH_ACTION_NAME ["_" attribute] "(" [args] ")"
+    
     kw: CNAME
     kwarg: kw "=" arg
-    args: arg ("," arg )*
-    kwargs: kwarg ("," kwarg)*
-    
-    function_call: variable "." function_name "(" [kwargs] ")"
-        | function_name "(" [args] ")"
-        | variable "." attribute 
-        | variable
+    kwargs: kwarg ("," kwarg)* 
+    custom_action: variable ["." subvariable] "." action_name "(" [kwargs] ")"
 
-    ?sum: term (add_op term)*
-    ?term: factor (mul_op factor)* 
-    ?factor: factor_op factor | atom
+    ?action.1: graph_action|custom_action
 
-    ?factor_op: "+" -> noflip | "-" -> flipsign
-    ?add_op: "+" -> add | "-" -> subtract
-    ?mul_op: "*" -> multiply | "/" -> divide    
+    expression: (LITERAL | SYMBOL | CNAME )+ 
+    ?start: action | expression
 
-    ?expression: sum
 
-    boolean_expression: expression bool_op expression
-    
-    ?bool_op: ">=" -> geq | "<=" -> leq | ">" -> ge | "<" -> le | "==" -> eq | "!=" -> ne
-    
-    assignment: declared_variable "=" (expression|boolean_expression)
+"""
+# args: arg ("," arg)*
 
-    action_name: CNAME
-    action: variable "." attribute "." action_name "(" [atom] ")"
-    
-    ?start: (assignment|boolean_expression)
-"""    
+
     #expressions: (assignment|boolean_expression) (NEWLINE (assignment|boolean_expression))* 
     #?start: [NEWLINE] expressions [NEWLINE]
 
