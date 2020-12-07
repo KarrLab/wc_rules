@@ -1,31 +1,65 @@
 from obj_model import core
 from obj_model import bio
-from functools import wraps
+from functools import wraps,partial
+
+def check_numeric_value(value,attr,_class,_min=None,_max=None):
+    if value is None:
+        return
+    err = "Attribute `{attr}` takes value None or any value of class `{_class}`."
+    assert isinstance(value,_class), err.format(attr=attr,_class=_class.__name__)
+    err = "Attribute `{attr}` takes value of class `{_class}` in the range [{_min},{_max}]."
+    if _min is not None:
+        assert value >= _min, err.format(attr=attr,_class=_class.__name__,_min=_min,_max=_max)
+    if _max is not None:
+        assert value <= _max, err.format(attr=attr,_class=_class.__name__,_min=_min,_max=_max)
+    return 
+
+def check_string_value(value,attr):
+    if value is None:
+        return
+    err = "Attribute `{attr}` can take value None or any value of class `{_class}`."
+    assert isinstance(value,str), err.format(attr=attr,_class=str.__name__)
 
 # scalar attributes
 class IdAttribute(core.StringAttribute):
     def __init__(self):
         super().__init__(default=None,unique=True,primary=True)
 
+    def check_value(self,value):
+        return check_string_value(value,self.name)
+
 class BooleanAttribute(core.BooleanAttribute):
     def __init__(self):
         super().__init__(default=None)
 
+    def check_value(self,value):
+        return check_numeric_value(attr=self.name,value=value,_class=bool)
+
 class FloatAttribute(core.FloatAttribute):
     def __init__(self):
         super().__init__(default=None)
+    #TODO: float attribute min max not setting properly
 
 class IntegerAttribute(core.IntegerAttribute):
-    def __init__(self):
-        super().__init__(default=None)
+    def __init__(self,min=None,max=None,):
+        super().__init__(default=None,min=min,max=max)
+
+    def check_value(self,value):
+        return check_numeric_value(attr=self.name,value=value,_class=int,_min=self.min,_max=self.max)
 
 class PositiveIntegerAttribute(core.PositiveIntegerAttribute):
-    def __init__(self):
-        super().__init__(default=None)
+    def __init__(self,max=None):
+        super().__init__(default=None,max=max)
+
+    def check_value(self,value):
+        return check_numeric_value(attr=self.name,value=value,_class=int,_min=0,_max=self.max)
 
 class StringAttribute(core.StringAttribute):
     def __init__(self):
         super().__init__(default=None)
+
+    def check_value(self,value):
+        return check_string_value(value,self.name)
 
 class LongStringAttribute(core.LongStringAttribute):
     def __init__(self):
@@ -34,7 +68,6 @@ class LongStringAttribute(core.LongStringAttribute):
 class RegexAttribute(core.RegexAttribute):
     def __init__(self):
         super().__init__(default=None)
-
 
 # related attributes
 class OneToOneAttribute(core.OneToOneAttribute):pass

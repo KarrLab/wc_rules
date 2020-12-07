@@ -92,37 +92,6 @@ class BaseClass(core.Model):
         lists = [self.listget(a) for a in attrs]
         return [ tuple(sorted([(self.id,a), (x.id,related[a])])) for a,y in zip(attrs,lists) for x in y ]
 
-
-    def add_edge(self,attr1,attr2,node):
-        assert node not in utils.listify(getattr(self,attr1)), "Edge already exists."
-        local_attribute = self.__class__.Meta.local_attributes[attr1]
-        if not local_attribute.is_related_to_many:
-            assert getattr(self,attr1) is None, "Related attribute '" + attr1 + "' is maxed out."
-        if not node.__class__.Meta.local_attributes[attr2].is_related_to_many:
-            assert getattr(node,attr2) is None, "Related attribute '" + attr2 + "' is maxed out."
-        # TODO: implement max_related check here when is_related_to_many == True
-
-        if local_attribute.is_related_to_many: 
-            getattr(self,attr1).add(node)
-        else:
-            setattr(self,attr1,node)
-        return self
-
-    def remove_edge(self,attr1,attr2,node):
-        assert node in utils.listify(getattr(self,attr1)), "Edge not found."
-        local_attribute = self.__class__.Meta.local_attributes[attr1]
-        if local_attribute.is_related_to_many: 
-            getattr(self,attr1).remove(node)
-        else:
-            setattr(self,attr1,None)
-        return self  
-
-    def set_attr(self,attr,value):
-        # TODO: check
-        setattr(self,attr,value)
-        return self
-
-
     def get_dynamic_methods(self):
         return {x:getattr(self,x) for x in dir(self) if hasattr(getattr(self,x),'_isdynamic')}
 
@@ -200,6 +169,23 @@ class BaseClass(core.Model):
                 nodes.add(node)
                 examine_stack.extend(node.listget_all_related())
         return list(nodes)
+
+    ################ this section is for safely doing actions during simulation
+    def safely_set_attr(self,attr,value):
+        # enforces class,min,max
+        self.__class__.Meta.attributes[attr].check_value(value)
+        setattr(self,attr,value)
+        return self
+
+    def safely_add_edge(self,attr,target):
+        # only enforce max
+
+        pass
+
+    def safely_remove_edge(self,attr,target):
+        pass
+
+
 
     
         
