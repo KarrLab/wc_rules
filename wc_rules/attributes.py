@@ -70,10 +70,17 @@ class RegexAttribute(core.RegexAttribute):
         super().__init__(default=None)
 
 # related attributes
-class OneToOneAttribute(core.OneToOneAttribute):pass
-class ManyToOneAttribute(core.ManyToOneAttribute):pass
-class OneToManyAttribute(core.OneToManyAttribute):pass
-class ManyToManyAttribute(core.ManyToManyAttribute):pass
+class OneToOneAttribute(core.OneToOneAttribute):
+    pass
+        
+class ManyToOneAttribute(core.ManyToOneAttribute):
+    pass
+
+class OneToManyAttribute(core.OneToManyAttribute):
+    pass
+
+class ManyToManyAttribute(core.ManyToManyAttribute):
+    pass
 
 # extra_attributes
 class BioSeqAttribute(bio.BioSeqAttribute):

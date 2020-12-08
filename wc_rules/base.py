@@ -63,7 +63,10 @@ class BaseClass(core.Model):
         return list(self.get_literal_attrs().keys()) 
 
     def get_related_name(self,attr):
-        return self.__class__.Meta.local_attributes[attr].related_name       
+        return self.__class__.Meta.local_attributes[attr].related_name
+
+    def get_related_class(self,attr):
+        return self.__class__.Meta.local_attributes[attr].related_class
 
     def listget(self,attr):
         x = getattr(self,attr)
@@ -178,12 +181,42 @@ class BaseClass(core.Model):
         return self
 
     def safely_add_edge(self,attr,target):
-        # only enforce max
+        #y = self.__class__.Meta.attributes[attr]
+        x = self.__class__.Meta.local_attributes[attr]
+        err = 'Cannot add an edge to `{target.__class__.__name__}` instance using attribute `{attr}`.'
+        assert isinstance(target, self.get_related_class(attr)), err.format(target=target,attr=attr)
+        if x.is_primary:
+            y = self.__class__.Meta.attributes[attr]
+            min_related, max_related = y.min_related, y.max_related
+            min_related_rev, max_related_rev = y.min_related_rev,y.max_related_rev
+        else:
+            y = target.__class__.Meta.attributes[self.get_related_name(attr)]
+            min_related, max_related = y.min_related_rev,y.max_related_rev
+            min_related_rev, max_related_rev = y.min_related, y.max_related
+        err = 'Cannot add another edge to `{target.__class__.__name__}` instance using attribute `{attr}`.'
+        assert len(self.listget(attr)) < max_related, err.format(target=target,attr=attr)
+        attr2 = self.get_related_name(attr)
+        assert len(target.listget(attr2)) < max_related, err.format(target=self,attr=attr2)
+        err = '`{target.__class__.__name__}` instance already found on attribute `{attr}`. Cannot add again.'
+        assert target not in self.listget(attr), err.format(target=target,attr=attr)
 
-        pass
+        if x.is_related_to_many:
+            a = getattr(self,attr)
+            a.add(target)
+        else:
+            setattr(self,attr,target)
+        return self
 
     def safely_remove_edge(self,attr,target):
-        pass
+        err = "`{target.__class__.__name__}` instance not found on attribute `{attr}`."
+        assert target in self.listget(attr), err.format(target=target,attr=attr)
+        if self.__class__.Meta.local_attributes[attr].is_related_to_many:
+            a = getattr(self,attr)
+            a.remove(target)
+        else:
+            setattr(self,attr,None)
+        return self
+
 
 
 
