@@ -196,7 +196,7 @@ class BaseClass(core.Model):
         err = 'Cannot add another edge to `{target.__class__.__name__}` instance using attribute `{attr}`.'
         assert len(self.listget(attr)) < max_related, err.format(target=target,attr=attr)
         attr2 = self.get_related_name(attr)
-        assert len(target.listget(attr2)) < max_related, err.format(target=self,attr=attr2)
+        assert len(target.listget(attr2)) < max_related_rev, err.format(target=self,attr=attr2)
         err = '`{target.__class__.__name__}` instance already found on attribute `{attr}`. Cannot add again.'
         assert target not in self.listget(attr), err.format(target=target,attr=attr)
 

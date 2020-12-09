@@ -17,11 +17,11 @@ class Person(BaseClass):
 	# many to many symmetric
 	friends = ManyToManyAttribute('Person',related_name='friends',max_related=2,max_related_rev=2)
 	# many to many asymmetric
-	senders = ManyToManyAttribute('Person',related_name='receivers',max_related=2,max_related_rev=2)
+	senders = ManyToManyAttribute('Person',related_name='receivers',max_related=2,max_related_rev=3)
 	# one to many
-	representative = OneToManyAttribute('Person',related_name='voters',max_related=2)
+	voters = OneToManyAttribute('Person',related_name='representative',max_related=2)
 	# many to one
-	followers = ManyToOneAttribute('Person',related_name='leader',max_related_rev=2)
+	leader = ManyToOneAttribute('Person',related_name='followers',max_related_rev=2)
 
 
 class TestSafelySettingAttributes(unittest.TestCase):
@@ -164,15 +164,98 @@ class TestSafelySettingAttributes(unittest.TestCase):
 		self.assertEqual(jacob.mentee,None)
 
 	def test_one_to_many(self):
-		pass
+		[john, jacob, jingle, hammer] = [self.john,self.jacob, self.jingle, self.hammer]
+
+		jacob.safely_add_edge('representative',john)
+		jingle.safely_add_edge('representative',john)
+
+		self.assertEqual(jacob.representative,john)
+		self.assertEqual(jingle.representative,john)
+		self.assertTrue(jacob in john.voters and jingle in john.voters)
+
+		with self.assertRaises(AssertionError):
+			jacob.safely_add_edge('representative',john)
+
+		with self.assertRaises(AssertionError):
+			hammer.safely_add_edge('representative',john)
+
+		with self.assertRaises(AssertionError):
+			jacob.safely_add_edge('representative',hammer)
+
+		john.safely_remove_edge('voters',jacob)
+		john.safely_remove_edge('voters',jingle)
+
+		with self.assertRaises(AssertionError):
+			jacob.safely_remove_edge('representative',john)
+
+		self.assertEqual(len(john.voters),0)
+		self.assertEqual(jacob.representative,None)
+		self.assertEqual(jingle.representative,None)
 
 	def test_many_to_one(self):
-		pass
+		[john, jacob, jingle, hammer] = [self.john,self.jacob, self.jingle, self.hammer]
+
+		john.safely_add_edge('followers',jacob)
+		john.safely_add_edge('followers',jingle)
+
+		self.assertEqual(jacob.leader,john)
+		self.assertEqual(jingle.leader,john)
+		self.assertTrue(jacob in john.followers and jingle in john.followers)
+
+		with self.assertRaises(AssertionError):
+			john.safely_add_edge('followers',jacob)
+
+		with self.assertRaises(AssertionError):
+			john.safely_add_edge('followers',hammer)
+
+		with self.assertRaises(AssertionError):
+			jacob.safely_add_edge('leader',hammer)
+
+		jacob.safely_remove_edge('leader',john)
+		jingle.safely_remove_edge('leader',john)
+
+		with self.assertRaises(AssertionError):
+			john.safely_remove_edge('followers',jacob)
 
 	def test_many_to_many(self):
-		pass
+		[john, jacob, jingle, hammer, schmidt] = [self.john,self.jacob, self.jingle, self.hammer, self.schmidt]		
+		senders = [john, jacob]
+		receivers = [jingle, hammer, schmidt]
+
+		for x in receivers:
+			john.safely_add_edge('receivers',x)
+		
+		for x in receivers:
+			x.safely_add_edge('senders',jacob)
+			
+		self.assertEqual(len(john.receivers),3)
+		self.assertEqual(len(jacob.receivers),3)
+		self.assertEqual(len(jingle.senders),2)
+		self.assertEqual(len(hammer.senders),2)
+		self.assertEqual(len(schmidt.senders),2)
+
+		with self.assertRaises(AssertionError):
+			jingle.safely_add_edge('senders',john)
+		
+		with self.assertRaises(AssertionError):
+			jacob.safely_add_edge('receivers',jingle)
+
+		for x in receivers:
+			x.safely_remove_edge('senders',john)
+
+		for x in receivers:
+			jacob.safely_remove_edge('receivers',x)
+
+		with self.assertRaises(AssertionError):
+			john.safely_remove_edge('receivers',jingle)
+
+		with self.assertRaises(AssertionError):
+			jingle.safely_remove_edge('senders',jacob)
+
+		for x in receivers:
+			self.assertEqual(len(x.senders),0)
+		for x in senders:
+			self.assertEqual(len(x.receivers),0)
 
 
-
-
-
+		
