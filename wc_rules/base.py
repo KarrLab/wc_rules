@@ -15,6 +15,7 @@ import random
 from collections import deque
 from .indexer import DictLike
 
+
 # Seed for creating ids
 # To modify this seed, load base module, then execute base.idgen.seed(<new_seed>)
 idgen = random.Random()
@@ -55,6 +56,34 @@ class BaseClass(core.Model):
         if 'id' in x and ignore_id:
             x.remove('id')
         return x
+
+    def get_literal_attrdict(self,ignore_id=True,ignore_None=True):
+        d = {x:self.get(x) for x in self.get_literal_attributes()}
+        if ignore_id:
+            del d['id']
+        if ignore_None:
+            d = {k:v for k,v in d.items() if v is not None}
+        return d
+
+    def convert_to_ids(self,_obj):
+        if _obj is None or _obj==[]:
+            return _obj
+        if isinstance(_obj,list):
+            return [x.get_id() for x in _obj]
+        return _obj.get_id()
+
+    def get_related_attrdict(self,ignore_None=True,use_id_for_related=True):
+        d = {x:self.get(x) for x in self.get_related_attributes()}
+        if use_id_for_related:
+            d = {k:self.convert_to_ids(v) for k,v in d.items()}
+        if ignore_None:
+            d = {k:v for k,v in d.items() if v not in [None,[]]}
+        return d
+
+    def get_attrdict(self,ignore_id=False,ignore_None=True,use_id_for_related=True):
+        d1 = self.get_literal_attrdict(ignore_id=ignore_id,ignore_None=ignore_None)
+        d2 = self.get_related_attrdict(use_id_for_related=use_id_for_related)
+        return {**d1,**d2}
 
     def get_related_attributes(self):
         return list(self.get_related_attrs().keys())        
