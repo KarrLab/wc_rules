@@ -72,7 +72,7 @@ class BaseClass(core.Model):
             return [x.get_id() for x in _obj]
         return _obj.get_id()
 
-    def get_related_attrdict(self,ignore_None=True,use_id_for_related=True):
+    def get_related_attrdict(self,ignore_None=True,use_id_for_related=False):
         d = {x:self.get(x) for x in self.get_related_attributes()}
         if use_id_for_related:
             d = {k:self.convert_to_ids(v) for k,v in d.items()}
@@ -80,9 +80,9 @@ class BaseClass(core.Model):
             d = {k:v for k,v in d.items() if v not in [None,[]]}
         return d
 
-    def get_attrdict(self,ignore_id=False,ignore_None=True,use_id_for_related=True):
+    def get_attrdict(self,ignore_id=False,ignore_None=True,use_id_for_related=False):
         d1 = self.get_literal_attrdict(ignore_id=ignore_id,ignore_None=ignore_None)
-        d2 = self.get_related_attrdict(use_id_for_related=use_id_for_related)
+        d2 = self.get_related_attrdict(ignore_None=ignore_None,use_id_for_related=use_id_for_related)
         return {**d1,**d2}
 
     def get_related_attributes(self):
@@ -105,8 +105,8 @@ class BaseClass(core.Model):
             return [x]
         return x
 
-    def get(self,attr):
-        return getattr(self,attr)
+    def get(self,attr,default=None):
+        return getattr(self,attr,default)
 
     def listget_all_related(self):
         x = set()
