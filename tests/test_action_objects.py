@@ -1,6 +1,7 @@
 from wc_rules.base import BaseClass
 from wc_rules.attributes import *
 from wc_rules.actions import *
+from wc_rules.simulator import SimulationState
 import unittest
 
 
@@ -20,7 +21,7 @@ class TestActionObjects(unittest.TestCase):
 
 	def setUp(self):
 		self.locals = dict(
-			sim = DummySimulationState(),
+			sim = SimulationState(),
 			Animal = Animal,
 			Person = Person,
 			AddNode = AddNode,
@@ -30,7 +31,7 @@ class TestActionObjects(unittest.TestCase):
 			RemoveEdge = RemoveEdge
 			)
 
-	def test_action_objects(self):
+	def test_primary_action_objects(self):
 
 		action_strings = '''
 			AddNode.make(Animal,'doggy',dict(sound='ruff'))
@@ -86,6 +87,7 @@ class TestActionObjects(unittest.TestCase):
 		for i,s in enumerate(action_strings.split()):
 			a = string_to_action_object(s,self.locals)
 			self.assertEqual(a,actions[i])
+
 			a.execute(self.locals['sim'])
 			self.assertEqual(self.locals['sim'].get_contents(),states[i+1])
 
@@ -93,3 +95,31 @@ class TestActionObjects(unittest.TestCase):
 		for i,a in enumerate(reversed(actions)):
 			a.rollback(self.locals['sim'])
 			self.assertEqual(self.locals['sim'].get_contents(),rev_states[i+1])
+
+
+
+	def test_secondary_action_objects(self):
+		john = Person('john')
+		doggy = Animal('doggy',sound='ruff',owner=john)
+		kitty = Animal('kitty',sound='meow',owner=john,friends=[doggy])
+		sim = SimulationState([john,doggy,kitty])
+		
+		action = RemoveScalarAttr(doggy,'sound')
+		expandsto = SetAttr.make(doggy,'sound',None)
+		self.assertEqual(action.expand(),expandsto)
+
+		action = RemoveEdgeAttr(doggy,'friends')
+		expandsto = [RemoveEdge.make(doggy,'friends',kitty)]
+		self.assertEqual(action.expand(),expandsto)
+
+		action = RemoveEdgeAttr(doggy,'owner')
+		expandsto = [RemoveEdge.make(doggy,'owner',john)]
+		self.assertEqual(action.expand(),expandsto)
+
+		action = RemoveAllEdges(doggy)
+		expandsto = [RemoveEdgeAttr(doggy,'friends'), RemoveEdgeAttr(doggy,'owner')]
+		self.assertEqual(action.expand(),expandsto)
+
+		action = Remove(doggy)
+		expandsto = [RemoveAllEdges(doggy),RemoveNode.make(doggy)]
+		self.assertEqual(action.expand(),expandsto)

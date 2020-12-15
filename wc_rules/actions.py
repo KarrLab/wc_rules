@@ -1,8 +1,9 @@
 from lark import Lark, tree, Transformer,Visitor, v_args, Tree,Token
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
-from .base import BaseClass
+from collections import deque
 
+############ ACTION GRAMMER ###################
 action_grammar = """
 %import common.CNAME
 %import common.WS_INLINE
@@ -44,37 +45,14 @@ COMMENT: /#.*/
 
 parser = Lark(action_grammar, start='start')
 
-class DummySimulationState:
-    def __init__(self,*args):
-        self._dict = {arg.get_id():arg for arg in args}
-
-    def resolve(self,idx):
-        return self._dict[idx]
-
-    def update(self,node):
-        self._dict[node.id] = node
-        return self
-
-    def remove(self,node):
-        del self._dict[node.id]
-        del node
-        return self
-
-    def get_contents(self,ignore_id=True,ignore_None=True,use_id_for_related=True,sort_for_printing=True):
-        d = {x.get_id():x.get_attrdict(ignore_id=ignore_id,ignore_None=ignore_None,use_id_for_related=use_id_for_related) for k,x in self._dict.items()}
-        if sort_for_printing:
-           # sort list attributes
-            for idx,adict in d.items():
-                for k,v in adict.items():
-                    if isinstance(v,list):
-                        adict[k] = list(sorted(v))
-                adict = dict(sorted(adict.items()))
-            d = dict(sorted(d.items())) 
-        return d
-
-
+############## Primary Actions
+# NodeAction -> AddNode, RemoveNode
+# SetAttr
+# EdgeAction -> AddEdge, RemoveEdge
+# make(...) -> primary constructor
+# execute(sim) -> executes the action on a simulation state
+# rollback(sim) -> rolls back the action on a simulation state
 class PrimaryAction(ABC):
-
     @classmethod
     @abstractmethod
     def make(cls,*args,**kwargs):
@@ -206,7 +184,42 @@ class RemoveEdge(EdgeAction):
         self.add_edge(sim)
         return self
 
+######## Secondary Actions
+# RemoveScalarAttr
+# RemoveEdgeAttr
+
 class SecondaryAction(ABC):
     @abstractmethod
-    def expand(self,sim):
+    def expand(self):
         pass
+
+@dataclass
+class RemoveScalarAttr(SecondaryAction):
+    source: 'typing.Any'
+    attr: str
+
+    def expand(self):
+        return SetAttr.make(self.source,self.attr,None)
+
+@dataclass
+class RemoveEdgeAttr(SecondaryAction):
+    source: 'typing.Any'
+    attr: str
+
+    def expand(self):
+        return [RemoveEdge.make(self.source,self.attr,x) for x in self.source.listget(self.attr)]
+
+@dataclass
+class RemoveAllEdges(SecondaryAction):
+    source: 'typing.Any'
+
+    def expand(self):
+        attrs = self.source.get_nonempty_related_attributes()
+        return [RemoveEdgeAttr(self.source,attr) for attr in attrs]
+
+@dataclass
+class Remove(SecondaryAction):
+    source: 'typing.Any'
+
+    def expand(self):
+        return [RemoveAllEdges(self.source), RemoveNode.make(self.source)]
