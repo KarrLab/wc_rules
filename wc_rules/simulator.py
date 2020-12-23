@@ -2,7 +2,7 @@ from collections import deque
 
 class SimulationState:
 	def __init__(self,nodes=[]):
-		self.state = {x.get_id():x for x in nodes}
+		self.state = {x.id:x for x in nodes}
 		# for both stacks, use LIFO semantics using appendleft and popleft
 		self.action_stack = deque()
 		self.rollback_stack = deque()
@@ -11,16 +11,16 @@ class SimulationState:
 		return self.state[idx]
 
 	def update(self,node):
-		self.state[node.get_id()] = node
+		self.state[node.id] = node
 		return self
 
 	def remove(self,node):
-		del self.state[node.get_id()]
+		del self.state[node.id]
 		del node
 		return self
 
 	def get_contents(self,ignore_id=True,ignore_None=True,use_id_for_related=True,sort_for_printing=True):
-		d = {x.get_id():x.get_attrdict(ignore_id=ignore_id,ignore_None=ignore_None,use_id_for_related=use_id_for_related) for k,x in self.state.items()}
+		d = {x.id:x.get_attrdict(ignore_id=ignore_id,ignore_None=ignore_None,use_id_for_related=use_id_for_related) for k,x in self.state.items()}
 		if sort_for_printing:
 			# sort list attributes
 			for idx,adict in d.items():
@@ -45,7 +45,7 @@ class SimulationState:
 			if hasattr(action,'expand'):
 				self.push_to_stack(action.expand())
 			else:
-				self.rollback_stack.appendleft(action.rollback(self.state))
+				self.rollback_stack.appendleft(action.rollback(self))
 				action.execute(self)
 		return self
 

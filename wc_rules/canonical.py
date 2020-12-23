@@ -46,7 +46,7 @@ def relabel_edge(edge,label_map):
 def canonical_edges(g,label_map):
 	edges = SortedSet()
 	for node in g:
-		for attr in node.get_nonempty_related_attributes():
+		for attr in node.get_related_attributes(ignore_None=True):
 			related_attr = node.get_related_name(attr)
 			for related_node in node.listget(attr):
 				edge = tuple(sorted( [(node.id,attr), (related_node.id,related_attr)] ))
@@ -198,14 +198,14 @@ def initial_partition(g):
 def node_certificate(idx,d,g):
 	# idx in g -> edges_sorted_by_indexes_of_targets_in_partition
 	node = g[idx]
-	attrs = sorted(node.get_nonempty_related_attributes())
+	attrs = sorted(node.get_related_attributes(ignore_None=True))
 	cert = [(d[x.id],a) for a in attrs for x in node.listget(a)]
 	return tuple(sorted(cert))
 	
 def initial_node_certificate(idx,g):
 	# idx in g -> <degree, class_name, sorted_edges>
 	node = g[idx]
-	attrs = sorted(node.get_nonempty_related_attributes())
+	attrs = sorted(node.get_related_attributes(ignore_None=True))
 	edges = [(a,x.__class__.__name__) for a in attrs for x in node.listget(a)]	
 	return (-len(edges),node.__class__.__name__,tuple(sorted(edges)))
 

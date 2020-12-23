@@ -6,14 +6,11 @@
 """
 
 from . import base
+from .actions import ActionMixin
 
-class Entity(base.BaseClass):
+class Entity(base.BaseClass,ActionMixin):
 
-    def __init__(self, *args, **kwargs):
-        super(Entity, self).__init__(*args,**kwargs)
-        attrdict = self.attribute_properties
-        self._tokens = set()
-
+    
     @classmethod
     def get_classnames(cls):
         classnames = []
@@ -22,5 +19,7 @@ class Entity(base.BaseClass):
             classnames.append(x.__name__)
             x = x.__bases__[0]
         return classnames
+
+
 
     

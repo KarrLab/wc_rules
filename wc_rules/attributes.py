@@ -29,6 +29,7 @@ class IdAttribute(core.StringAttribute):
         return check_string_value(value,self.name)
 
 class BooleanAttribute(core.BooleanAttribute):
+    
     def __init__(self):
         super().__init__(default=None)
 
@@ -36,11 +37,13 @@ class BooleanAttribute(core.BooleanAttribute):
         return check_numeric_value(attr=self.name,value=value,_class=bool)
 
 class FloatAttribute(core.FloatAttribute):
+    
     def __init__(self):
         super().__init__(default=None)
     #TODO: float attribute min max not setting properly
 
 class IntegerAttribute(core.IntegerAttribute):
+    
     def __init__(self,min=None,max=None,):
         super().__init__(default=None,min=min,max=max)
 
@@ -48,6 +51,7 @@ class IntegerAttribute(core.IntegerAttribute):
         return check_numeric_value(attr=self.name,value=value,_class=int,_min=self.min,_max=self.max)
 
 class PositiveIntegerAttribute(core.PositiveIntegerAttribute):
+
     def __init__(self,max=None):
         super().__init__(default=None,max=max)
 

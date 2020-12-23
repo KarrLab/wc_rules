@@ -1,7 +1,10 @@
 from lark import Lark, tree, Transformer,Visitor, v_args, Tree,Token
 from dataclasses import dataclass
-from abc import ABC, abstractmethod
 from collections import deque
+from types import MethodType
+from abc import ABC, abstractmethod
+from obj_model import core
+
 
 ############ ACTION GRAMMER ###################
 action_grammar = """
@@ -124,7 +127,7 @@ class SetAttr(PrimaryAction):
 
     @classmethod
     def make(cls,node,attr,value):
-        return cls(idx=node.get_id(),
+        return cls(idx=node.id,
             attr = attr,
             value = value,
             old_value = node.get(attr)
@@ -150,9 +153,9 @@ class EdgeAction(PrimaryAction):
     @classmethod
     def make(cls,source,attr,target):
         return cls(
-            source_idx = source.get_id(),
+            source_idx = source.id,
             source_attr = attr,
-            target_idx = target.get_id(),
+            target_idx = target.id,
             target_attr = source.get_related_name(attr)
             )
 
@@ -184,17 +187,14 @@ class RemoveEdge(EdgeAction):
         self.add_edge(sim)
         return self
 
-######## Secondary Actions
-# RemoveScalarAttr
-# RemoveEdgeAttr
-
-class SecondaryAction(ABC):
+class CompositeAction(ABC):
     @abstractmethod
     def expand(self):
         pass
 
+############## Literal Attr Actions ###########
 @dataclass
-class RemoveScalarAttr(SecondaryAction):
+class RemoveLiteralAttr(CompositeAction):
     source: 'typing.Any'
     attr: str
 
@@ -202,7 +202,51 @@ class RemoveScalarAttr(SecondaryAction):
         return SetAttr.make(self.source,self.attr,None)
 
 @dataclass
-class RemoveEdgeAttr(SecondaryAction):
+class Flip(CompositeAction):
+    source: 'typing.Any'
+    attr: str
+
+    def expand(self):
+        return SetAttr.make(self.source,self.attr,not self.source.get(self.attr))    
+
+@dataclass
+class SetTrue(CompositeAction):
+    source: 'typing.Any'
+    attr: str
+
+    def expand(self):
+        return SetAttr.make(self.source,self.attr,True)
+
+@dataclass
+class SetFalse(CompositeAction):
+    source: 'typing.Any'
+    attr: str
+
+    def expand(self):
+        return SetAttr.make(self.source,self.attr,False)
+
+@dataclass
+class Increment(CompositeAction):
+    source: 'typing.Any'
+    attr: str
+    value: 'typing.Any' = 1
+
+    def expand(self):
+        return SetAttr.make(self.source,self.attr,self.source.get(self.attr) + self.value)
+
+@dataclass
+class Decrement(CompositeAction):
+    source: 'typing.Any'
+    attr: str
+    value: 'typing.Any' = 1
+
+    def expand(self):
+        return SetAttr.make(self.source,self.attr,self.source.get(self.attr) - self.value)
+
+    
+######## Edge Attr ##########
+@dataclass
+class RemoveEdgeAttr(CompositeAction):
     source: 'typing.Any'
     attr: str
 
@@ -210,16 +254,118 @@ class RemoveEdgeAttr(SecondaryAction):
         return [RemoveEdge.make(self.source,self.attr,x) for x in self.source.listget(self.attr)]
 
 @dataclass
-class RemoveAllEdges(SecondaryAction):
+class RemoveAllEdges(CompositeAction):
     source: 'typing.Any'
 
     def expand(self):
-        attrs = self.source.get_nonempty_related_attributes()
+        attrs = self.source.get_related_attributes(ignore_None=True)
         return [RemoveEdgeAttr(self.source,attr) for attr in attrs]
 
+######### Node Remove ###########
 @dataclass
-class Remove(SecondaryAction):
+class Remove(CompositeAction):
     source: 'typing.Any'
 
     def expand(self):
         return [RemoveAllEdges(self.source), RemoveNode.make(self.source)]
+
+
+############### codegeneration for methods
+
+class ActionMixin:
+
+    
+    def attach_actions(self):
+        self.attach_removenode_method()
+        for attr,value in self.__class__.Meta.local_attributes.items():
+            if attr == 'id':
+                continue
+            methods = {
+                core.LiteralAttribute: self.attach_literalsetattr_method,
+                core.NumericAttribute: self.attach_numericattr_methods,
+                core.BooleanAttribute: self.attach_booleanattr_methods,
+                core.RelatedAttribute: self.attach_edgeattr_methods,
+            }
+
+            for attrtype,method in methods.items():
+                if isinstance(value.__dict__['attr'],attrtype):
+                    method(attr)
+
+    def attach_method(self,name,fn):
+        fn.__name__ = name
+        fn._is_action = True
+        setattr(self,name,MethodType(fn, self))
+        return self
+
+    def attach_literalsetattr_method(self,attr):
+        def setterfn(self,value):
+            return SetAttr.make(self,attr,value)
+        def removefn(self):
+            return SetAttr.make(self,attr,None)
+        self.attach_method('set_{0}'.format(attr),setterfn)
+        self.attach_method('remove_{0}'.format(attr),removefn)    
+        return self
+
+    def attach_numericattr_methods(self,attr):
+        def incrementfn(self,value=None):
+            if value is None:
+                return Increment(self,attr)
+            return Increment(self,attr,value)
+        def decrementfn(self,value=None):
+            if value is None:
+                return Decrement(self,attr)
+            return Decrement(self,attr,value)
+    
+        self.attach_method('increment_{0}'.format(attr),incrementfn)
+        self.attach_method('decrement_{0}'.format(attr),decrementfn)    
+        return self
+
+    def attach_booleanattr_methods(self,attr):
+        def settruefn(self):
+            return SetTrue(self,attr)
+        def setfalsefn(self):
+            return SetFalse(self,attr)
+        def flipfn(self):
+            return Flip(self,attr)
+        self.attach_method('setTrue_{0}'.format(attr),settruefn)
+        self.attach_method('setFalse_{0}'.format(attr),setfalsefn)
+        self.attach_method('flip_{0}'.format(attr),flipfn)
+        return self
+
+    def attach_edgeattr_methods(self,attr):
+        def add_edge_fn(self,*args):
+            targets = deque()
+            for arg in args:
+                if isinstance(arg,list):
+                    for elem in arg:
+                        targets.append(elem)
+                else:
+                    targets.append(arg)
+            return [AddEdge.make(self,attr,x) for x in targets]
+            
+        def remove_edge_fn(self,*args):
+            targets = deque()
+            if len(args)==0:
+                return RemoveEdgeAttr(self,attr)
+            for arg in args:
+                if isinstance(arg,list):
+                    for elem in arg:
+                        targets.append(elem)
+                else:
+                    targets.append(arg)
+            return [RemoveEdge.make(self,attr,x) for x in targets]
+            
+        self.attach_method('add_{0}'.format(attr),add_edge_fn)
+        self.attach_method('remove_{0}'.format(attr),remove_edge_fn)
+        return self
+
+    def attach_removenode_method(self):
+        def remove_edges_fn(self):
+            return RemoveAllEdges(self)
+
+        def removefn(self):
+            return Remove(self)
+
+        self.attach_method('remove_all_edges',remove_edges_fn)
+        self.attach_method('remove',removefn)
+        return self

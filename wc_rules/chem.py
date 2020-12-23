@@ -1,5 +1,6 @@
 """
-:Author: John Sekar <johnarul.sekar@gmail.com>
+:Author: John Sekar <johnarul.se
+kar@gmail.com>
 :Date: 2018-04-20
 :Copyright: 2017, Karr Lab
 :License: MIT
@@ -9,50 +10,12 @@ from . import base,entity,utils
 from .attributes import *
 
 class Molecule(entity.Entity):
-    # Setters
-    def add_sites(self,*sites):
-        self.sites.extend(sites)
-        return self
-
-    # Getters
-    def get_sites(self,**kwargs):
-        site_type = kwargs.pop('site_type',None)
-        return self.sites.get(__type=site_type,**kwargs)
-
-    # Unsetters
-    def remove_sites(self,*sites):
-        for site in sites:
-            self.sites.discard(site)
-        return self
+    pass
 
 class Site(entity.Entity):
     molecule = ManyToOneAttribute(Molecule,related_name='sites')
     bond = OneToOneAttribute('Site',related_name='bond')
     
-    # Setters
-    def set_molecule(self,molecule):
-        self.molecule = molecule
-        return self
-
-    def set_bond(self,bond):
-        self.bond = bond
-        return self
-    
-    # Getters
-    def get_molecule(self):
-        return self.molecule
-
-    def get_bond(self):
-        return self.bond
-    
-    # Unsetters
-    def unset_molecule(self):
-        self.molecule = None
-        return self
-
-    def unset_bond(self):
-        self.bond = None
-        return self
     
 class MoleculeFactory(object):
     def __init__(self,m_type=None,s_types=None,m_attr=None,s_attr=None):

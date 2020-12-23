@@ -14,6 +14,7 @@ import uuid
 import random
 from collections import deque
 from .indexer import DictLike
+from .actions import ActionMixin
 
 
 # Seed for creating ids
@@ -22,7 +23,7 @@ idgen = random.Random()
 idgen.seed(0)
 
 ###### Structures ######
-class BaseClass(core.Model):
+class BaseClass(core.Model,ActionMixin):
     """ Base class for bioschema objects.
 
     Attributes:
@@ -47,49 +48,42 @@ class BaseClass(core.Model):
             else:
             #self.id = str(uuid.UUID(int=idgen.getrandbits(128)))
                 self.id = utils.generate_id()
-
-    def get_nonempty_related_attributes(self):
-        return list(self.get_non_empty_related_attrs().keys())
-
-    def get_nonempty_scalar_attributes(self,ignore_id=True):
-        x = list(self.get_non_empty_literal_attrs().keys())
-        if 'id' in x and ignore_id:
-            x.remove('id')
-        return x
+        self.attach_actions()
 
     def get_literal_attrdict(self,ignore_id=True,ignore_None=True):
-        d = {x:self.get(x) for x in self.get_literal_attributes()}
-        if ignore_id:
-            del d['id']
-        if ignore_None:
-            d = {k:v for k,v in d.items() if v is not None}
-        return d
-
-    def convert_to_ids(self,_obj):
-        if _obj is None or _obj==[]:
-            return _obj
-        if isinstance(_obj,list):
-            return [x.get_id() for x in _obj]
-        return _obj.get_id()
+        return {x:self.get(x) for x in self.get_literal_attributes(ignore_id=ignore_id,ignore_None=ignore_None)}
 
     def get_related_attrdict(self,ignore_None=True,use_id_for_related=False):
-        d = {x:self.get(x) for x in self.get_related_attributes()}
+        d = {x:self.get(x) for x in self.get_related_attributes(ignore_None)}
+        def convert_to_ids(v):
+            if isinstance(v,list):
+                return [x.id for x in v]
+            elif v is not None:
+                return v.id
+            else:
+                return v
         if use_id_for_related:
-            d = {k:self.convert_to_ids(v) for k,v in d.items()}
-        if ignore_None:
-            d = {k:v for k,v in d.items() if v not in [None,[]]}
+            d = {k:convert_to_ids(v) for k,v in d.items()}
         return d
 
     def get_attrdict(self,ignore_id=False,ignore_None=True,use_id_for_related=False):
         d1 = self.get_literal_attrdict(ignore_id=ignore_id,ignore_None=ignore_None)
         d2 = self.get_related_attrdict(ignore_None=ignore_None,use_id_for_related=use_id_for_related)
         return {**d1,**d2}
+    
+    def get_literal_attributes(self,ignore_id=False,ignore_None=False):
+        L = list(self.get_literal_attrs().keys())
+        if ignore_id:
+            L.remove('id')
+        if ignore_None:
+            L = [x for x in L if self.get(x) is not None]
+        return L
 
-    def get_related_attributes(self):
-        return list(self.get_related_attrs().keys())        
-
-    def get_literal_attributes(self):
-        return list(self.get_literal_attrs().keys()) 
+    def get_related_attributes(self,ignore_None=False):
+        L = list(self.get_related_attrs().keys())
+        if ignore_None:
+            L = [x for x in L if self.get(x) not in [[],None]]
+        return L
 
     def get_related_name(self,attr):
         return self.__class__.Meta.local_attributes[attr].related_name
@@ -97,20 +91,21 @@ class BaseClass(core.Model):
     def get_related_class(self,attr):
         return self.__class__.Meta.local_attributes[attr].related_class
 
-    def listget(self,attr):
+    def get(self,attr,aslist=False):
         x = getattr(self,attr)
-        if x is None:
-            return []
-        if not isinstance(x,list):
-            return [x]
+        if aslist and self.__class__.Meta.local_attributes[attr].is_related and not self.__class__.Meta.local_attributes[attr].is_related_to_many:
+            if x is None:
+                x = []
+            else:
+                x = [x]
         return x
 
-    def get(self,attr,default=None):
-        return getattr(self,attr,default)
-
+    def listget(self,attr):
+        return self.get(attr,aslist=True)
+        
     def listget_all_related(self):
         x = set()
-        for attr in self.get_nonempty_related_attributes():
+        for attr in self.get_related_attributes(ignore_None=True):
             x.update(self.listget(attr))
         return list(x)
 
@@ -119,29 +114,20 @@ class BaseClass(core.Model):
 
     def get_edge_tuples(self):
         # returns list of tuples (attr,related_attr,x)
-        attrs = self.get_nonempty_related_attributes()
+        attrs = self.get_related_attributes(ignore_None=True)
         related = {a:self.get_related_name(a) for a in attrs}
         lists = [self.listget(a) for a in attrs]
         return [ tuple(sorted([(self.id,a), (x.id,related[a])])) for a,y in zip(attrs,lists) for x in y ]
 
-    def get_dynamic_methods(self):
-        return {x:getattr(self,x) for x in dir(self) if hasattr(getattr(self,x),'_isdynamic')}
-
-    def duplicate(self,id=None,preserve_id=False,attrlist=None):
-        ''' duplicates node up to scalar attributes '''
-        new_node = self.__class__()
-        if attrlist is None:
-            attrlist = self.get_nonempty_scalar_attributes()
-        else:
-            attrlist = set(self.get_nonempty_scalar_attributes()) - set(attrlist)
-        for attr in attrlist:
-            if attr=='id': continue
-            setattr(new_node,attr,getattr(self,attr))
+    def duplicate(self,id=None,preserve_id=False):
+        ''' duplicates node up to literal attributes '''
+        attrdict = self.get_literal_attrdict(ignore_id=True,ignore_None=True)
+        new_node = self.__class__(**attrdict)
         if id:
-            new_node.set_id(id)
+            new_node.id = id
         elif preserve_id:
             # use cautiously
-            new_node.set_id(self.id)
+            new_node.id = self.id
         return new_node
 
     def duplicate_relations(self,target,nodemap,attrlist=None):
@@ -150,9 +136,9 @@ class BaseClass(core.Model):
         A1.duplicate_relations(A2,nodemap) builds the new edge A2->X2
          '''
         if attrlist is None:
-            attrlist = self.get_nonempty_related_attributes()
+            attrlist = self.get_related_attributes(ignore_None=True)
         else:
-            attrlist = set(self.get_nonempty_related_attributes()) - set(attrlist)
+            attrlist = set(self.get_related_attributes(ignore_None=True)) - set(attrlist)
         for attr in attrlist:
             old_relations = self.listget(attr)
             converted_old_relations = [nodemap[x.id] for x in old_relations]
@@ -164,20 +150,6 @@ class BaseClass(core.Model):
                 else:
                     setattr(target,attr,to_add.pop())
         return self
-
-    def set_id(self, id):
-        """ Sets id attribute.
-
-        Args:
-            id (:obj:`str`)
-
-        Returns:
-            self
-        """
-        self.id = id
-        return self
-
-    def get_id(self): return self.id
 
     @property
     def label(self):

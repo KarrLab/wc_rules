@@ -124,7 +124,7 @@ class GraphContainer(DictLike):
         nodes_visited = set()
         for idx,node in self.iternodes():
             nodes_visited.add(node)
-            for attr in node.get_nonempty_related_attributes():
+            for attr in node.get_related_attributes(ignore_None=True):
                 related_attr = node.get_related_name(attr)
                 for related_node in node.listget(attr):
                     if related_node not in nodes_visited:
@@ -135,7 +135,7 @@ class GraphContainer(DictLike):
         stripped_attrs = []
         for node in nodes:
             idx = node.id
-            for attr in node.get_nonempty_scalar_attributes():
+            for attr in node.get_literal_attributes(ignore_id=True,ignore_None=True):
                 value = node.get(attr)
                 stripped_attrs.append((idx,attr,value,))
                 setattr(node,attr,None)
