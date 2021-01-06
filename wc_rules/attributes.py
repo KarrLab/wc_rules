@@ -113,3 +113,8 @@ def localfn(fn):
         return fn(**new_kwargs,**kwargs)
         
     return fn2
+
+# wrapper for methods that implement actions in a rule
+def action(fn):
+    fn._is_action = True
+    return fn

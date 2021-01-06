@@ -30,9 +30,9 @@ COMMENT: /#.*/
     
     function_name: CNAME
     subvariable: CNAME
-    function_call: variable ["." subvariable] "." function_name  "(" [kwargs] ")"
+    function_call: variable ["." subvariable] "." function_name  "(" [args|kwargs] ")"
         | variable ["." subvariable] "." attribute
-        | function_name "(" [args] ")"
+        | function_name "(" [args|kwargs] ")"
         | variable 
         
     ?sum: term (add_op term)*
