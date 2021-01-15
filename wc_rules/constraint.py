@@ -76,7 +76,9 @@ global_builtins = dict(
     
 )
 
-class Constraint:
+class LambdaObject:
+	# is a fancy lambda function that can be executed
+
 	def __init__(self,keywords,builtins,fn,code,deps):
 		self.keywords = keywords
 		self.builtins = builtins
@@ -93,34 +95,40 @@ class Constraint:
 			))
 
 	@classmethod
+	def process(cls,s,start,builtins):
+		tree, depdict = process_constraint_string(s,start=start)
+		deps, code = DependencyCollector(depdict),serialize(tree)
+		keywords = list(deps.variables)
+		builtins = subdict(builtins, ['__builtins__'] + list(deps.builtins))
+		code2 = 'lambda {vars}: {code}'.format(vars=','.join(keywords),code=code)
+		try:
+			fn = eval(code2,builtins,{})
+		except:
+			err = "'{code}' does not generate a execution object.".format(code=code)
+			raise ValueError(err)
+
+		return dict(keywords=keywords,builtins=builtins,fn=fn,code=code,deps=deps)
+
+
+class Constraint(LambdaObject):
+	builtins = global_builtins
+	
+	@classmethod
 	def initialize(cls,s,has_subvariables=False):
 		# has_subvariables behavior
 		# for patterns, the node variable is the top level, e.g. a.x, a.f(), etc.
 		# for rules, the pattern variable is the top level, e.g., p.a.x, p.a.f(), etc.
 		# Constraint objects are common to both patterns and rules
 		# but only rules can have subvariables (see grammar in expr_new.py)
+		creation_params = LambdaObject.process(s,start='start',builtins=cls.builtins)
+		deps,code = [creation_params.get(x,None) for x in ['deps','code']]
 
-		tree, depdict = process_constraint_string(s)
-		deps, code = DependencyCollector(depdict),serialize(tree)
-
-		keywords = list(deps.variables)
-		builtins = subdict(global_builtins, ['__builtins__'] + list(deps.builtins))
-
-		if deps.has_subvariables != has_subvariables:
-			err = "'{code}' has too many nested variables. Disallowed here.".format(code=code)
+		if deps.has_subvariables and not has_subvariables:
+			err = "Nested variables disallowed in '{code}'".format(code=code)
 			raise ValueError(err)
 
-		code2 = 'lambda {vars}: {code}'.format(vars=','.join(keywords),code=code)
-		
-		try:
-			fn = eval(code2,builtins,{})
-		except:
-			err = "'{code}' does not generate a valid constraint function.".format(code=code)
-			raise ValueError(err)
+		return cls(**creation_params), deps.declared_variable
 			
-		return Constraint(keywords,builtins,fn,code,deps), deps.declared_variable
-
-
 	@classmethod
 	def initialize_strings(cls,strs,cmax=0):
 		constraints = dict()

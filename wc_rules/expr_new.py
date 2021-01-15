@@ -59,16 +59,18 @@ COMMENT: /#.*/
 
 
 
-parser = Lark(grammar, start='start')
+
 
 ### process constraint string
-def process_constraint_string(string_input):
+def process_constraint_string(string_input,start='start'):
     #### This is the main method
     # parses a string input to generate a tree, prunes new lines,
     # simplifies based on basic arithmetic,
     # analyzes dependencies,
     
     # parse string input to generate a tree
+    assert start in ['start','function_call'], "Something bad happened!"
+    parser = Lark(grammar, start=start)
     tree = parser.parse(string_input)
     # prune newline tokens
     nodes = list(filter(lambda x:x.__class__.__name__=='Token',tree.children))
