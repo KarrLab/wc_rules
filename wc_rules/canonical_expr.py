@@ -1,4 +1,4 @@
-from .expr_new import process_constraint_string
+from .expr_new import process_expression_string
 from .base import BaseClass
 from .attributes import StringAttribute, OneToOneAttribute, ManyToManyAttribute, OneToManyAttribute
 from .indexer import GraphContainer
@@ -91,7 +91,7 @@ def dfs_print(tree,tab_level=0):
 		)
 
 def constraint_to_tree(var,constraint):
-	larktree,_ = process_constraint_string('{v} = {c}'.format(v=var,c=constraint.code))
+	larktree,_ = process_expression_string('{v} = {c}'.format(v=var,c=constraint.code))
 	tree = dfs_make(larktree)
 	return tree
 

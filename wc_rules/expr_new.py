@@ -57,19 +57,15 @@ COMMENT: /#.*/
     #expressions: (assignment|boolean_expression) (NEWLINE (assignment|boolean_expression))* 
     #?start: [NEWLINE] expressions [NEWLINE]
 
-
-
-
-
 ### process constraint string
-def process_constraint_string(string_input,start='start'):
+def process_expression_string(string_input,start='start'):
     #### This is the main method
     # parses a string input to generate a tree, prunes new lines,
     # simplifies based on basic arithmetic,
     # analyzes dependencies,
     
     # parse string input to generate a tree
-    assert start in ['start','function_call'], "Something bad happened!"
+    #assert start in ['start','function_call'], "Something bad happened!"
     parser = Lark(grammar, start=start)
     tree = parser.parse(string_input)
     # prune newline tokens
@@ -302,6 +298,8 @@ class Serializer(Transformer):
     divide = constant("/")
 
     # declared vars
+    # note that we're ignoring the declared variable here
+    # because the goal is to make a valid lambda object
     declared_variable = constant('')
     assignment = lambda x,y:y[1]
 
@@ -349,4 +347,4 @@ def serialize(tree):
     s = Serializer().transform(tree=tree)
     return s
     
-    
+   

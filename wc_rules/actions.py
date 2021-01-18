@@ -1,10 +1,9 @@
 from lark import Lark, tree, Transformer,Visitor, v_args, Tree,Token
 from dataclasses import dataclass
-from collections import deque
+from collections import deque, ChainMap
 from types import MethodType
 from abc import ABC, abstractmethod
 from obj_model import core
-from .constraint import LambdaObject, global_builtins
 
 ############ ACTION GRAMMER ###################
 action_grammar = """
@@ -47,6 +46,19 @@ COMMENT: /#.*/
 """
 
 parser = Lark(action_grammar, start='start')
+############## Simulator Actions
+class SimulatorAction:
+    pass
+
+RollbackAction = type('RollbackAction',(SimulatorAction,),{})
+TerminateAction = type('TerminateAction',(SimulatorAction,),{})
+def rollback(expr):
+    assert isinstance(expr,bool), "Rollback condition must evaluate to a boolean."
+    return {True:RollbackAction(),False:[]}[expr]
+def terminate(expr):
+    assert isinstance(expr,bool), "Terminate condition must evaluate to a boolean."
+    return {True:TerminateAction(),False:[]}[expr]
+
 
 ############## Primary Actions
 # NodeAction -> AddNode, RemoveNode

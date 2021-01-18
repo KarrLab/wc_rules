@@ -3,7 +3,7 @@ from .utils import generate_id,ValidateError,listmap, split_string, merge_dicts,
 from .canonical import canonical_label
 from .canonical_expr import canonical_expression_ordering
 from functools import partial
-from .constraint import global_builtins, Constraint
+from .constraint import global_builtins, Constraint, Computation
 from functools import wraps
 from .entity import Entity
 from pprint import pformat
@@ -69,7 +69,7 @@ class Pattern:
 			cmax = len([x for x in parent.constraints if x[0]=='_'])
 
 		constraint_strings.extend(split_string(constraints))
-		constraints = Constraint.initialize_strings(constraint_strings,cmax)
+		constraints = cls.initialize_constraints(constraint_strings,cmax)
 
 		namespace,errs = verify_and_compile_namespace(parent,helpers,constraints)
 		assert len(errs)==0, "Errors in namespace:\n{0}".format('\n'.join(errs))
@@ -91,6 +91,24 @@ class Pattern:
 	@helperfn
 	def contains(self,**kwargs):
 		return False
+
+	def initialize_constraints(constraint_strings,cmax):
+		constraints = dict()
+		for s in constraint_strings:
+			for c in [Constraint,Computation]:
+				x = c.initialize(s)
+				if x is not None:
+					break
+			if x is None:
+				err = 'Code `{s}` is not a \n valid boolean expression (<expr> <op> <expr>) \n or a valid variable assignment (<var> = <expr>)'.format(s=s)
+				raise ValueError(err)
+			if x.deps.declared_variable is not None:
+				constraints[x.deps.declared_variable] = x
+			else:
+				constraints['_{0}'.format(cmax)] = x
+				cmax += 1
+		return constraints
+
 
 def check_cycle(gdict):
 	# gdict is a directed graph represented as a dict

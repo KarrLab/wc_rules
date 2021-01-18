@@ -1,6 +1,6 @@
 from wc_rules.entity import Entity
 from wc_rules.attributes import IntegerAttribute, OneToOneAttribute
-from wc_rules.constraint import Constraint
+from wc_rules.constraint import Constraint, Computation
 from wc_rules.actions import parser
 
 import math
@@ -25,19 +25,24 @@ class TestRule(unittest.TestCase):
 		p.a, q.b = a,b
 
 		s = "v = a.x + b.y"
-		c,var = Constraint.initialize(s)
-		self.assertEqual([var,c.code,sorted(c.keywords)],['v','a.x + b.y',['a','b']])
-		match = {'a':a,'b':b}
-		self.assertEqual(c.exec(match),3)
-
-		s = "v = p.a.x + q.b.y"
-		with self.assertRaises(ValueError):
-			c,var = Constraint.initialize(s)
-
-		c,var = Constraint.initialize(s,has_subvariables=True)
-		self.assertEqual([var,c.code],['v','p.a.x + q.b.y'])
-		match = {'p':p,'q':q}
-		self.assertEqual(c.exec(match),3)
+		# constraint initializiation should fail
+		self.assertEqual(Constraint.initialize(s),None)
+		# computation initialization should pass
+		x = Computation.initialize(s)
+		self.assertTrue(isinstance(x,Computation))
+		# executing on a match should return a dict
+		self.assertEqual(x.exec(dict(a=a,b=b),{}), dict(v=3))
+		self.assertEqual([x.deps.declared_variable,x.code,sorted(x.keywords)],['v','a.x + b.y',['a','b']])
+		
+		s = 'a.x + b.y < 4'
+		# computation initialization should fail
+		self.assertEqual(Computation.initialize(s),None)
+		# constraint initialization should pass
+		x = Constraint.initialize(s)
+		self.assertTrue(isinstance(x,Constraint))
+		# executing on a match should return a bool
+		self.assertTrue(x.exec(dict(a=a,b=b),{})) 
+		self.assertEqual([x.deps.declared_variable,x.code,sorted(x.keywords)],[None,'a.x + b.y < 4',['a','b']])
 
 	def test_action_grammar(self):
 		t1 = "p.a.add_molecule(q.b)"
