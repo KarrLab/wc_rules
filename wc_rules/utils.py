@@ -89,8 +89,12 @@ def invert_dict(_dict):
         out[v].append(k)
     return dict(out)
 
+def verify_list(_list,_types):
+    if not isinstance(_list,list):
+        return isinstance(_list,_types)
+    return all([verify_list(elem,_types) for elem in _list]) 
 
-
+    
 ###### Error ######
 class GenericError(Exception):
 

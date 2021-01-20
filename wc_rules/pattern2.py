@@ -36,7 +36,7 @@ class Parent:
 	def get_canonical_form_leaders(self):
 		return self.variable_map.replace(self.canonical_form.leaders)
 
-class Pattern:
+class PatternArchetype:
 
 	def __init__(self,parent,helpers=dict(),constraints=dict(),namespace=dict(),partition=tuple(),leaders=tuple()):
 		self.parent = parent
@@ -84,14 +84,6 @@ class Pattern:
 		outbool = all(c.exec(match,self.helpers) for c in self.constraints)
 		return outbool, match
 
-	@helperfn
-	def count(self,**kwargs):
-		return 0
-
-	@helperfn
-	def contains(self,**kwargs):
-		return False
-
 	def initialize_constraints(constraint_strings,cmax):
 		constraints = dict()
 		for s in constraint_strings:
@@ -138,8 +130,8 @@ def verify_and_compile_namespace(parent,helpers,constraints):
 	parent_helpers = parent.helpers if hasattr(parent,'helpers') else dict()
 	inv_helpers = invert_dict(merge_dicts([parent_helpers,helpers]))
 	for h,v in inv_helpers.items():
-		if not isinstance(h,Pattern):
-			errs.append("Helper variable '{0}' must be assigned to a Pattern instance.".format(v))
+		if not isinstance(h,PatternArchetype):
+			errs.append("Helper variable '{0}' must be assigned to a PatternArchetype instance.".format(v))
 		if len(v)>1:
 			errs.append("Multiple variables {0} assigned to the same helper.".format(str(v)))
 
@@ -156,11 +148,14 @@ def verify_and_compile_namespace(parent,helpers,constraints):
 		namespace = merge_dicts([parent.namespace,helpers,{v:c.code for v,c in constraints.items()}])
 
 	return namespace,errs
-		
 
 
+class Pattern(PatternArchetype):
+	pass
 
+class FactoryPattern(PatternArchetype):
+	pass
 
-
-
+class SpeciesPattern(PatternArchetype):
+	pass
 

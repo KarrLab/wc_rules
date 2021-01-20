@@ -10,7 +10,7 @@ class X(BaseClass):
     pi = PositiveIntegerAttribute()
     s = StringAttribute()
 
-    @localfn
+    @computation
     def product(f,i,factor=1):
         return f*i*factor
 
@@ -26,10 +26,10 @@ class TestAttributes(unittest.TestCase):
         self.assertEqual(x1.s,None)
 
 
-    def test_localfn_decorator(self):
+    def test_computation_decorator(self):
         x1 = X(id='idx1',b=True,f=0.5,i=100)
 
-        self.assertTrue(x1.product._is_localfn)
+        self.assertTrue(x1.product._is_computation)
         self.assertEqual(x1.product(),50)
         self.assertEqual(x1.product(factor=3),150)
         self.assertEqual(x1.product(f=0.25,factor=3),75)

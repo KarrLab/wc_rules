@@ -1,7 +1,7 @@
 from wc_rules.entity import Entity
 from wc_rules.attributes import IntegerAttribute, OneToOneAttribute
 from wc_rules.constraint import Constraint, Computation
-from wc_rules.actions import parser
+#from wc_rules.actions import parser
 
 import math
 import unittest
@@ -17,7 +17,7 @@ class P(Entity):
 
 class TestRule(unittest.TestCase):
 	
-	def test_constraint_objects(self):
+	def test_execution_objects(self):
 		# constraint objects are used by both patterns and rules
 		# constraints of the form p.a.x are disallowed in patterns, but allowed in rules
 		# this test is to check whether constraint objects support both behaviors
@@ -44,6 +44,7 @@ class TestRule(unittest.TestCase):
 		self.assertTrue(x.exec(dict(a=a,b=b),{})) 
 		self.assertEqual([x.deps.declared_variable,x.code,sorted(x.keywords)],[None,'a.x + b.y < 4',['a','b']])
 
+	@unittest.skip("Skipping action grammar for now. Reusing Expression code.")
 	def test_action_grammar(self):
 		t1 = "p.a.add_molecule(q.b)"
 		t2 = "p.a.set_phospho(True)"

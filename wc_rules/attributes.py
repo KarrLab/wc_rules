@@ -92,7 +92,7 @@ class BioSeqAttribute(bio.BioSeqAttribute):
         super().__init__(default=None)
 
 # wrapper for methods that can be called for setting pattern constraints & during simulation
-def localfn(fn):
+def computation(fn):
     ''' 
     Takes a function defined with keywords {kw1,kw2...}
     * Makes it an instance function with the same keywords
@@ -103,7 +103,7 @@ def localfn(fn):
     '''
 
     fn._kws = fn.__code__.co_varnames
-    fn._is_localfn = True
+    fn._is_computation = True
 
     @wraps(fn)
     def fn2(self,**kwargs):

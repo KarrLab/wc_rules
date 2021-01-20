@@ -76,10 +76,9 @@ global_builtins = dict(
     
 )
 
-class ExecutableExpressionObject:
+class ExecutableExpression:
 	# is a fancy lambda function that can be executed
 	start = None
-	has_subvariables = None
 	builtins = {}
 
 	def __init__(self,keywords,builtins,fn,code,deps):
@@ -126,7 +125,7 @@ class ExecutableExpressionObject:
 		return v
 
 
-class Constraint(ExecutableExpressionObject):
+class Constraint(ExecutableExpression):
 	start = 'boolean_expression'
 	builtins = global_builtins
 			
@@ -135,7 +134,7 @@ class Constraint(ExecutableExpressionObject):
 		assert isinstance(v,bool), 'Constraint `{code}` did not return a boolean value.'.format(code=self.code)
 		return v
 
-class Computation(ExecutableExpressionObject):
+class Computation(ExecutableExpression):
 	start = 'assignment'
 	builtins = global_builtins
 

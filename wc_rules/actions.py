@@ -4,70 +4,14 @@ from collections import deque, ChainMap
 from types import MethodType
 from abc import ABC, abstractmethod
 from obj_model import core
-
-############ ACTION GRAMMER ###################
-action_grammar = """
-%import common.CNAME
-%import common.WS_INLINE
-%import common.NUMBER
-%ignore WS_INLINE
-%import common.ESCAPED_STRING
-%import common.NEWLINE
-
-COMMENT: /#.*/
-%ignore COMMENT
-%ignore NEWLINE
+from .constraint import ExecutableExpression, global_builtins
+from .utils import verify_list
+from .attributes import action
 
 
-    LITERAL.1: NUMBER | "True" | "False" | ESCAPED_STRING
-    SYMBOL:  "==" | "!=" |"<="| ">=" | "<" | ">" | "=" | "," | "+" | "-" | "*" | "/" | "." | "(" | ")"
-
-    variable.1: CNAME
-    subvariable: CNAME
-    attribute: CNAME    
-    action_name: CNAME
-    GRAPH_ACTION_NAME: "add" | "remove" | "set"
-    
-    ?graph_target.1: variable ["." subvariable]
-    arg:  graph_target | LITERAL  | expression
-    args: arg ("," arg)*
-    graph_action.2: variable ["." subvariable]  "." GRAPH_ACTION_NAME ["_" attribute] "(" [args] ")"
-    
-    kw: CNAME
-    kwarg: kw "=" arg
-    kwargs: kwarg ("," kwarg)* 
-    custom_action: variable ["." subvariable] "." action_name "(" [kwargs] ")"
-
-    ?action.1: graph_action|custom_action
-
-    expression: (LITERAL | SYMBOL | CNAME )+ 
-    ?start: action | expression
-
-"""
-
-parser = Lark(action_grammar, start='start')
-############## Simulator Actions
-class SimulatorAction:
+### Action prototypes
+class SimulatorAction(ABC):
     pass
-
-RollbackAction = type('RollbackAction',(SimulatorAction,),{})
-TerminateAction = type('TerminateAction',(SimulatorAction,),{})
-def rollback(expr):
-    assert isinstance(expr,bool), "Rollback condition must evaluate to a boolean."
-    return {True:RollbackAction(),False:[]}[expr]
-def terminate(expr):
-    assert isinstance(expr,bool), "Terminate condition must evaluate to a boolean."
-    return {True:TerminateAction(),False:[]}[expr]
-
-
-############## Primary Actions
-# NodeAction -> AddNode, RemoveNode
-# SetAttr
-# EdgeAction -> AddEdge, RemoveEdge
-# make(...) -> primary constructor
-# execute(sim) -> executes the action on a simulation state
-# rollback(sim) -> rolls back the action on a simulation state
-
 
 class PrimaryAction(ABC):
     @classmethod
@@ -82,6 +26,34 @@ class PrimaryAction(ABC):
     @abstractmethod
     def rollback(self,sim):
         pass
+
+class CompositeAction(ABC):
+    @abstractmethod
+    def expand(self):
+        pass
+      
+
+######## Simulator actions
+RollbackAction = type('RollbackAction',(SimulatorAction,),{})
+TerminateAction = type('TerminateAction',(SimulatorAction,),{})
+
+def rollback(expr):
+    assert isinstance(expr,bool), "Rollback condition must evaluate to a boolean."
+    return {True:RollbackAction(),False:[]}[expr]
+setattr(rollback,'_is_action',True)
+
+def terminate(expr):
+    assert isinstance(expr,bool), "Terminate condition must evaluate to a boolean."
+    return {True:TerminateAction(),False:[]}[expr]
+setattr(terminate,'_is_action',True)
+
+############## Primary Actions
+# NodeAction -> AddNode, RemoveNode
+# SetAttr
+# EdgeAction -> AddEdge, RemoveEdge
+# make(...) -> primary constructor
+# execute(sim) -> executes the action on a simulation state
+# rollback(sim) -> rolls back the action on a simulation state
 
 @dataclass
 class NodeAction(PrimaryAction):
@@ -201,11 +173,6 @@ class RemoveEdge(EdgeAction):
         self.add_edge(sim)
         return self
 
-class CompositeAction(ABC):
-    @abstractmethod
-    def expand(self):
-        pass
-
 ############## Literal Attr Actions ###########
 @dataclass
 class RemoveLiteralAttr(CompositeAction):
@@ -284,11 +251,25 @@ class Remove(CompositeAction):
         return [RemoveAllEdges(self.source), RemoveNode.make(self.source)]
 
 
-############### codegeneration for methods
+########### ActionCaller ##########
+# an executable expression object that when called on a match
+# is equivalent to an action method call
+class ActionCaller(ExecutableExpression):
+    start = 'function_call'
+    builtins = ChainMap(global_builtins,dict(rollback=rollback,terminate=terminate))
 
+    def exec(self,matches,helpers):
+        v = super().exec(matches,helper)
+        #err = 'An element in the following nested list is not a recognized Action: {0}'
+        #assert verify_list(v,(SimulatorAction,PrimaryAction,CompositeAction)), err.format(list(v))
+        # verifying that every element of a nested list is an action is slow AF
+        # just don't do any verification here
+        # todo: verification can be done by the simulator when it processes the output of an action caller.
+        return v  
+
+############### codegeneration for methods
 class ActionMixin:
 
-    
     def attach_actions(self):
         self.attach_removenode_method()
         for attr,value in self.__class__.Meta.local_attributes.items():
