@@ -2,6 +2,7 @@ from .expr_new import process_expression_string, serialize
 from .dependency import DependencyCollector
 from .utils import subdict
 import math,builtins
+import scipy.special
 from pprint import pformat
 from collections import ChainMap
 from operator import xor
@@ -22,7 +23,7 @@ def compute_len(x):
 		return x.__len__()
 	return int(x is not None)
 
-ordered_builtins = 'mod div log pow'.split()
+ordered_builtins = 'mod div log pow perm comb'.split()
 
 global_builtins = dict(
 	__builtins__ = None,
@@ -73,6 +74,10 @@ global_builtins = dict(
     only_one_true = lambda *x: x.count(True)==1,
     only_one_false = lambda *x: x.count(False)==1,
     inv = lambda x: not x,
+
+    # permutations and combinations
+    perm = scipy.special.perm,
+    comb = scipy.special.comb,
     
 )
 
@@ -97,16 +102,17 @@ class ExecutableExpression:
 			))
 
 	@classmethod
-	def initialize(cls,s,has_subvariables=False):
+	def initialize(cls,s):
 		try:
 			tree, depdict = process_expression_string(s,start=cls.start)
 			deps, code = DependencyCollector(depdict),serialize(tree)
-			if deps.has_subvariables:
-				err = 'Code `{s}` is nesting too many variables'
-				assert has_subvariables, err.format(s=s) 
+			#if deps.has_subvariables:
+			#	err = 'Code `{s}` is nesting too many variables'
+			#	assert has_subvariables, err.format(s=s) 
 			keywords = list(deps.variables)
 			builtins = subdict(cls.builtins, ['__builtins__'] + list(deps.builtins))
 			code2 = 'lambda {vars}: {code}'.format(vars=','.join(keywords),code=code)
+
 			try:
 				fn = eval(code2,builtins,{})
 				x = cls(keywords=keywords,builtins=builtins,fn=fn,code=code,deps=deps)
@@ -116,6 +122,26 @@ class ExecutableExpression:
 			x = None
 		# Note checking of valid object is OUTSIDE the control of this factory method
 		return x
+
+	@classmethod
+	def initialize_from_strings(cls,strings,classes,cmax=0):
+		d = dict()
+		allowed_forms = '\n'.join([x for c in classes for x in c.allowed_forms])
+		for s in strings:
+			for c in classes:
+				x = c.initialize(s)
+				if x is not None:
+					break
+			if x is None:
+				err = "Code `{s}` does not create a valid expression object in this context. It must have one of the forms:\n {f}"
+				raise ValueError(err.format(s=s,f=allowed_forms))
+
+			if x.deps.declared_variable is not None:
+				d[x.deps.declared_variable] = x
+			else:
+				d['_{0}'.format(cmax)] = x
+				cmax += 1
+		return d
 
 	def exec(self,match,helpers={}):
 		# match is a dict that is equivalent to a pattern match
@@ -128,6 +154,7 @@ class ExecutableExpression:
 class Constraint(ExecutableExpression):
 	start = 'boolean_expression'
 	builtins = global_builtins
+	allowed_forms = ['<expr> <bool_op> <expr>']
 			
 	def exec(self,match,helpers):
 		v = super().exec(match,helpers)
@@ -137,6 +164,7 @@ class Constraint(ExecutableExpression):
 class Computation(ExecutableExpression):
 	start = 'assignment'
 	builtins = global_builtins
+	allowed_forms = ['<var> = <expr>']
 
 	def exec(self,match,helpers):
 		v = super().exec(match,helpers)

@@ -255,6 +255,7 @@ class Dependency_Analyzer(Transformer):
     # these terms return dicts
     variable = return_dict('variable')
     declared_variable = return_dict('declared_variable')
+    subvariable = return_dict('subvariable')
     attribute = return_dict('attribute')
     function_name = return_dict('function_name')
     subvariable = return_dict('subvariable')

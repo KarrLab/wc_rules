@@ -9,14 +9,17 @@ class DependencyCollector:
 		self.builtins = set()
 		self.function_calls = defaultdict(dict)
 		self.variables = set()
+		self.subvariables = set()
 		self.has_subvariables = False
 		self.collect_dependencies(deps)
 
 	def to_string(self):
-		attrs = ['declared_variable','attribute_calls','builtins','function_calls','variables']
+		attrs = ['declared_variable','attribute_calls','builtins','function_calls','variables','subvariables']
 		return pformat({attr:getattr(self,attr) for attr in attrs})
 		
 	def collect_dependencies(self,deps):
+		if not isinstance(deps,list):
+			deps = [deps]
 		while len(deps)>0:
 			x = deps.pop(0)
 			if x is None:
@@ -60,7 +63,7 @@ class DependencyCollector:
 		return self
 
 	def process_function_call(self,x):
-		if 'function_name' in x and 'variable' in x:
+		if 'function_name' in x:
 			kws = set()
 			if 'kws' in x:
 				kws = set(x['kws'])
@@ -69,11 +72,13 @@ class DependencyCollector:
 				arg = x['args'][i]
 				if isinstance(arg,dict) and len(arg.keys())==1 and 'variable' in arg:
 					kwpairs.add((kw,arg['variable']))
-			self.function_calls[x['variable']]['function_name'] = dict(kws=kws,kwpairs=kwpairs)
+			headerlist = [y for y in [x.get('variable',None), x.get('subvariable',None),x.get('function_name',None)] if y is not None]
+			self.function_calls[tuple(headerlist)] = dict(kws=kws,kwpairs=kwpairs)
 		return self
 
 	def process_subvariable(self,x):
 		if 'subvariable' in x:
+			self.subvariables.add((x['variable'],x['subvariable']))
 			self.has_subvariables = True
 		return self
 

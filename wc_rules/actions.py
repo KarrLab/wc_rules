@@ -257,6 +257,7 @@ class Remove(CompositeAction):
 class ActionCaller(ExecutableExpression):
     start = 'function_call'
     builtins = ChainMap(global_builtins,dict(rollback=rollback,terminate=terminate))
+    allowed_forms = ['<actioncall> ( <boolexpr> )', '<pattern>.<var>.<actioncall> (<params>)', '<pattern>.<actioncall> (<params>)']
 
     def exec(self,matches,helpers):
         v = super().exec(matches,helper)
