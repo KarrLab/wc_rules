@@ -112,7 +112,6 @@ class ExecutableExpression:
 			keywords = list(deps.variables)
 			builtins = subdict(cls.builtins, ['__builtins__'] + list(deps.builtins))
 			code2 = 'lambda {vars}: {code}'.format(vars=','.join(keywords),code=code)
-
 			try:
 				fn = eval(code2,builtins,{})
 				x = cls(keywords=keywords,builtins=builtins,fn=fn,code=code,deps=deps)
@@ -143,13 +142,11 @@ class ExecutableExpression:
 				cmax += 1
 		return d
 
-	def exec(self,match,helpers={}):
-		# match is a dict that is equivalent to a pattern match
-		d = ChainMap(match,helpers)
-		kwargs = subdict(d,self.keywords)
-		v = self.fn(**kwargs)
-		return v
-
+	def exec(self,*dicts):
+		d = ChainMap(*dicts)
+		kwargs = {x:d[x] for x in self.keywords}
+		return self.fn(**kwargs)
+		
 
 class Constraint(ExecutableExpression):
 	start = 'boolean_expression'

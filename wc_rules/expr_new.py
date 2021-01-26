@@ -68,14 +68,14 @@ def process_expression_string(string_input,start='start'):
     #assert start in ['start','function_call'], "Something bad happened!"
     parser = Lark(grammar, start=start)
     tree = parser.parse(string_input)
-    # prune newline tokens
-    nodes = list(filter(lambda x:x.__class__.__name__=='Token',tree.children))
-    for node in list(nodes):
-        tree.children.remove(node)
+    
+    # prune newline tokens - not necessary any more
+    # nodes = list(filter(lambda x:x.__class__.__name__=='Token',tree.children))
+    # for node in list(nodes):
+    #   tree.children.remove(node)
 
     # simplify the tree
     tree,modified = simplify_tree(tree) 
-    
     deps = Dependency_Analyzer().transform(tree=tree)
     return tree,deps
 
