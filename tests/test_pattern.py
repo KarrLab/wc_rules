@@ -88,7 +88,7 @@ class TestPattern(unittest.TestCase):
 		[False, False, True, False ],
 		]
 
-		computed_values = [[c.exec(match,{}) for match in matches] for c in pz.constraints.values()]
+		computed_values = [[c.exec(match) for match in matches] for c in pz.constraints.values()]
 
 		self.assertEqual(computed_values,expected_values)
 
@@ -106,8 +106,8 @@ class TestPattern(unittest.TestCase):
 
 		pz = Pattern.build(Z('z'),constraints='''len(z.z) > 0''')
 		c = list(pz.constraints.values())[0]
-		self.assertEqual(c.exec(match=dict( z=Z() ), helpers = {}), False)
-		self.assertEqual(c.exec(match=dict( z=Z(z=Z()) ), helpers = {}), True)
+		self.assertEqual(c.exec(dict( z=Z() )), False)
+		self.assertEqual(c.exec(dict( z=Z(z=Z()) )), True)
 
 	def test_canonical_expr(self):
 		z = Z('z1',z=Z('z2'))

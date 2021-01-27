@@ -145,25 +145,22 @@ class ExecutableExpression:
 	def exec(self,*dicts):
 		d = ChainMap(*dicts)
 		kwargs = {x:d[x] for x in self.keywords}
-		return self.fn(**kwargs)
+		v = self.fn(**kwargs)
+		if self.__class__.allowed_returns is not None:
+			types = self.__class__.allowed_returns
+			err = 'Value {v} returned by {cls} `{code}` is not one of {types}.'
+			assert isinstance(v,types), err.format(v=v,code=self.code,cls=self.__class__.__name__,types=types)
+		return v
 		
 
 class Constraint(ExecutableExpression):
 	start = 'boolean_expression'
 	builtins = global_builtins
 	allowed_forms = ['<expr> <bool_op> <expr>']
+	allowed_returns = (bool,)
 			
-	def exec(self,match,helpers):
-		v = super().exec(match,helpers)
-		assert isinstance(v,bool), 'Constraint `{code}` did not return a boolean value.'.format(code=self.code)
-		return v
-
 class Computation(ExecutableExpression):
 	start = 'assignment'
 	builtins = global_builtins
 	allowed_forms = ['<var> = <expr>']
-
-	def exec(self,match,helpers):
-		v = super().exec(match,helpers)
-		return {self.deps.declared_variable: v}
-
+	allowed_returns = None

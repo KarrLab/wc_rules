@@ -8,6 +8,7 @@ class RateLaw(ExecutableExpression):
 	start = 'expression'
 	builtins = global_builtins
 	allowed_forms = ['<expr>']
+	allowed_returns = (int,float,)
 
 class RuleArchetype:
 	
@@ -48,10 +49,6 @@ class RuleArchetype:
 		terms = ['comb({p}.count(),{n})'.format(p=p,n=n) for p,n in reaction_stoich.items()]
 		rate_law_string = '*'.join(terms)
 		return rate_law_string
-
-	def exec(self,reactants,helpers):
-		v = super().exec(reactants,helpers)
-		return v
 
 	def fire(self,pool,idxmap):
 		for action in self.actions:

@@ -64,19 +64,12 @@ def process_expression_string(string_input,start='start'):
     # simplifies based on basic arithmetic,
     # analyzes dependencies,
     
-    # parse string input to generate a tree
-    #assert start in ['start','function_call'], "Something bad happened!"
     parser = Lark(grammar, start=start)
     tree = parser.parse(string_input)
-    
-    # prune newline tokens - not necessary any more
-    # nodes = list(filter(lambda x:x.__class__.__name__=='Token',tree.children))
-    # for node in list(nodes):
-    #   tree.children.remove(node)
-
-    # simplify the tree
+    print(tree,start)
     tree,modified = simplify_tree(tree) 
     deps = Dependency_Analyzer().transform(tree=tree)
+
     return tree,deps
 
 
