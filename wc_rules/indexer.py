@@ -146,8 +146,20 @@ class GraphContainer(DictLike):
         for node in root.get_connected():
             self.add(node)
 
-            
+    def duplicate(self,varmap={},strip_attrs=False):
+        # if varmap has id remap, then the remapped id is used
+        # if not the same id is used
+        newnodes = dict()
+        for idx,node in self.iternodes():
+            attrs = {} if strip_attrs else node.get_literal_attrdict()
+            x = node.__class__(varmap.get(idx,idx),**attrs)
+            newnodes[x.id] = x
 
+        for (idx1,attr1),(idx2,attr2) in self.iteredges():
+            idx1,idx2 = [varmap.get(x,x) for x in [idx1,idx2]]
+            newnodes[idx1].safely_add_edge(attr1,newnodes[idx2])
+            
+        return GraphContainer(newnodes.values())
 
 
 class SetLike(object):

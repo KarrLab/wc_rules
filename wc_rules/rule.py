@@ -19,9 +19,8 @@ class RuleArchetype:
 		self.rate_constant = rate_constant
 		self.rate_law = rate_law
 
-
 	@classmethod
-	def build(cls,reactants={},helpers={},actions='',rate_constant='1',counts=True):
+	def build(cls,reactants={},helpers={},actions='',rate_constant='1',params={},counts=True):
 		# collect and verify reactants
 		# collect and verify helpers
 		# parse and compile actions

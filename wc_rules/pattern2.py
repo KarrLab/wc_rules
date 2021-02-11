@@ -130,9 +130,12 @@ def verify_and_compile_namespace(parent,helpers,constraints):
 class Pattern(PatternArchetype):
 	pass
 
-class FactoryPattern(PatternArchetype):
-	pass
-
 class SpeciesPattern(PatternArchetype):
 	pass
 
+class FactoryPattern(PatternArchetype):
+	def __init__(self,parent):
+		self.prototype ,_ = GraphContainer.build(parent.get_connected())
+
+	def create(self,varmap={}):
+		return self.prototype.duplicate(varmap=varmap)._dict

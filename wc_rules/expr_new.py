@@ -66,7 +66,6 @@ def process_expression_string(string_input,start='start'):
     
     parser = Lark(grammar, start=start)
     tree = parser.parse(string_input)
-    print(tree,start)
     tree,modified = simplify_tree(tree) 
     deps = Dependency_Analyzer().transform(tree=tree)
 
