@@ -43,7 +43,7 @@ class RuleArchetype:
 			assert isinstance(x,str), x + " is not a parameter"
 		namespace,errs = verify_and_compile_namespace(reactants,helpers,actions,rate_law,params)
 		assert len(errs)==0, "Errors in namespace:\n{0}".format('\n'.join(errs))
-		
+
 		# TODO:
 		# GET CANONICAL FROM 
 		# GET CANONICAL ORDERING
@@ -76,7 +76,7 @@ def verify_and_compile_namespace(reactants,helpers,actions,rate_law,params):
 	for c in [*actions.values(),rate_law]:
 		for kw in c.keywords:
 			if kw not in allowed_keywords:
-				errs.append("Variable/parameter {0} not found.".format(kw))
+				errs.append("Variable/parameter '{0}' not found.".format(kw))
 
 	cycle = check_cycle({v:c.keywords for v,c in actions.items()})
 	if len(cycle)>0:
