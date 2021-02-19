@@ -1,7 +1,10 @@
 from wc_rules.entity import Entity
 from wc_rules.attributes import IntegerAttribute, OneToOneAttribute
 from wc_rules.constraint import Constraint, Computation
-from wc_rules.rule import RateLaw
+from wc_rules.rule import RateLaw, InstanceRateRule
+from wc_rules.pattern2 import Pattern
+from wc_rules.chem import Molecule, Site
+from pprint import pformat
 #from wc_rules.actions import parser
 
 import math
@@ -16,7 +19,7 @@ class P(Entity):
 	b = OneToOneAttribute(A,related_name='q')
 
 
-class TestRule(unittest.TestCase):
+class TestRateLaw(unittest.TestCase):
 	
 	def test_executable_expression_objects(self):
 		# constraint objects are used by both patterns and rules
@@ -91,3 +94,70 @@ class TestRule(unittest.TestCase):
 		# in s6, it incorrectly tries to parse as action
 		# in u1, it incorrectly tries to parse as expression
 		
+
+
+class Lig(Molecule):
+	pass
+
+class Rec(Molecule):
+	pass
+
+class RecBindingSite(Site):
+	pass
+
+class LigBindingSite(Site):
+	pass
+
+class TestRuleBuild(unittest.TestCase):
+
+	def test_rule_one(self):
+		lig  = Pattern.build(
+			Lig('Lig',sites=[RecBindingSite('rec1'),RecBindingSite('rec2')]), 
+			constraints = 'len(rec1.bond)==0 \n len(rec2.bond)==0'
+			)
+		rec = Pattern.build(
+			Rec('Rec',sites=[LigBindingSite('lig')]),
+			constraints = 'len(lig.bond)==0'
+			)
+		# note two bonds being formed at the same time
+		binding_rule = InstanceRateRule.build(
+			reactants = dict(L=lig,R1=rec,R2=rec),
+			actions = 'k = some_value \n L.rec1.add_bond(R1.lig) \n L.rec2.add_bond(R2.lig) ',
+			rate_law = 'binding_constant',
+			params = ['binding_constant','some_value']
+			)
+
+		namespace = {
+			'reactants': {
+				'L': {
+					'Lig': Lig,
+					'rec1': RecBindingSite,
+					'rec2': RecBindingSite,
+					'_0': 'len(rec1.bond) == 0',
+					'_1': 'len(rec2.bond) == 0'
+				},
+				'R1': {
+					'Rec': Rec,
+					'lig': LigBindingSite,
+					'_0': 'len(lig.bond) == 0'
+				},
+				'R2': {
+					'Rec': Rec,
+					'lig': LigBindingSite,
+					'_0': 'len(lig.bond) == 0'
+				}
+			},
+			'helpers': {},
+			'actions':{
+				'k': 'some_value',
+				'_0': 'L.rec1.add_bond(R1.lig)',
+				'_1': 'L.rec2.add_bond(R2.lig)',
+			},
+			'params': ('binding_constant', 'some_value'),                                          
+  			'rate_law': 'binding_constant*comb(L.count(),1)*comb(R1.count(),2)',
+		}
+		self.maxDiff=None
+		self.assertEqual(pformat(binding_rule.namespace),pformat(namespace))
+
+
+

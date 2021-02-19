@@ -52,6 +52,10 @@ class PatternArchetype:
 	def get_canonical_form_leaders(self):
 		return self.parent.get_canonical_form_leaders()
 
+	def pprint_namespace(self):
+		# in Python 3.8, sort_dicts=False to preserve insertion order
+		return pformat(self.namespace)
+
 	@classmethod
 	def build(cls,parent,helpers={},constraints=''):
 		err = "Argument for 'parent' keyword must be an entity node to recurse from or an existing pattern."
