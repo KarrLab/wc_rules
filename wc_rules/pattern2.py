@@ -1,4 +1,4 @@
-from .indexer import GraphContainer
+from .indexer import GraphContainer,DictLike
 from .utils import generate_id,ValidateError,listmap, split_string, merge_dicts, no_overlaps, invert_dict
 from .canonical import canonical_label
 from .canonical_expr import canonical_expression_ordering
@@ -58,6 +58,10 @@ class PatternArchetype:
 
 	@classmethod
 	def build(cls,parent,helpers={},constraints=''):
+
+		def make_constraint_strings(attrs):
+			return ['{0}.{1}=={2}'.format(idx,attr,attrs[idx][attr]) for idx in attrs for attr in attrs[idx]]
+
 		err = "Argument for 'parent' keyword must be an entity node to recurse from or an existing pattern."
 		assert isinstance(parent, (Entity,Pattern)), err
 		
@@ -65,9 +69,10 @@ class PatternArchetype:
 		cmax, constraint_strings = 0,[]
 		# stripping parent graph of attrs and creating a Parent(CanonicalForm()) object
 		if isinstance(parent,Entity):
-			d,stripped_attrs = GraphContainer.build(parent.get_connected(),strip_attrs=True)
+			#d,stripped_attrs = GraphContainer.build(parent.get_connected(),strip_attrs=True)
+			d, stripped_attrs = GraphContainer(parent.get_connected()).duplicate().strip_attrs()
 			parent = Parent.create(d)
-			constraint_strings.extend(['{0}.{1}=={2}'.format(*x) for x in stripped_attrs])
+			constraint_strings.extend(make_constraint_strings(stripped_attrs))
 		else:
 			# parent is already a pattern, just update current_cmax
 			cmax = len([x for x in parent.constraints if x[0]=='_'])
@@ -81,7 +86,6 @@ class PatternArchetype:
 		seed = parent.get_canonical_form_partition()
 		partition, leaders = canonical_expression_ordering(seed,namespace,constraints)
 		return Pattern(parent,helpers,constraints,namespace,partition,leaders)
-
 	
 def check_cycle(gdict):
 	# gdict is a directed graph represented as a dict

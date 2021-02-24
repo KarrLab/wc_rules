@@ -218,6 +218,9 @@ class BaseClass(core.Model,ActionMixin):
             setattr(self,attr,None)
         return self
 
+    def __repr__(self):
+        return 'Object of {0} with id \'{1}\''.format(self.__class__,self.id)
+
 
 
 

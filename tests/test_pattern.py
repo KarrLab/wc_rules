@@ -27,15 +27,16 @@ class TestPattern(unittest.TestCase):
 		with self.assertRaises(AssertionError):
 			x = X('x',y=[Y('y1'),Y('y1')])
 			GraphContainer(x.get_connected())
-		
-		with self.assertRaises(AssertionError):
-			x  =X(0)
-			GraphContainer(x.get_connected())
 
 		x = X('x',y=[Y('y1'),Y('y2')])
 		g = GraphContainer(x.get_connected())
 		self.assertEqual([g[elem].__class__ for elem in ['x','y1','y2']], [X,Y,Y])
+		g.validate_connected()
 
+		with self.assertRaises(AssertionError):
+			g = GraphContainer([X('x'),Y('y1'),Y('y2')])
+			g.validate_connected()
+			
 	def test_pattern_build(self):
 
 		with self.assertRaises(AssertionError):
