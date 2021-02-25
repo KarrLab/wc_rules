@@ -3,7 +3,7 @@ import math
 from itertools import product
 from functools import partial
 from .indexer import BiMap
-from .utils import strgen, concat, printvars
+from .utils import strgen, concat, printvars, merge_lists
 from operator import itemgetter
 from sortedcontainers import SortedSet
 from dataclasses import dataclass
@@ -15,13 +15,21 @@ class CanonicalForm:
 	leaders: tuple
 	edges: tuple
 
+	@property
+	def namespace(self):
+		return dict(zip(merge_lists(self.partition),self.classes))
+	
+
 @dataclass(unsafe_hash=True)
 class SymmetryGenerator:
 	source: tuple
 	targets: tuple
 	
 def canonical_label(g):
-	if len(g)==1:
+	# g is a graphcontainer
+	if len(g)==0:
+		partition, order, leaders = [],[],[]
+	elif len(g)==1:
 		idx,node = next(g.iternodes())
 		partition, order, leaders = [[idx,]], [idx,], []	
 	else:
@@ -36,7 +44,6 @@ def canonical_label(g):
 	}
 
 	return CanonicalForm(*new_data.values()), label_map.reverse()
-
 
 def relabel_edge(edge,label_map):
 	(x,a),(y,b) = edge

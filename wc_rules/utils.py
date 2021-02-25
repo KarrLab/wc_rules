@@ -172,3 +172,19 @@ class RemoveObjectError(Exception):
         msg = str(type(obj))
         msg = ''.join(filter(lambda ch: ch not in "<>", msg))
         return msg
+
+##### Validating data structures
+def check_cycle(gdict):
+    # gdict is a directed graph represented as a dict
+    nodes,paths = collections.deque(gdict), collections.deque()
+    while nodes or paths:
+        if not paths:
+            paths.append([nodes.popleft()])
+        path = paths.popleft()
+        if len(path)>1 and path[0]==path[-1]:
+            pathstr = '->'.join(path)
+            return pathstr 
+        next_steps = gdict.get(path[-1],[])
+        if len(next_steps)>0:
+            paths.extend([path + [x] for x in next_steps])
+    return ''

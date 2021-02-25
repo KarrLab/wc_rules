@@ -8,33 +8,47 @@ from functools import wraps
 from .entity import Entity
 from pprint import pformat
 from collections import ChainMap, Counter, deque
+from .utils import check_cycle, merge_lists
 #from attrdict import AttrDict
 
 def helperfn(fn):
 	fn._is_helperfn = True
 	return fn
 
-class Parent:
-	# Wrapper class for canonical form to be used for parent patterns
-	def __init__(self,canonical_form,variable_map):
-		self.canonical_form = canonical_form
-		self.variable_map = variable_map
-		order = [x for y in self.canonical_form.partition for x in y]
-		d = dict()
-		for i,source in enumerate(order):
-			d[variable_map.get(source)]= canonical_form.classes[i]
-		self.namespace = d
+class ParentWrapper:
+	'''
+		Wrapper class adding "parent behavior" to patterns and canonically labeled graphs.
+		Should be wrapped around objects intended to be parents to patterns.
+		Must have a 
+			source: the object that is the parent
+			variable_map: a map between the variables of the parent and the child
+			partition: conversion of the partition attribute of the parent using variable_map
+			leaders: conversion of the leaders attributue of the parent using variable_map
+			namespace: conversion of the parents
+	'''
 
-	@classmethod
-	def create(cls,g):
-		# create a parent class from a graphcontainer
-		return cls(*canonical_label(g))
+	def __init__(self,source,vmap):
+		self.source = source
+		self.variable_map = vmap
+		self.partition = vmap.replace(source.partition)
+		self.leaders = vmap.replace(source.leaders)
+		self.namespace = {y:source.namespace[x] for x,y in vmap.items()}
 
 	def get_canonical_form_partition(self):
-		return self.variable_map.replace(self.canonical_form.partition)
+		return self.variable_map.replace(self.source.partition)
 
 	def get_canonical_form_leaders(self):
-		return self.variable_map.replace(self.canonical_form.leaders)
+		return self.variable_map.replace(self.source.leaders)
+
+	@classmethod
+	def build(cls,x):
+		if isinstance(x,GraphContainer):
+			source, vmap = canonical_label(x)
+			return cls(source,vmap)
+		elif isinstance(x,PatternArchetype):
+			assert True, "Not implemented yet!"
+		else:
+			assert True, "Should not be here!"
 
 class PatternArchetype:
 
@@ -52,12 +66,8 @@ class PatternArchetype:
 	def get_canonical_form_leaders(self):
 		return self.parent.get_canonical_form_leaders()
 
-	def pprint_namespace(self):
-		# in Python 3.8, sort_dicts=False to preserve insertion order
-		return pformat(self.namespace)
-
 	@classmethod
-	def build(cls,parent,helpers={},constraints=''):
+	def build(cls,parent=GraphContainer(),helpers={},constraints=''):
 
 		def make_constraint_strings(attrs):
 			return ['{0}.{1}=={2}'.format(idx,attr,attrs[idx][attr]) for idx in attrs for attr in attrs[idx]]
@@ -69,9 +79,8 @@ class PatternArchetype:
 		cmax, constraint_strings = 0,[]
 		# stripping parent graph of attrs and creating a Parent(CanonicalForm()) object
 		if isinstance(parent,Entity):
-			#d,stripped_attrs = GraphContainer.build(parent.get_connected(),strip_attrs=True)
-			d, stripped_attrs = GraphContainer(parent.get_connected()).duplicate().strip_attrs()
-			parent = Parent.create(d)
+			g, stripped_attrs = GraphContainer(parent.get_connected()).duplicate().strip_attrs()
+			parent = ParentWrapper.build(g)
 			constraint_strings.extend(make_constraint_strings(stripped_attrs))
 		else:
 			# parent is already a pattern, just update current_cmax
@@ -87,20 +96,7 @@ class PatternArchetype:
 		partition, leaders = canonical_expression_ordering(seed,namespace,constraints)
 		return Pattern(parent,helpers,constraints,namespace,partition,leaders)
 	
-def check_cycle(gdict):
-	# gdict is a directed graph represented as a dict
-	nodes,paths = deque(gdict), deque()
-	while nodes or paths:
-		if not paths:
-			paths.append([nodes.popleft()])
-		path = paths.popleft()
-		if len(path)>1 and path[0]==path[-1]:
-			pathstr = '->'.join(path)
-			return pathstr 
-		next_steps = gdict.get(path[-1],[])
-		if len(next_steps)>0:
-			paths.extend([path + [x] for x in next_steps])
-	return ''
+
 
 def verify_and_compile_namespace(parent,helpers,constraints):
 	errs = []

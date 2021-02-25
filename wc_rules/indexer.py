@@ -117,7 +117,7 @@ class GraphContainer(DictLike):
     # A temporary container for a graph that can be used to create
     # canonical forms or iterate over a graph
 
-    def __init__(self,_list):
+    def __init__(self,_list=[]):
         # there must be only one way to create a GraphContainer and that must be to create a list
         super().__init__(_list)
 
