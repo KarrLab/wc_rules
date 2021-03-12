@@ -92,7 +92,10 @@ def invert_dict(_dict):
 def verify_list(_list,_types):
     if not isinstance(_list,list):
         return isinstance(_list,_types)
-    return all([verify_list(elem,_types) for elem in _list]) 
+    return all([verify_list(elem,_types) for elem in _list])
+
+def tuplify_dict(_dict):
+    return tuple(sorted(_dict.items()))
 
     
 ###### Error ######

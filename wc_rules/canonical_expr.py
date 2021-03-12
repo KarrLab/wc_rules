@@ -2,7 +2,7 @@ from .expr_new import process_expression_string
 from .base import BaseClass
 from .attributes import StringAttribute, OneToOneAttribute, ManyToManyAttribute, OneToManyAttribute
 from .indexer import GraphContainer
-from .utils import generate_id, listmap, pipe_map, grouper, merge_lists, invert_dict
+from .utils import generate_id, listmap, pipe_map, grouper, merge_lists, invert_dict, tuplify_dict
 from .constraint import ordered_builtins
 from .canonical import *
 from operator import itemgetter
@@ -24,8 +24,6 @@ class Variable(Expr):
 class Root(Expr):
 	def __init__(self,children):
 		super().__init__('_root',children=listmap(Variable,children))
-
-	
 
 def dfs_make(tree):
 	if isinstance(tree,str):
@@ -114,27 +112,16 @@ def add_tree_to_g(g,tree):
 		replace_node(node,g[varname])
 	return
 
-
 def canonical_expression_ordering(seed,namespace,constraints):
 	g = namespace_to_graph(namespace)
 	trees = [constraint_to_tree(var,c) for var,c in constraints.items()]
 	for tree in trees:
 		add_tree_to_g(g,tree)
 	g.update()
- 
-	init_partition = partition_namespace(seed,namespace) + deque([['_root']])
-	excludes = concat(init_partition)
-	remaining_nodes = [x for x in g.keys() if x not in excludes]
-	init_partition += initial_partition(remaining_nodes,g)
-
-	partition = refine_partition(g,init_partition)
-	p, leaders = partition.copy(), list()	
-	while len(p) < len(g):
-		p, leader, remaining = break_and_refine(g,p)
-		leaders.extend([(leader,x) for x in remaining])
-		
-	final_elems = concat(seed)
+	# partition_namespace(seed,namespace)
+	partition, order, leaders = canonical_ordering(g,seed)
 	
+	final_elems = concat(seed)
 	partition = tuple([tuple(x) for x in partition if x[0] in final_elems])
 	leaders = tuple([tuple(x) for x in leaders if x[0] in final_elems])
 	
@@ -145,8 +132,15 @@ def canonical_expression_ordering(seed,namespace,constraints):
 def initial_partition(nodes,g):
 	return deque( group_by_node_certificates(initial_exprnode_certificate, nodes, g=g) )
 
+# def initial_exprnode_certificate(idx,g):
+# 	return (-g[idx].degree(), getattr(g[idx],'data',''))
+
 def initial_exprnode_certificate(idx,g):
-	return (-g[idx].degree(), getattr(g[idx],'data',''))
+	x = g[idx]
+	degree = x.degree()
+	classname = x.__class__.__name__
+	attrs = tuplify_dict(x.get_literal_attrdict(ignore_id=True))
+	return (-degree,classname,attrs)
 
 
 def partition_namespace(seed,namespace):
@@ -166,4 +160,4 @@ def partition_namespace(seed,namespace):
 	conditions = sorted([x for x in d2.get('constraint',[]) if x[0]=='_'])
 	partition = concat([seed,[helpers],[assignments],[conditions]])
 	
-	return deque(partition)
+	return partition

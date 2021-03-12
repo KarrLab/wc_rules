@@ -44,15 +44,15 @@ class TestPattern(unittest.TestCase):
 			px = Pattern.build(x)
 		
 		x = X('x',y=[Y('y1'),Y('y2')])
-		px = Pattern.build(x)
+		px = Pattern.build(parent=GraphContainer(x.get_connected()))
 		self.assertEqual(px.namespace, dict(x=X,y1=Y,y2=Y))
 
-		pxx = Pattern.build(px)
+		pxx = Pattern.build(parent=px)
 		self.assertEqual(pxx.namespace, dict(x=X,y1=Y,y2=Y))
 		del px,pxx
 		
 
-		px = Pattern.build(X('x',i=10))
+		px = Pattern.build(parent=GraphContainer([X('x',i=10)]))
 		self.assertEqual(px.namespace, dict(x=X,_0='x.i == 10'))
 
 		pxx = Pattern.build(px, helpers={'px':px}, constraints='px.contains(x=x)==True')
@@ -60,13 +60,14 @@ class TestPattern(unittest.TestCase):
 		del pxx
 
 		with self.assertRaises(AssertionError):
-			pxx = Pattern.build(px, helpers={'px':px}, constraints='px=5')
+			pxx = Pattern.build(parent=px, helpers={'px':px}, constraints='px=5')
 
 		with self.assertRaises(AssertionError):
-			pxx = Pattern.build(px, helpers={'px':px}, constraints='t==5')
+			pxx = Pattern.build(parent=px, helpers={'px':px}, constraints='t==5')
 
 	def test_boolean_constraints(self):
-		pz = Pattern.build(Z('z1',z=Z('z2')), constraints = 
+		z = Z('z1',z=Z('z2'))
+		pz = Pattern.build(parent=GraphContainer(z.get_connected()), constraints = 
 		'''any(z1.a,z1.b,z2.a,z2.b) == True
 		inv(any(z1.a,z1.b,z2.a,z2.b)) == False
 		all(z1.a,z1.b,z2.a,z2.b) == True
@@ -94,7 +95,7 @@ class TestPattern(unittest.TestCase):
 		self.assertEqual(computed_values,expected_values)
 
 	def test_list_constraints(self):		
-		px = Pattern.build(X('x'),constraints='''
+		px = Pattern.build(GraphContainer([X('x')]),constraints='''
 			max(x.i,x.j,x.k) == 30
 			min(x.i,x.j,x.k) == 10
     		sum(x.i,x.j,x.k) == 60
@@ -105,21 +106,21 @@ class TestPattern(unittest.TestCase):
 		for c in px.constraints.values():
 			self.assertTrue(c.exec(match,{}))
 
-		pz = Pattern.build(Z('z'),constraints='''len(z.z) > 0''')
+		pz = Pattern.build(parent=GraphContainer([Z('z')]),constraints='''len(z.z) > 0''')
 		c = list(pz.constraints.values())[0]
 		self.assertEqual(c.exec(dict( z=Z() )), False)
 		self.assertEqual(c.exec(dict( z=Z(z=Z()) )), True)
 
 	def test_canonical_expr(self):
 		z = Z('z1',z=Z('z2'))
-		pz = Pattern.build(z)
+		pz = Pattern.build(parent=GraphContainer(z.get_connected()))
 
 		cP, cL = (('z1','z2'),), (('z1','z2'),)
 		self.assertEqual(pz.partition,cP)
 		self.assertEqual(pz.leaders,cL)
 
 		# symmetry preserving
-		pzz = Pattern.build(pz, constraints='''
+		pzz = Pattern.build(parent=pz, constraints='''
 			a = any(z1.a,z2.a)
 			b = all(z1.b,z2.b)
 			c = any(z1.a,z1.b)
@@ -131,7 +132,7 @@ class TestPattern(unittest.TestCase):
 		self.assertEqual(pzz.leaders,cL)
 
 		# symmetry breaking
-		cP, cL = (('z2',),('z1',),), tuple()
+		cP, cL = (('z1',),('z2',),), tuple()
 		pzzz = Pattern.build(pz,constraints='''
 			a = any(z1.a,z1.b,z2.a)
 			''')
@@ -142,10 +143,10 @@ class TestPattern(unittest.TestCase):
 
 		# symmetry preserving + using helpers
 		z = Z('z',a=True,b=False)
-		pz = Pattern.build(z)
+		pz = Pattern.build(parent=GraphContainer([z]))
 
 		zz = Z('z1',z=Z('z2'))
-		pzz = Pattern.build(zz,
+		pzz = Pattern.build(parent=GraphContainer(zz.get_connected()),
 			helpers = {'pz':pz},
 			constraints = 'pz.contains(z=z1)==True \n pz.contains(z=z2)==True',
 			)
@@ -154,7 +155,7 @@ class TestPattern(unittest.TestCase):
 		self.assertEqual(pzz.leaders,cL)
 
 		# symmetry breaking + using helpers
-		pzz = Pattern.build(zz,
+		pzz = Pattern.build(parent=GraphContainer(zz.get_connected()),
 			helpers = {'pz':pz},
 			constraints = 'pz.contains(z=z1)==True',
 			)

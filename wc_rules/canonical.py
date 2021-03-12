@@ -3,7 +3,7 @@ import math
 from itertools import product
 from functools import partial
 from .indexer import BiMap
-from .utils import strgen, concat, printvars, merge_lists
+from .utils import strgen, concat, printvars, merge_lists, tuplify_dict
 from operator import itemgetter
 from sortedcontainers import SortedSet
 from dataclasses import dataclass
@@ -34,6 +34,8 @@ def canonical_label(g):
 		partition, order, leaders = [[idx,]], [idx,], []	
 	else:
 		partition,order,leaders = canonical_ordering(g)
+
+	
 	label_map = BiMap.create(order,strgen(len(order)))
 	
 	new_data = {
@@ -42,7 +44,6 @@ def canonical_label(g):
 	'leaders':   tuple(sorted(label_map.replace(leaders))),
 	'edges': 	 tuple(SortedSet(relabel_edge(e,label_map) for e in g.iteredges()))
 	}
-
 	return CanonicalForm(*new_data.values()), label_map.reverse()
 
 def relabel_edge(edge,label_map):
@@ -146,9 +147,9 @@ def copy_partition(partition):
 #		then call refine.
 
 ####### methods for generating a canonical partition/ordering of a graph container
-def canonical_ordering(g):
+def canonical_ordering(g,seed=tuple()):
 	# partition = coarsest equitable partition
-	partition = refine_partition(g,initial_partition(g))
+	partition = refine_partition(g,initial_partition(g,seed))
 	p, leaders = partition.copy(), list()	
 	while len(p) < len(g):
 		p, leader, remaining = break_and_refine(g,p)
@@ -158,7 +159,6 @@ def canonical_ordering(g):
 	#order = canonical ordering
 	for x in partition:
 		x.sort(key = lambda x: order.index(x))
-
 	return partition, order, leaders
 
 def break_and_refine(g,p):
@@ -197,9 +197,12 @@ def partition_cell(cell,indexes,g):
 	# returns a singleton deque or a deque further partitioning cell
 	return deque( group_by_node_certificates(node_certificate,cell,d=indexes,g=g) )
 
-def initial_partition(g):
+def initial_partition(g,seed):
+	# seed is an existing partial partition - usually a tuple of tuples, convert to list of lists
+	seed = [list(x) for x in seed]
+	remaining = [x for x in sorted(g.keys()) if x not in concat(seed)]
 	# returns an initial partition of nodes of g
-	return deque( group_by_node_certificates(initial_node_certificate, sorted(g.keys()), g=g) )
+	return deque(seed) + deque( group_by_node_certificates(initial_node_certificate, remaining, g=g) )
 
 # methods to compute certificates and sort and group nodes by certificates	
 def node_certificate(idx,d,g):
@@ -209,12 +212,19 @@ def node_certificate(idx,d,g):
 	cert = [(d[x.id],a) for a in attrs for x in node.listget(a)]
 	return tuple(sorted(cert))
 	
+# def initial_node_certificate(idx,g):
+# 	# idx in g -> <degree, class_name, sorted_edges>
+# 	node = g[idx]
+# 	attrs = sorted(node.get_related_attributes(ignore_None=True))
+# 	edges = [(a,x.__class__.__name__) for a in attrs for x in node.listget(a)]	
+# 	return (-len(edges),node.__class__.__name__,tuple(sorted(edges)))
+
 def initial_node_certificate(idx,g):
-	# idx in g -> <degree, class_name, sorted_edges>
-	node = g[idx]
-	attrs = sorted(node.get_related_attributes(ignore_None=True))
-	edges = [(a,x.__class__.__name__) for a in attrs for x in node.listget(a)]	
-	return (-len(edges),node.__class__.__name__,tuple(sorted(edges)))
+	x = g[idx]
+	degree = x.degree()
+	classname = x.__class__.__name__
+	attrs = tuplify_dict(x.get_literal_attrdict(ignore_id=True))
+	return (-degree,classname,attrs)
 
 def group_by_node_certificates(certificate_function,elems,**kwargs):
 	if len(elems)==1:

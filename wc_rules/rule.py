@@ -45,7 +45,7 @@ class RuleArchetype:
 		assert len(errs)==0, "Errors in namespace:\n{0}".format('\n'.join(errs))
 
 		# TODO:
-		# GET CANONICAL FROM 
+		# GET CANONICAL FORM 
 		# GET CANONICAL ORDERING
 		# STORE IT
 

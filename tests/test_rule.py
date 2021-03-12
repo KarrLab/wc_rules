@@ -2,7 +2,7 @@ from wc_rules.entity import Entity
 from wc_rules.attributes import IntegerAttribute, OneToOneAttribute
 from wc_rules.constraint import Constraint, Computation
 from wc_rules.rule import RateLaw, InstanceRateRule
-from wc_rules.pattern2 import Pattern
+from wc_rules.pattern2 import Pattern, GraphContainer
 from wc_rules.chem import Molecule, Site
 from pprint import pformat
 #from wc_rules.actions import parser
@@ -111,12 +111,14 @@ class LigBindingSite(Site):
 class TestRuleBuild(unittest.TestCase):
 
 	def test_rule_one(self):
+		lignode = Lig('Lig',sites=[RecBindingSite('rec1'),RecBindingSite('rec2')])
 		lig  = Pattern.build(
-			Lig('Lig',sites=[RecBindingSite('rec1'),RecBindingSite('rec2')]), 
+			parent = GraphContainer(lignode.get_connected()), 
 			constraints = 'len(rec1.bond)==0 \n len(rec2.bond)==0'
 			)
+		recnode =Rec('Rec',sites=[LigBindingSite('lig')])
 		rec = Pattern.build(
-			Rec('Rec',sites=[LigBindingSite('lig')]),
+			parent = GraphContainer(recnode.get_connected()),
 			constraints = 'len(lig.bond)==0'
 			)
 		# note two bonds being formed at the same time

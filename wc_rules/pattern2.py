@@ -9,6 +9,7 @@ from .entity import Entity
 from pprint import pformat
 from collections import ChainMap, Counter, deque
 from .utils import check_cycle, merge_lists
+
 #from attrdict import AttrDict
 
 def helperfn(fn):
@@ -17,7 +18,7 @@ def helperfn(fn):
 
 class ParentWrapper:
 	'''
-		Wrapper class adding "parent behavior" to patterns and canonically labeled graphs.
+		Wrapper class adding "parent behavior" to canonically labeled graphs.
 		Should be wrapped around objects intended to be parents to patterns.
 		Must have a 
 			source: the object that is the parent
@@ -27,28 +28,14 @@ class ParentWrapper:
 			namespace: conversion of the parents
 	'''
 
-	def __init__(self,source,vmap):
+	def __init__(self,g):
+		source,vmap = canonical_label(g)
 		self.source = source
 		self.variable_map = vmap
 		self.partition = vmap.replace(source.partition)
 		self.leaders = vmap.replace(source.leaders)
 		self.namespace = {y:source.namespace[x] for x,y in vmap.items()}
 
-	def get_canonical_form_partition(self):
-		return self.variable_map.replace(self.source.partition)
-
-	def get_canonical_form_leaders(self):
-		return self.variable_map.replace(self.source.leaders)
-
-	@classmethod
-	def build(cls,x):
-		if isinstance(x,GraphContainer):
-			source, vmap = canonical_label(x)
-			return cls(source,vmap)
-		elif isinstance(x,PatternArchetype):
-			assert True, "Not implemented yet!"
-		else:
-			assert True, "Should not be here!"
 
 class PatternArchetype:
 
@@ -60,11 +47,6 @@ class PatternArchetype:
 		self.partition = partition
 		self.leaders = leaders
 
-	def get_canonical_form_partition(self):
-		return self.parent.get_canonical_form_partition()
-
-	def get_canonical_form_leaders(self):
-		return self.parent.get_canonical_form_leaders()
 
 	@classmethod
 	def build(cls,parent=GraphContainer(),helpers={},constraints=''):
@@ -72,31 +54,34 @@ class PatternArchetype:
 		def make_constraint_strings(attrs):
 			return ['{0}.{1}=={2}'.format(idx,attr,attrs[idx][attr]) for idx in attrs for attr in attrs[idx]]
 
-		err = "Argument for 'parent' keyword must be an entity node to recurse from or an existing pattern."
-		assert isinstance(parent, (Entity,Pattern)), err
+		err = "Argument for 'parent' keyword must be a Pattern or a GraphContainer holding a connected graph."
 		
-		# building parent if Entity and updating constraint_strings
+		# Setting up parent
+		assert isinstance(parent, (GraphContainer,Pattern)), err
 		cmax, constraint_strings = 0,[]
-		# stripping parent graph of attrs and creating a Parent(CanonicalForm()) object
-		if isinstance(parent,Entity):
-			g, stripped_attrs = GraphContainer(parent.get_connected()).duplicate().strip_attrs()
-			parent = ParentWrapper.build(g)
+		if isinstance(parent,GraphContainer):
+			parent.validate_connected()
+			g, stripped_attrs = parent.duplicate().strip_attrs()
+			parent = ParentWrapper(g)
 			constraint_strings.extend(make_constraint_strings(stripped_attrs))
-		else:
-			# parent is already a pattern, just update current_cmax
+		elif isinstance(parent,Pattern):
 			cmax = len([x for x in parent.constraints if x[0]=='_'])
-
+		
+		# Setting up constraints
 		constraint_strings.extend(split_string(constraints))
 		constraints = ExecutableExpression.initialize_from_strings(constraint_strings,[Constraint,Computation],cmax)
+
+		# Setting up helpers
+
 
 		namespace,errs = verify_and_compile_namespace(parent,helpers,constraints)
 		assert len(errs)==0, "Errors in namespace:\n{0}".format('\n'.join(errs))
 
-		seed = parent.get_canonical_form_partition()
+		seed = parent.partition
 		partition, leaders = canonical_expression_ordering(seed,namespace,constraints)
+		#print(partition,leaders)
 		return Pattern(parent,helpers,constraints,namespace,partition,leaders)
 	
-
 
 def verify_and_compile_namespace(parent,helpers,constraints):
 	errs = []
