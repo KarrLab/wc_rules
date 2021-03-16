@@ -101,6 +101,7 @@ class ExecutableExpression:
 			fn = self.fn
 			))
 
+
 	@classmethod
 	def initialize(cls,s):
 		try:
@@ -132,8 +133,8 @@ class ExecutableExpression:
 				if x is not None:
 					break
 			if x is None:
-				err = "Code `{s}` does not create a valid expression object in this context. It must have one of the forms:\n {f}"
-				raise ValueError(err.format(s=s,f=allowed_forms))
+				err = "`{s}` does not create a valid instance of {c}. It must have one of the forms:\n {f}"
+				raise ValueError(err.format(s=s,c=classes,f=allowed_forms))
 
 			if x.deps.declared_variable is not None:
 				d[x.deps.declared_variable] = x
@@ -164,3 +165,13 @@ class Computation(ExecutableExpression):
 	builtins = global_builtins
 	allowed_forms = ['<var> = <expr>']
 	allowed_returns = None
+
+
+def initialize_from_strings(string,classes):
+	for c in classes:
+		x = c.initialize(string)
+		if x is not None:
+			return x
+	err = 'Could not create a valid instance of {0} from {1}'
+	assert False, err.format(classes,string)
+	

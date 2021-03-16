@@ -166,11 +166,11 @@ class BaseClass(core.Model,ActionMixin):
         return self.get_graph(recurse=True)
 
     def get_connected(self):
-        nodes, examine_stack = set(), deque([self])
+        nodes, examine_stack = [], deque([self])
         while examine_stack:
             node = examine_stack.popleft()
             if node not in nodes:
-                nodes.add(node)
+                nodes.append(node)
                 examine_stack.extend(node.listget_all_related())
         return list(nodes)
 

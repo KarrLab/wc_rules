@@ -97,6 +97,9 @@ def verify_list(_list,_types):
 def tuplify_dict(_dict):
     return tuple(sorted(_dict.items()))
 
+def all_unique(_list):
+    return len(set(_list)) == len(_list)
+
     
 ###### Error ######
 class GenericError(Exception):

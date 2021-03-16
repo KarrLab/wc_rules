@@ -169,11 +169,16 @@ class GraphContainer(DictLike):
         return self,attrs
 
     def validate_connected(self):
-        assert GraphContainer(self.values()[0].get_connected())==self, "GraphContainer does not hold a connected graph."
+        err = "GraphContainer does not hold a connected graph."
+        assert len(self) == 0 or GraphContainer(self.values()[0].get_connected())==self, err
+
+    @property
+    def variables(self):
+        return self.keys()
 
     @property
     def namespace(self):
-        return self._dict
+        return {idx:'Instance of {0}'.format(node.__class__) for idx,node in self._dict.items()}
     
 class SetLike(object):
     def __init__(self,iterable=None):
