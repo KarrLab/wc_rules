@@ -3,7 +3,7 @@ from .utils import generate_id,ValidateError,listmap, split_string, merge_dicts,
 from .canonical import canonical_label
 from .canonical_expr import canonical_expression_ordering
 from functools import partial
-from .constraint import ExecutableExpression, Constraint, Computation
+from .executable_expr import ExecutableExpression, Constraint, Computation
 from functools import wraps
 from .entity import Entity
 from pprint import pformat

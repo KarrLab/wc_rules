@@ -4,7 +4,7 @@ from collections import deque, ChainMap
 from types import MethodType
 from abc import ABC, abstractmethod
 from obj_model import core
-from .constraint import ExecutableExpression, global_builtins
+from .executable_expr import ExecutableExpression, global_builtins
 from .utils import verify_list
 from .attributes import action
 

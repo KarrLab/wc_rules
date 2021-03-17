@@ -1,7 +1,7 @@
 from wc_rules.attributes import *
 from wc_rules.entity import Entity
 from wc_rules.pattern2 import Pattern, GraphContainer
-from wc_rules.constraint import Constraint
+from wc_rules.executable_expr import Constraint
 import math
 import unittest
 

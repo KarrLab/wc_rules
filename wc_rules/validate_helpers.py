@@ -6,6 +6,14 @@ def validate_class(_obj,classes,prefix):
 	err = "{0} must be an instance of {1}"
 	assert isinstance(_obj,classes), err.format(prefix,classes)
 
+def validate_dict(_dict,classes,prefix):
+	for k,v in _dict.items():
+		validate_class(v,classes,'{0} {1}'.format(prefix,k))
+
+def validate_list(_list,classes,prefix):
+	for elem in _list:
+		validate_class(elem,classes,'{0} {1}'.format(prefix,elem))
+
 def validate_unique(master,child,prefix):
 	for x in child:
 		err = "`{0}` for {1} as it already exists in the namespace."
@@ -21,14 +29,14 @@ def validate_acyclic(kwdeps):
 	err = "Cyclical dependency found: {0}."
 	assert len(cycle)==0, err.format(cycle)
 
-def validate_keyword(x,prefix):
-	err = "`{0}` is not a valid {1} name."
-	assert isinstance(x,str) and x.isidentifier() and not iskeyword(x), err.format(x,prefix)
+def validate_keywords(_list,prefix):
+	for x in _list:
+		err = "`{0}` is not a valid {1} name."
+		assert isinstance(x,str) and x.isidentifier() and not iskeyword(x), err.format(x,prefix)
 
 def validate_literal_attribute(node,attr):
 	node.__class__.Meta.attributes[attr].check_value(node.get(attr))
 	
-
 def validate_literal_attributes(node):
 	for attr in node.get_literal_attributes(ignore_id=False,ignore_None=True):
 		validate_literal_attribute(node,attr)

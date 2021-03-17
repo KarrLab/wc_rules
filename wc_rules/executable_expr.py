@@ -1,4 +1,4 @@
-from .expr_new import process_expression_string, serialize
+from .expr import process_expression_string, serialize
 from .dependency import DependencyCollector
 from .utils import subdict
 import math,builtins
@@ -166,8 +166,14 @@ class Computation(ExecutableExpression):
 	allowed_forms = ['<var> = <expr>']
 	allowed_returns = None
 
+class RateLaw(ExecutableExpression):
+	start = 'expression'
+	builtins = global_builtins
+	allowed_forms = ['<expr>']
+	allowed_returns = (int,float,)
 
-def initialize_from_strings(string,classes):
+
+def initialize_from_string(string,classes):
 	for c in classes:
 		x = c.initialize(string)
 		if x is not None:

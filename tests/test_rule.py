@@ -1,7 +1,7 @@
 from wc_rules.entity import Entity
 from wc_rules.attributes import IntegerAttribute, OneToOneAttribute
-from wc_rules.constraint import Constraint, Computation
-from wc_rules.rule import RateLaw, InstanceRateRule
+from wc_rules.executable_expr import Constraint, Computation, RateLaw
+from wc_rules.rule2 import InstanceRateRule
 from wc_rules.pattern2 import Pattern, GraphContainer
 from wc_rules.chem import Molecule, Site
 from pprint import pformat
