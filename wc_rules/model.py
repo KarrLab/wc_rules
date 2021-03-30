@@ -34,6 +34,9 @@ class RuleBasedModel:
 			assert name in [x.name for x in self.rules], "Could not find rule `{0}` in this RuleBasedModel.".format(name)
 			return [x for x in self.rules if x.name==name][0]
 
+	def visualize(self,count=0):
+		return '\n'.join( [count*'  ' + self.name] + [(count+1)*'  ' + x.name for x in self.rules] )
+			
 
 class AggregateModel:
 
@@ -62,4 +65,6 @@ class AggregateModel:
 			assert name in [x.name for x in self.models], "Could not find model `{0}` in this AggregateModel.".format(name)
 			return [x for x in self.models if x.name==name][0]
 
+	def visualize(self,count=0):
+		return '\n'.join( [count*'  ' + self.name] + [x.visualize(count+1) for x in self.models] )
 	
