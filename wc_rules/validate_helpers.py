@@ -14,6 +14,10 @@ def validate_list(_list,classes,prefix):
 	for elem in _list:
 		validate_class(elem,classes,'{0} {1}'.format(prefix,elem))
 
+def validate_set(_list,prefix):
+	err = "{0} must be unique."
+	assert len(_list) == len(set(_list)), err.format(prefix)
+
 def validate_unique(master,child,prefix):
 	for x in child:
 		err = "`{0}` for {1} as it already exists in the namespace."
@@ -54,7 +58,7 @@ def validate_related_attribute(node,attr):
 	else:
 		max_related = targets[0].__class__.Meta.attributes[node.get_related_name(attr)].max_related_rev
 	err = 'Targets of related attribute {0} of class {1} exceed max_related value {2}'
-	assert len(node.listget(attr)) < max_related, err.format(attr,node.__class__,max_related)
+	assert len(node.listget(attr)) <= max_related, err.format(attr,node.__class__,max_related)
 
 def validate_related_attributes(node):
 	for attr in node.get_related_attributes(ignore_None=True):

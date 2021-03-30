@@ -6,7 +6,10 @@ from .executable_expr import Constraint, Computation, RateLaw, initialize_from_s
 
 class Rule:
 
-	def __init__(self, reactants=dict(), helpers=dict(), actions=[], rate_prefix='', params = []):
+	def __init__(self, name='', reactants=dict(), helpers=dict(), actions=[], rate_prefix='', params = []):
+		validate_keywords([name],'Rule name')
+		self.name = name
+		
 		self.validate_reactants(reactants)
 		self.reactants = reactants
 

@@ -1,9 +1,9 @@
 
 from .validate_helpers import *
 from .indexer import GraphContainer
-from .utils import split_string, check_cycle
+from .utils import split_string, check_cycle, idgen
 from .executable_expr import Constraint, Computation, initialize_from_string
-
+    	
 class Pattern:
 
 	def __init__(self, parent=GraphContainer(), helpers=dict(), constraints = [], params= []):
@@ -75,3 +75,11 @@ class Pattern:
 				kwdeps[v] = x.keywords
 		validate_acyclic(kwdeps)
 		return newvars
+
+class SynthesisPattern:
+
+	def __init__(self,prototype):
+		err = "FactoryPattern must be initialized from a GraphContainer with a connected graph."
+		assert isinstance(prototype,GraphContainer) and prototype.validate_connected(), err
+		self.prototype = prototype
+

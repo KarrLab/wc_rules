@@ -5,7 +5,7 @@ kar@gmail.com>
 :Copyright: 2017, Karr Lab
 :License: MIT
 """
-from obj_model import core
+
 from . import base,entity,utils
 from .attributes import *
 
@@ -27,3 +27,5 @@ def bngize(mol,use_classnames=False):
     m = f(mol)
     s = ','.join([f(s) for s in mol.sites])
     return '{m}({s})'.format(m=m,s=s)
+
+
