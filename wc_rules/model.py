@@ -29,14 +29,19 @@ class RuleBasedModel:
 
 	def __getattr__(self,name):
 		try:
-			object.__getattr__(self,name)
+			out = object.__getattr__(self,name)
 		except:
-			assert name in [x.name for x in self.rules], "Could not find rule `{0}` in this RuleBasedModel.".format(name)
-			return [x for x in self.rules if x.name==name][0]
+			try:
+				out = [x for x in self.models if x.name==name][0]
+			except:
+				raise AttributeError(f'{self.__class__.__name__}.{name} is invalid.')
+		return out
 
-	def visualize(self,count=0):
+	def visualize_structure(self,count=0):
 		return '\n'.join( [count*'  ' + self.name] + [(count+1)*'  ' + x.name for x in self.rules] )
-			
+
+	def visualize_params(self,count=0):
+		return '\n'.join( [count*'  ' + self.name] + [(count+1)*'  ' + x for x in self.required_parameters()] )			
 
 class AggregateModel:
 
@@ -60,11 +65,16 @@ class AggregateModel:
 
 	def __getattr__(self,name):
 		try:
-			object.__getattr__(self,name)
+			out = object.__getattr__(self,name)
 		except:
-			assert name in [x.name for x in self.models], "Could not find model `{0}` in this AggregateModel.".format(name)
-			return [x for x in self.models if x.name==name][0]
+			try:
+				out = [x for x in self.models if x.name==name][0]
+			except:
+				raise AttributeError(f'{self.__class__.__name__}.{name} is invalid.')
+		return out
 
-	def visualize(self,count=0):
-		return '\n'.join( [count*'  ' + self.name] + [x.visualize(count+1) for x in self.models] )
+	def visualize_structure(self,count=0):
+		return '\n'.join( [count*'  ' + self.name] + [x.visualize_structure(count+1) for x in self.models] )
 	
+	def visualize_params(self,count=0):
+		return '\n'.join( [count*'  ' + self.name] + [x.visualize_params(count+1) for x in self.models] )	
