@@ -6,6 +6,8 @@ from pprint import pformat
 
 class RuleBasedModel:
 
+	defaults = None
+
 	def __init__(self,name,rules):
 		validate_keywords([name],'Model name')
 		self.name = name
@@ -42,13 +44,17 @@ class RuleBasedModel:
 				raise AttributeError(f'{self.__class__.__name__}.{name} is not a valid attribute or contained rule.')
 		return out
 
-	def visualize_structure(self,count=0):
+	def visualize_structure(self,count=0,rules=True):
+		if not rules:
+			return  '\n'.join( [count*'  ' + self.name])
 		return '\n'.join( [count*'  ' + self.name] + [(count+1)*'  ' + x.name for x in self.rules] )
 
 	def visualize_params(self,count=0):
 		return '\n'.join( [count*'  ' + self.name] + [(count+1)*'  ' + x for x in self.required_parameters()] )			
 
 class AggregateModel:
+
+	defaults = None
 
 	def __init__(self,name,models):
 		validate_keywords([name],'Model name')
@@ -60,8 +66,8 @@ class AggregateModel:
 		self.models = models
 		self._dict = {x.name:x for x in self.models}
 
-	def verify(self,data):
 
+	def verify(self,data):
 		for model in self.models:
 			model.verify(data.get(model.name,{}))
 
@@ -79,8 +85,8 @@ class AggregateModel:
 				raise AttributeError(f'{self.__class__.__name__}.{name} is not a valid attribute or contained model.')
 		return out
 
-	def visualize_structure(self,count=0):
-		return '\n'.join( [count*'  ' + self.name] + [x.visualize_structure(count+1) for x in self.models] )
+	def visualize_structure(self,count=0,rules=True):
+		return '\n'.join( [count*'  ' + self.name] + [x.visualize_structure(count+1,rules=rules) for x in self.models] )
 	
 	def visualize_params(self,count=0):
 		return '\n'.join( [count*'  ' + self.name] + [x.visualize_params(count+1) for x in self.models] )	

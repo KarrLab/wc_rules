@@ -180,6 +180,11 @@ class GraphContainer(DictLike):
     def namespace(self):
         return {idx:'Instance of {0}'.format(node.__class__) for idx,node in self._dict.items()}
     
+    def add_suffix(self,suffix):
+        varmap = {x:f'{x}_{suffix}' for x in self.keys()}
+        return self.duplicate(varmap=varmap)
+
+
 class SetLike(object):
     def __init__(self,iterable=None):
         ''' Container of objects that behaves like a set'''
