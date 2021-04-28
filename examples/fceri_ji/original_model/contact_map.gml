@@ -11,15 +11,15 @@ graph
 		label	"Lig"
 		graphics
 		[
-			x	25.49658203125
+			x	29.5
 			y	39.3505859375
-			w	113.0146484375
-			h	78.701171875
+			w	105.0078125
+			h	69.40234375
 			type	"roundrectangle"
 			fill	"#D2D2D2"
 			outline	"#000000"
-			topBorderInset	4.6494140625
-			bottomBorderInset	4.6494140625
+			topBorderInset	0.0
+			bottomBorderInset	0.0
 			leftBorderInset	0.0
 			rightBorderInset	0.0
 		]
@@ -41,7 +41,7 @@ graph
 		[
 			x	7.0
 			y	48.701171875
-			w	46.021484375
+			w	30.0078125
 			h	20.701171875
 			type	"roundrectangle"
 			fill	"#FFFFFF"
@@ -62,16 +62,16 @@ graph
 		label	"Lyn"
 		graphics
 		[
-			x	268.5
-			y	39.3505859375
-			w	122.0
-			h	78.701171875
+			x	269.0
+			y	39.8505859375
+			w	121.0
+			h	79.701171875
 			type	"roundrectangle"
 			fill	"#D2D2D2"
 			outline	"#000000"
 			topBorderInset	0.0
-			bottomBorderInset	0.0
-			leftBorderInset	1.0
+			bottomBorderInset	1.0
+			leftBorderInset	0.0
 			rightBorderInset	1.0
 		]
 		LabelGraphics
@@ -137,9 +137,9 @@ graph
 		graphics
 		[
 			x	180.15966796875
-			y	162.40234375
+			y	162.90234375
 			w	371.6806640625
-			h	127.40234375
+			h	128.40234375
 			type	"roundrectangle"
 			fill	"#D2D2D2"
 			outline	"#000000"
@@ -187,16 +187,16 @@ graph
 		label	"beta"
 		graphics
 		[
-			x	289.0
-			y	171.7529296875
-			w	122.0
-			h	78.701171875
+			x	289.5
+			y	172.2529296875
+			w	121.0
+			h	79.701171875
 			type	"roundrectangle"
 			fill	"#FFFFFF"
 			outline	"#000000"
 			topBorderInset	0.0
-			bottomBorderInset	0.0
-			leftBorderInset	1.0
+			bottomBorderInset	1.0
+			leftBorderInset	0.0
 			rightBorderInset	1.0
 		]
 		LabelGraphics
@@ -261,16 +261,16 @@ graph
 		label	"gamma"
 		graphics
 		[
-			x	137.0
-			y	171.7529296875
-			w	122.0
-			h	78.701171875
+			x	137.5
+			y	172.2529296875
+			w	121.0
+			h	79.701171875
 			type	"roundrectangle"
 			fill	"#FFFFFF"
 			outline	"#000000"
 			topBorderInset	0.0
-			bottomBorderInset	0.0
-			leftBorderInset	1.0
+			bottomBorderInset	1.0
+			leftBorderInset	0.0
 			rightBorderInset	1.0
 		]
 		LabelGraphics
@@ -335,16 +335,16 @@ graph
 		label	"Syk"
 		graphics
 		[
-			x	238.5
-			y	309.8046875
-			w	366.6777777777778
-			h	127.40234375
+			x	239.00001085069445
+			y	310.8046983506945
+			w	365.6777560763889
+			h	129.4023654513889
 			type	"roundrectangle"
 			fill	"#D2D2D2"
 			outline	"#000000"
 			topBorderInset	0.0
-			bottomBorderInset	0.0
-			leftBorderInset	1.0000217013889028
+			bottomBorderInset	1.0000217013889028
+			leftBorderInset	0.0
 			rightBorderInset	1.0
 		]
 		LabelGraphics
@@ -363,16 +363,16 @@ graph
 		label	"aLoop"
 		graphics
 		[
-			x	192.8388888888889
-			y	319.1552734375
-			w	122.0
-			h	78.701171875
+			x	193.3388888888889
+			y	319.6552734375
+			w	121.0
+			h	79.701171875
 			type	"roundrectangle"
 			fill	"#FFFFFF"
 			outline	"#000000"
 			topBorderInset	0.0
-			bottomBorderInset	0.0
-			leftBorderInset	1.0
+			bottomBorderInset	1.0
+			leftBorderInset	0.0
 			rightBorderInset	1.0
 		]
 		LabelGraphics
@@ -437,16 +437,16 @@ graph
 		label	"linker"
 		graphics
 		[
-			x	344.8388888888889
-			y	319.1552734375
-			w	122.0
-			h	78.701171875
+			x	345.3388888888889
+			y	319.6552734375
+			w	121.0
+			h	79.701171875
 			type	"roundrectangle"
 			fill	"#FFFFFF"
 			outline	"#000000"
 			topBorderInset	0.0
-			bottomBorderInset	0.0
-			leftBorderInset	1.0
+			bottomBorderInset	1.0
+			leftBorderInset	0.0
 			rightBorderInset	1.0
 		]
 		LabelGraphics
@@ -576,8 +576,8 @@ graph
 		edgeAnchor
 		[
 			ySource	1.0
-			xTarget	-0.8278688524590164
-			yTarget	-1.0
+			xTarget	-0.8347107438016529
+			yTarget	-0.9874531330408999
 		]
 	]
 	edge
@@ -591,8 +591,8 @@ graph
 		edgeAnchor
 		[
 			ySource	1.0
-			xTarget	0.1557377049180328
-			yTarget	-1.0
+			xTarget	0.15702479338842976
+			yTarget	-0.9874531330408999
 		]
 	]
 	edge
@@ -605,8 +605,8 @@ graph
 		]
 		edgeAnchor
 		[
-			xSource	-0.8278688524590164
-			ySource	1.0
+			xSource	-0.8347107438016529
+			ySource	0.9874531330408999
 			yTarget	-1.0
 		]
 	]

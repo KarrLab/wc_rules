@@ -1,3 +1,4 @@
+
 from schema_molecules import *
 from schema_sites import *
 
@@ -16,18 +17,9 @@ x = Receptor('receptor',sites=[
 	Gamma('gamma')
 	])
 gReceptor = GraphContainer(x.get_connected())
-# graphs for binding rules
-gReceptorAlpha = GraphContainer(gReceptor.duplicate(include=['receptor','alpha']))
-gReceptorBeta = GraphContainer(gReceptor.duplicate(include=['receptor','beta']))
-gReceptorGamma = GraphContainer(gReceptor.duplicate(include=['receptor','gamma']))
 
 x = Lyn('lyn',sites=[SH2('sh2')])
 gLyn = GraphContainer(x.get_connected())
-
-x = gReceptorBeta.duplicate()['beta']
-y = gLyn.duplicate()['sh2']
-x.bond = y
-gLynReceptor = GraphContainer(x.get_connected())
 
 x = Syk('syk',sites=[
 		TandemSH2('tsh2'),
@@ -35,6 +27,18 @@ x = Syk('syk',sites=[
 		LinkerRegion('linker')
 	])
 gSyk = GraphContainer(x.get_connected())
+
+# graphs for binding rules
+gReceptorAlpha = GraphContainer(gReceptor.duplicate(include=['receptor','alpha']))
+gReceptorBeta = GraphContainer(gReceptor.duplicate(include=['receptor','beta']))
+gReceptorGamma = GraphContainer(gReceptor.duplicate(include=['receptor','gamma']))
+
+
+x = gReceptorBeta.duplicate()['beta']
+y = gLyn.duplicate()['sh2']
+x.bond = y
+gLynReceptor = GraphContainer(x.get_connected())
+
 gSykTsh2 = gSyk.duplicate(include=['syk','tsh2'])
 
 # graphs for building dimers

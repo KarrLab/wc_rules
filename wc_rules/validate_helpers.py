@@ -20,7 +20,7 @@ def validate_set(_list,prefix):
 
 def validate_unique(master,child,prefix):
 	for x in child:
-		err = "`{0}` for {1} as it already exists in the namespace."
+		err = "Cannot use `{0}` for {1} as it already exists in the namespace."
 		assert x not in master, err.format(x,prefix)
 
 def validate_contains(master,child,prefix):
@@ -69,4 +69,5 @@ def validate_namespace(*args):
 	c = Counter()
 	for arg in args:
 		c.update(arg)
-	duplicates = [x for x in c if c[x]>2]
+	duplicates = [x for x in c if c[x]>1]
+	assert len(duplicates) == 0, 'Duplicates found: {0}'.format(duplicates)

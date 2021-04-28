@@ -10,7 +10,6 @@ import math
 
 import itertools,functools,collections,operator
 
-
 ############ functional programming
 def merge_lists(list_of_lists):
     return list(itertools.chain(*list_of_lists))
@@ -99,8 +98,7 @@ def tuplify_dict(_dict):
 
 def all_unique(_list):
     return len(set(_list)) == len(_list)
-
-    
+  
 ###### Error ######
 class GenericError(Exception):
 

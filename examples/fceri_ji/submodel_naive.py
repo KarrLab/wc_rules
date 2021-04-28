@@ -64,18 +64,20 @@ dimer_unbinding_rule = Rule(
 	params = ['dissociation_constant']
 	)
 
+monomer_ligand_model = RuleBasedModel(
+	name = 'monomer_ligand',
+	rules = [monomer_binding_rule, monomer_unbinding_rule]
+	)
+
 dimer_ligand_model = RuleBasedModel(
 	name = 'dimer_ligand',
 	rules = [dimer_binding_rule, dimer_unbinding_rule]
 	)
 
-# Aggregate Model
 model = AggregateModel(
 	name = 'ligand_receptor_binding',
 	models = [monomer_ligand_model, dimer_ligand_model]
 	)
-model.defaults = 
-
 
 data = {
 	'monomer_ligand': {
@@ -84,8 +86,9 @@ data = {
 	},
 	'dimer_ligand': {
 		'association_constant' : 2.5e-1,
-		'dissociation_constant': 0,
+		'dissociation_constant': 0.0,
 	}
 }
 
 model.verify(data)
+model.defaults = data

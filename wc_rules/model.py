@@ -2,7 +2,6 @@ from .rule import Rule
 from .validate_helpers import *
 from .utils import merge_lists
 from .indexer import DictLike
-from pprint import pformat
 
 class RuleBasedModel:
 
@@ -44,13 +43,13 @@ class RuleBasedModel:
 				raise AttributeError(f'{self.__class__.__name__}.{name} is not a valid attribute or contained rule.')
 		return out
 
-	def visualize_structure(self,count=0,rules=True):
-		if not rules:
-			return  '\n'.join( [count*'  ' + self.name])
-		return '\n'.join( [count*'  ' + self.name] + [(count+1)*'  ' + x.name for x in self.rules] )
+	def collect_parameters(self):
+		assert self.defaults is not None, "Model has no default parameters."
+		self.verify(self.defaults)
+		return self.defaults
 
-	def visualize_params(self,count=0):
-		return '\n'.join( [count*'  ' + self.name] + [(count+1)*'  ' + x for x in self.required_parameters()] )			
+	def collect_rules(self):
+		return [rule.name for rule in self.rules]
 
 class AggregateModel:
 
@@ -85,8 +84,12 @@ class AggregateModel:
 				raise AttributeError(f'{self.__class__.__name__}.{name} is not a valid attribute or contained model.')
 		return out
 
-	def visualize_structure(self,count=0,rules=True):
-		return '\n'.join( [count*'  ' + self.name] + [x.visualize_structure(count+1,rules=rules) for x in self.models] )
-	
-	def visualize_params(self,count=0):
-		return '\n'.join( [count*'  ' + self.name] + [x.visualize_params(count+1) for x in self.models] )	
+	def collect_parameters(self):
+		if self.defaults is None:
+			return {model.name: model.collect_parameters() for model in self.models}
+		else:
+			self.verify(self.defaults)
+			return self.defaults
+
+	def collect_rules(self):
+		return {model.name: model.collect_rules() for model in self.models}

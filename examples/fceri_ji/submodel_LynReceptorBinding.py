@@ -5,36 +5,55 @@ from template_molecular_graphs import *
 from template_rules import BindingModel
 
 # Patterns
-free_lyn = Pattern(gLyn,constraints = ['len(sh2.bond)==0'])
-free_beta_u = Pattern(gReceptorBeta,constraints = ['beta.ph==False','len(beta.bond)==0'])
-free_beta_p = Pattern(gReceptorBeta,constraints = ['beta.ph==True','len(beta.bond)==0'])
+free_lyn = Pattern(gLyn, constraints = ['len(sh2.bond)==0'])
+free_beta_u = Pattern(gReceptorBeta, constraints = ['beta.ph==False','len(beta.bond)==0'])
+free_beta_p = Pattern(gReceptorBeta, constraints = ['beta.ph==True','len(beta.bond)==0'])
 
-bound_lyn_u = Pattern(gLynReceptor,constraints = ['beta.ph==False'])
-bound_lyn_p = Pattern(gLynReceptor,constraints = ['beta.ph==True'])
+bound_lyn_u = Pattern(gLynReceptor, constraints = ['beta.ph==False'])
+bound_lyn_p = Pattern(gLynReceptor, constraints = ['beta.ph==True'])
 
-# binding models
-constitutive_inputs = [
-	('free_lyn',free_lyn,'sh2'),
-	('free_beta',free_beta_u, 'beta'),
-	('bound_lyn',bound_lyn_u,'sh2')
-]
-constitutive_model = BindingModel('constitutive', constitutive_inputs)
+constitutive_model = BindingModel(
+	name = 'constitutive',
+	reactants = {
+		'rLyn':			free_lyn,
+		'rReceptor':	free_beta_u,
+		'rLynReceptor':	bound_lyn_u,
+		},
+	targets = {
+		'rLyn':			'sh2',
+		'rReceptor':	'beta',
+		'rLynReceptor':	'sh2',
+		}
+	)
 
-active_inputs = [
-	('free_lyn',free_lyn,'sh2'),
-	('free_beta',free_beta_p, 'beta'),
-	('bound_lyn',bound_lyn_p,'sh2')
-]
-active_model = BindingModel('active', active_inputs)
+active_model = BindingModel(
+	name = 'active',
+	reactants = {
+		'rLyn':			free_lyn,
+		'rReceptor':	free_beta_p,
+		'rLynReceptor':	bound_lyn_p,
+		},
+	targets = {
+		'rLyn':			'sh2',
+		'rReceptor':	'beta',
+		'rLynReceptor':	'sh2',
+		}
+	)
 
 model = AggregateModel(
-	name = 'lyn_rec',
-	models = [constitutive_model,active_model]
+	name = 'lyn_receptor',
+	models = [ constitutive_model,active_model ]
 	)
 
 data = {
-	'constitutive': {'association_constant':5e-2, 'dissociation_constant':20.0},
-	'active': {'association_constant':5e-2, 'dissociation_constant':0.12}
+	'constitutive': {
+		'association_constant':		5e-2, 
+		'dissociation_constant':	20.0
+	},
+	'active': {
+		'association_constant':		5e-2, 
+		'dissociation_constant':	0.12
+	}
 }
 model.verify(data)
 model.defaults = data

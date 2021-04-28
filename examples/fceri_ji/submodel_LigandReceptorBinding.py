@@ -4,44 +4,61 @@ from wc_rules.model import AggregateModel
 from template_molecular_graphs import *
 from template_rules import BindingModel
 
-
 # Pattern template
 def build_ligand_pattern(v1,v2):
 	constraints = [f'len(fc1.bond) == {v1}',f'len(fc2.bond) == {v2}']
 	return Pattern(gLigand,constraints=constraints)
 
 # Patterns
-free_ligand = build_ligand_pattern(0,0)
-singly_bound_ligand = build_ligand_pattern(1,0)
-doubly_bound_ligand = build_ligand_pattern(1,1)
-free_receptor = Pattern(gReceptorAlpha,constraints = ['len(alpha.bond) == 0'])
+L00 = build_ligand_pattern(0,0)
+L01 = build_ligand_pattern(0,1)
+L11 = build_ligand_pattern(1,1)
+R   = Pattern(gReceptorAlpha,constraints = ['len(alpha.bond) == 0'])
 
-# RuleBasedModels
-monomer_inputs = [ 
-	('free_ligand',free_ligand,'fc1'), 
-	('free_receptor',free_receptor,'alpha'),
-	('singly_bound_ligand',singly_bound_ligand,'fc1')
-	]
-monomer_model = BindingModel('monomer',monomer_inputs )
+monomer_model = BindingModel(
+	name = 'monomer',
+	reactants = {
+		'rLigand': 			L00, 
+		'rReceptor': 		R, 
+		'rLigandReceptor':	L01
+		},
+	targets = {
+		'rLigand': 			'fc2', 
+		'rReceptor': 		'alpha', 
+		'rLigandReceptor': 	'fc2'
+		}
+	)
 
-dimer_inputs = [
-	('singly_bound_ligand',singly_bound_ligand,'fc2'), 
-	('free_receptor',free_receptor,'alpha'),
-	('doubly_bound_ligand',doubly_bound_ligand,'fc2')
-	]
-dimer_model = BindingModel('dimer',dimer_inputs)
-
+dimer_model = BindingModel(
+	name = 'dimer',
+	reactants = {
+		'rLigand': 			L01, 
+		'rReceptor': 		R, 
+		'rLigandReceptor':	L11
+		},
+	targets = {
+		'rLigand': 			'fc1', 
+		'rReceptor': 		'alpha', 
+		'rLigandReceptor': 	'fc1'
+		}
+	)
 
 # Aggregate model
 model = AggregateModel(
 	name = 'ligand_receptor',
-	models = [ monomer_model, dimer_model]
+	models = [ monomer_model, dimer_model ]
 	)
 
 # setting default parameters
 data = {
-	'monomer':{'association_constant':1.3e-7, 'dissociation_constant':0.0},
-	'dimer':{'association_constant':2.5e-1, 'dissociation_constant':0.0}
+	'monomer': {
+		'association_constant':		1.3e-7, 
+		'dissociation_constant':	0.0
+	},
+	'dimer': {
+		'association_constant':		2.5e-1, 
+		'dissociation_constant':	0.0
+	}
 }
 
 model.verify(data)

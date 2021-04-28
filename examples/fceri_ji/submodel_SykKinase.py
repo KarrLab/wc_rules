@@ -3,21 +3,26 @@ from template_rules import *
 from wc_rules.pattern import Pattern
 from wc_rules.model import AggregateModel
 
-
-pSykALoopFalseOnSyk = Pattern(gSykOnSyk,constraints = ['aloop_left.ph==False','aloop_right.ph==False'])
-pSykALoopTrueOnSyk = Pattern(gSykOnSyk,constraints = ['aloop_left.ph==True','aloop_right.ph==False'])
+def build_model(aloop=False):
+	state = {True:'phosphorylated',False:'unphosphorylated'}
+	return TransPhosphorylationModel(
+		name = f'aloop_{state[aloop]}',
+		reactant = Pattern(gSykOnSyk, constraints = [f'aloop_left.ph == {aloop}', f'aloop_right.ph == False']),
+		target = 'aloop_right',
+	)
 
 model = AggregateModel(
 	name = 'syk_kinase',
 	models = [
-		TransPhosphorylationModel('syk_aloopfalse_on_syk',pSykALoopFalseOnSyk,'aloop_right'),
-		TransPhosphorylationModel('syk_alooptrue_on_syk',pSykALoopTrueOnSyk,'aloop_right')
+		build_model(aloop=False),
+		build_model(aloop=True)	
 	]
 )
 
 data =	{
-	'syk_aloopfalse_on_syk': {'phosphorylation_rate': 100},
-	'syk_alooptrue_on_syk': {'phosphorylation_rate': 200},
+	'aloop_unphosphorylated': 	{'phosphorylation_rate': 100},
+	'aloop_phosphorylated': 	{'phosphorylation_rate': 200},
 }
+
 model.verify(data)
 model.defaults = data

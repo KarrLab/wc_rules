@@ -1,0 +1,26 @@
+binding:
+  ligand_receptor:
+    dimer: [dimer_binding_rule, dimer_unbinding_rule]
+    monomer: [monomer_binding_rule, monomer_unbinding_rule]
+  lyn_rec:
+    active: [active_binding_rule, active_unbinding_rule]
+    constitutive: [constitutive_binding_rule, constitutive_unbinding_rule]
+  syk_rec: [syk_rec_binding_rule, syk_rec_unbinding_rule]
+dephosphorylation:
+  receptor: [receptor_dephosphorylation_rule]
+  syk:
+    free_syk: [free_syk_dephosphorylation_rule]
+    membrane_syk: [membrane_syk_dephosphorylation_rule]
+transphosphorylation:
+  lyn_kinase:
+    active:
+      lyn_on_beta: [lyn_on_beta_phosphorylation_rule]
+      lyn_on_gamma: [lyn_on_gamma_phosphorylation_rule]
+      lyn_on_syk_linker: [lyn_on_syk_linker_phosphorylation_rule]
+    constitutive:
+      lyn_on_beta: [lyn_on_beta_phosphorylation_rule]
+      lyn_on_gamma: [lyn_on_gamma_phosphorylation_rule]
+      lyn_on_syk_linker: [lyn_on_syk_linker_phosphorylation_rule]
+  syk_kinase:
+    syk_aloopfalse_on_syk: [syk_aloopfalse_on_syk_phosphorylation_rule]
+    syk_alooptrue_on_syk: [syk_alooptrue_on_syk_phosphorylation_rule]

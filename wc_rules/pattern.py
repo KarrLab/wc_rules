@@ -21,7 +21,7 @@ class Pattern:
 
 	@property
 	def variables(self):
-		return self.parent.variables + list(self.helpers.keys()) + self.params + self.assigned_variables
+		return list(self.namespace.keys())
 	
 	@property
 	def namespace(self):
