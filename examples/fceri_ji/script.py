@@ -1,11 +1,17 @@
 from model import model
 
 from pprint import pformat
-from wc_rules.data_utils import write_yaml, write_json, read_yaml
+from wc_rules.data_utils import DataFileUtil
 
+dutil = DataFileUtil('canonical_data')
 
-p = model.collect_parameters()
-q = write_yaml(p,'data_fceri_ji.yaml')
-r = read_yaml('data_fceri_ji.yaml')
-write_json(p,'data_fceri_ji.json')
-model.verify(r)
+params1 = model.collect_parameters()
+model.verify(params1)
+
+dutil.write_file(params1,'params.yaml')
+params2 = dutil.read_file('params.yaml')
+model.verify(params2)
+
+dutil.write_file(params2,'params.json')
+params3 = dutil.read_file('params.json')
+model.verify(params3)
