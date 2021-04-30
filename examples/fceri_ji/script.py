@@ -8,18 +8,18 @@ dutil = DataFileUtil('canonical_data')
 params = model.collect_parameters()
 model.verify(params)
 
-params1 = model.collect_parameters()
+dutil.write_file(params,'params.yaml')
+params1 = dutil.read_file('params.yaml')
 model.verify(params1)
 
-dutil.write_file(params1,'params.yaml')
-params2 = dutil.read_file('params.yaml')
+dutil.write_file(params,'params.json')
+params2 = dutil.read_file('params.json')
 model.verify(params2)
 
-dutil.write_file(params1,'params.json')
-params3 = dutil.read_file('params.json')
+dutil.write_file(params,'params.plist')
+params3 = dutil.read_file('params.plist')
 model.verify(params3)
 
-dutil.write_file(params1,'params.plist')
-params4 = dutil.read_file('params.plist')
+dutil.write_file(params,'params.csv')
+params4 = dutil.read_file('params.csv')
 model.verify(params4)
-
