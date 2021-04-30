@@ -1,5 +1,5 @@
 from copy import deepcopy
-import json, importlib.util
+import json, csv, io
 import yaml
 
 from pathlib import Path
@@ -35,7 +35,7 @@ def join_dicts(*dicts):
 	return {k:v for d in dicts for k,v in d.items()}
 
 
-class YamlUtil:
+class YAMLUtil:
 	@staticmethod
 	def read(s):
 		return yaml.load(s)
@@ -44,7 +44,7 @@ class YamlUtil:
 	def write(d):
 		return yaml.dump(d,default_flow_style=False)
 
-class JsonUtil:
+class JSONUtil:
 
 	@staticmethod
 	def read(s):
@@ -54,11 +54,28 @@ class JsonUtil:
 	def write(d):
 		return json.dumps(d,indent=4)
 
+class PLISTUtil:
+
+	@staticmethod
+	def write(d):
+		rows = [['.'.join(k),v] for k,v in flatten_dict(d).items()]
+		s = io.StringIO()
+		w = csv.writer(s,delimiter='\t')
+		w.writerows(rows)
+		return s.getvalue()
+
+	@staticmethod
+	def read(s):
+		d1 = list(csv.reader(s.splitlines(),delimiter='\t'))
+		d2 = {tuple(x.split('.')):y for x,y in d1}
+		return unflatten_dict(d2)
+
 class DataFileUtil:
 
 	utils = {
-		'yaml': YamlUtil,
-		'json': JsonUtil
+		'yaml': YAMLUtil,
+		'json': JSONUtil,
+		'plist': PLISTUtil
 	}
 
 	def __init__(self,folder='.'):
