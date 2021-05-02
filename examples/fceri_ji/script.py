@@ -23,3 +23,7 @@ model.verify(params3)
 dutil.write_file(params,'params.csv')
 params4 = dutil.read_file('params.csv')
 model.verify(params4)
+
+dutil = DataFileUtil('data1')
+params5 = {x:dutil.read_file(f'{x}.csv') for x in ['binding','transphosphorylation','dephosphorylation']}
+model.verify(params)
