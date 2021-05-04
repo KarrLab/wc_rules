@@ -1,0 +1,17 @@
+"model","association_constant","dissociation_constant","phosphorylation_rate","dephosphorylation_rate"
+"binding.ligand_receptor.monomer",1.3e-07,0.0,"",""
+"binding.ligand_receptor.dimer",0.25,0.0,"",""
+"binding.lyn_receptor.constitutive",0.05,20.0,"",""
+"binding.lyn_receptor.active",0.05,0.12,"",""
+"binding.syk_receptor",0.06,20.0,"",""
+"transphosphorylation.lyn_kinase.constitutive.beta","","",30,""
+"transphosphorylation.lyn_kinase.constitutive.gamma","","",1,""
+"transphosphorylation.lyn_kinase.constitutive.linker","","",30,""
+"transphosphorylation.lyn_kinase.active.beta","","",100,""
+"transphosphorylation.lyn_kinase.active.gamma","","",3,""
+"transphosphorylation.lyn_kinase.active.linker","","",100,""
+"transphosphorylation.syk_kinase.aloop_unphosphorylated","","",100,""
+"transphosphorylation.syk_kinase.aloop_phosphorylated","","",200,""
+"dephosphorylation.receptor","","","",20.0
+"dephosphorylation.membrane_syk","","","",20.0
+"dephosphorylation.free_syk","","","",20.0

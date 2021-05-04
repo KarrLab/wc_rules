@@ -1,0 +1,6 @@
+"model","association_constant","dissociation_constant"
+"ligand_receptor.monomer",1.3e-07,0.0
+"ligand_receptor.dimer",0.25,0.0
+"lyn_receptor.constitutive",0.05,20.0
+"lyn_receptor.active",0.05,0.12
+"syk_receptor",0.06,20.0

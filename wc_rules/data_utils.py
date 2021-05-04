@@ -5,6 +5,8 @@ import yaml
 from pathlib import Path
 from collections import defaultdict
 
+DELIMITER = ','
+
 def flatten_dict(d):
 	if not isinstance(d,dict):
 		return d
@@ -44,6 +46,9 @@ def ordered_unique_elems(L):
 			outS.add(elem)
 	return outL
 
+def compose_data(*dicts):
+	return unflatten_dict(join_dicts(*[flatten_dict(d) for d in dicts]))
+
 
 class YAMLUtil:
 	@staticmethod
@@ -68,7 +73,7 @@ class PLISTUtil:
 
 	@staticmethod
 	def read(s):
-		d1 = list(csv.reader(s.splitlines(),delimiter=','))
+		d1 = list(csv.reader(s.splitlines(),delimiter=DELIMITER,  quoting = csv.QUOTE_NONNUMERIC))
 		d2 = {tuple(x.split('.')):y for x,y in d1}
 		return unflatten_dict(d2)
 
@@ -77,7 +82,7 @@ class PLISTUtil:
 	def write(d):
 		rows = [['.'.join(k),v] for k,v in flatten_dict(d).items()]
 		s = io.StringIO()
-		w = csv.writer(s,delimiter=',')
+		w = csv.writer(s,delimiter=DELIMITER, quoting = csv.QUOTE_NONNUMERIC)
 		w.writerows(rows)
 		return s.getvalue()
 
@@ -86,7 +91,7 @@ class CSVUtil:
 	@staticmethod
 	def read(s):
 		# uses first row as header
-		elems = list(csv.reader(s.splitlines(),delimiter=','))
+		elems = list(csv.reader(s.splitlines(),delimiter=DELIMITER,  quoting = csv.QUOTE_NONNUMERIC))
 		headers = elems.pop(0)[1:]
 		d = dict()
 		for elem in elems:
@@ -105,7 +110,7 @@ class CSVUtil:
 		rows = [join_dicts({'model':mname},mparams) for mname, mparams in d1.items()]
 		
 		s = io.StringIO()
-		w = csv.DictWriter(s,delimiter=',', fieldnames = fieldnames)
+		w = csv.DictWriter(s,delimiter=DELIMITER, fieldnames = fieldnames, quoting = csv.QUOTE_NONNUMERIC)
 		w.writeheader() 
 		w.writerows(rows)
 		return s.getvalue()
@@ -140,3 +145,13 @@ class DataFileUtil:
 			self.folder.mkdir(parents=True)
 		file.write_text(txt)
 		return
+	
+	def read_files(self,filenames=[]):
+		if filenames == []:
+			files = sorted(self.folder.glob('*.*'))
+		else:
+			files = [self.folder / x for x in filenames]
+		return {file.stem:self.read_file(file.name) for file in files}
+
+
+

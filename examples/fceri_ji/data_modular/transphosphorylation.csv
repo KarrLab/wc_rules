@@ -1,0 +1,9 @@
+"model","phosphorylation_rate"
+"lyn_kinase.constitutive.beta",30
+"lyn_kinase.constitutive.gamma",1
+"lyn_kinase.constitutive.linker",30
+"lyn_kinase.active.beta",100
+"lyn_kinase.active.gamma",3
+"lyn_kinase.active.linker",100
+"syk_kinase.aloop_unphosphorylated",100
+"syk_kinase.aloop_phosphorylated",200
