@@ -6,7 +6,8 @@
 :License: MIT
 """
 
-from . import seq,utils
+from . import seq
+from ..utils import utils
 from Bio.Alphabet.IUPAC import IUPACAmbiguousDNA,IUPACUnambiguousDNA,IUPACAmbiguousRNA,IUPACUnambiguousRNA,IUPACProtein,ExtendedIUPACProtein
 
 ###### Sequence Objects ######

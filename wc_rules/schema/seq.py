@@ -4,10 +4,10 @@
 :Copyright: 2017, Karr Lab
 :License: MIT
 """
-from . import rete_nodes as rn
-from . import chem, utils
-from obj_model import core
-from obj_model import bio
+from . import chem
+from ..utils import utils
+from obj_model import core,bio
+
 import Bio.Seq
 import Bio.Alphabet
 

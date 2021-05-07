@@ -2,8 +2,8 @@ from collections import defaultdict,deque
 import math
 from itertools import product
 from functools import partial
-from .indexer import BiMap
-from .utils import strgen, concat, printvars, merge_lists, tuplify_dict
+from ..utils.data_structures import BiMap
+from ..utils.utils import strgen, concat, printvars, merge_lists, tuplify_dict
 from operator import itemgetter
 from sortedcontainers import SortedSet
 from dataclasses import dataclass

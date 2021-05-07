@@ -6,7 +6,7 @@ kar@gmail.com>
 :License: MIT
 """
 
-from . import base,entity,utils
+from . import base,entity
 from .attributes import *
 
 class Molecule(entity.Entity):

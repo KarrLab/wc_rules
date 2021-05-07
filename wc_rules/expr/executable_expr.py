@@ -1,6 +1,7 @@
 from .expr import process_expression_string, serialize
 from .dependency import DependencyCollector
-from .utils import subdict
+from ..utils.utils import subdict
+from ..schema.actions import RollbackAction, TerminateAction
 import math,builtins
 import scipy.special
 from pprint import pformat
@@ -172,6 +173,33 @@ class RateLaw(ExecutableExpression):
 	allowed_forms = ['<expr>']
 	allowed_returns = (int,float,)
 
+######## Simulator methods #########
+def rollback(expr):
+    assert isinstance(expr,bool), "Rollback condition must evaluate to a boolean."
+    return {True:RollbackAction(),False:[]}[expr]
+setattr(rollback,'_is_action',True)
+
+def terminate(expr):
+    assert isinstance(expr,bool), "Terminate condition must evaluate to a boolean."
+    return {True:TerminateAction(),False:[]}[expr]
+setattr(terminate,'_is_action',True)
+
+########### ActionCaller ##########
+# an executable expression object that when called on a match
+# is equivalent to an action method call
+class ActionCaller(ExecutableExpression):
+    start = 'function_call'
+    builtins = ChainMap(global_builtins,dict(rollback=rollback,terminate=terminate))
+    allowed_forms = ['<actioncall> ( <boolexpr> )', '<pattern>.<var>.<actioncall> (<params>)', '<pattern>.<actioncall> (<params>)']
+
+    def exec(self,matches,helpers):
+        v = super().exec(matches,helper)
+        #err = 'An element in the following nested list is not a recognized Action: {0}'
+        #assert verify_list(v,(SimulatorAction,PrimaryAction,CompositeAction)), err.format(list(v))
+        # verifying that every element of a nested list is an action is slow AF
+        # just don't do any verification here
+        # todo: verification can be done by the simulator when it processes the output of an action caller.
+        return v  
 
 def initialize_from_string(string,classes):
 	for c in classes:
@@ -180,4 +208,3 @@ def initialize_from_string(string,classes):
 			return x
 	err = 'Could not create a valid instance of {0} from {1}'
 	assert False, err.format(classes,string)
-	

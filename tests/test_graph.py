@@ -1,7 +1,7 @@
-from wc_rules.attributes import *
-from wc_rules.entity import Entity
-from wc_rules.pattern2 import Pattern, GraphContainer
-from wc_rules.canonical import canonical_ordering, compute_symmetries, compute_symmetry_generators
+from wc_rules.schema.attributes import *
+from wc_rules.schema.entity import Entity
+from wc_rules.pattern.pattern import Pattern, GraphContainer
+from wc_rules.canonical.canonical import canonical_ordering, compute_symmetries, compute_symmetry_generators
 import math
 import random
 from collections import defaultdict

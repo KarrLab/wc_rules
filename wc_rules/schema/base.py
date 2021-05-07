@@ -7,38 +7,15 @@
 """
 
 from obj_model import core
-from . import graph_utils
-from . import utils
+from ..utils import utils
 from .attributes import *
-import uuid
-import random
-from collections import deque
-from .indexer import DictLike
 from .actions import ActionMixin
 
+from collections import deque
 
-# Seed for creating ids
-# To modify this seed, load base module, then execute base.idgen.seed(<new_seed>)
-idgen = random.Random()
-idgen.seed(0)
-
-###### Structures ######
 class BaseClass(core.Model,ActionMixin):
-    """ Base class for bioschema objects.
-
-    Attributes:
-        id (:obj:`str`): unique id that can be used to pick object from a list
-
-    Properties:
-        label (:obj:`str`): name of the leaf class from which object is created
-    """
-    #id = StringAttribute(primary=True, unique=True)
+    ''' Base class for building objects '''
     id = IdAttribute()
-    attribute_properties = dict()
-
-    class GraphMeta(graph_utils.GraphMeta):
-        outward_edges = tuple()
-        semantic = tuple()
 
     def __init__(self, *args, **kwargs):
         super(BaseClass, self).__init__(**kwargs)
@@ -46,7 +23,6 @@ class BaseClass(core.Model,ActionMixin):
             if args:
                 self.id = args[0]
             else:
-            #self.id = str(uuid.UUID(int=idgen.getrandbits(128)))
                 self.id = utils.generate_id()
         self.attach_actions()
 
@@ -156,14 +132,6 @@ class BaseClass(core.Model,ActionMixin):
         """ Name of the leaf class from which object is created.
         """
         return self.__class__.__name__
-
-    ##### Graph Methods #####
-    def get_graph(self, recurse=True, memo=None):
-        return graph_utils.get_graph(self, recurse=recurse, memo=memo)
-
-    @property
-    def graph(self):
-        return self.get_graph(recurse=True)
 
     def get_connected(self):
         nodes, examine_stack = [], deque([self])

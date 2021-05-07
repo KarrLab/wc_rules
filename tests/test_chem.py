@@ -5,7 +5,7 @@
 :License: MIT
 """
 
-from wc_rules import chem,utils
+from wc_rules.schema import chem
 import unittest
 
 

@@ -5,10 +5,10 @@
 :License: MIT
 """
 
-from wc_rules import base
-from wc_rules import graph_utils
-from wc_rules import utils
-from wc_rules.attributes import *
+from wc_rules.schema import base
+from wc_rules.schema.attributes import *
+from wc_rules.utils import utils
+
 import unittest
 
 
@@ -17,14 +17,8 @@ class Person(base.BaseClass):
     parents = ManyToManyAttribute('Person', max_related_rev=2, related_name='children')
     pets = OneToManyAttribute('Pet', related_name='owner')
 
-    class GraphMeta(graph_utils.GraphMeta):
-        outward_edges = ('children', 'pets')
-        semantic = ('name',)
-
-
 class Pet(base.BaseClass):
     name = StringAttribute()
-
 
 class TestBase(unittest.TestCase):
 

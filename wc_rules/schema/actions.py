@@ -4,10 +4,7 @@ from collections import deque, ChainMap
 from types import MethodType
 from abc import ABC, abstractmethod
 from obj_model import core
-from .executable_expr import ExecutableExpression, global_builtins
-from .utils import verify_list
 from .attributes import action
-
 
 ### Action prototypes
 class SimulatorAction(ABC):
@@ -36,16 +33,6 @@ class CompositeAction(ABC):
 ######## Simulator actions
 RollbackAction = type('RollbackAction',(SimulatorAction,),{})
 TerminateAction = type('TerminateAction',(SimulatorAction,),{})
-
-def rollback(expr):
-    assert isinstance(expr,bool), "Rollback condition must evaluate to a boolean."
-    return {True:RollbackAction(),False:[]}[expr]
-setattr(rollback,'_is_action',True)
-
-def terminate(expr):
-    assert isinstance(expr,bool), "Terminate condition must evaluate to a boolean."
-    return {True:TerminateAction(),False:[]}[expr]
-setattr(terminate,'_is_action',True)
 
 ############## Primary Actions
 # NodeAction -> AddNode, RemoveNode
@@ -250,23 +237,6 @@ class Remove(CompositeAction):
     def expand(self):
         return [RemoveAllEdges(self.source), RemoveNode.make(self.source)]
 
-
-########### ActionCaller ##########
-# an executable expression object that when called on a match
-# is equivalent to an action method call
-class ActionCaller(ExecutableExpression):
-    start = 'function_call'
-    builtins = ChainMap(global_builtins,dict(rollback=rollback,terminate=terminate))
-    allowed_forms = ['<actioncall> ( <boolexpr> )', '<pattern>.<var>.<actioncall> (<params>)', '<pattern>.<actioncall> (<params>)']
-
-    def exec(self,matches,helpers):
-        v = super().exec(matches,helper)
-        #err = 'An element in the following nested list is not a recognized Action: {0}'
-        #assert verify_list(v,(SimulatorAction,PrimaryAction,CompositeAction)), err.format(list(v))
-        # verifying that every element of a nested list is an action is slow AF
-        # just don't do any verification here
-        # todo: verification can be done by the simulator when it processes the output of an action caller.
-        return v  
 
 ############### codegeneration for methods
 class ActionMixin:
