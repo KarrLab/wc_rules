@@ -5,14 +5,40 @@ import yaml
 from pathlib import Path
 from collections import defaultdict
 
+
+def nesteddict_pathtuple(s):
+	assert isinstance(s,(str,tuple)), f"Key {s} must be a string (e.g., `a.b.c`) or tuple (e.g., ('a','b','c',))."
+	if isinstance(s,str):
+		return tuple(s.split('.'))
+	return s
+
+def nesteddict_get(d,key):
+	for elem in nesteddict_pathtuple(key):
+		d = d[elem]
+	return d
+
+def nesteddict_makepath(d,path):
+	for elem in path:
+		if not isinstance(d.get(elem,None), dict):
+			d[elem] = dict()
+		d = d[elem]
+	return d
+
+def nesteddict_set(d,key,value):
+	path = nesteddict_pathtuple(key)
+	d1 = nesteddict_makepath(d,path[:-1])
+	d1[path[-1]]=value
+	return
+
+
 DELIMITER = ','
 
-def flatten_dict(d):
+def nesteddict_flatten(d):
 	if not isinstance(d,dict):
 		return d
 	outd = dict()
 	for k,v in d.items():
-		v = flatten_dict(v)
+		v = nesteddict_flatten(v)
 		if isinstance(v,dict):
 			for k1,v1 in v.items():
 				outd[(k,*k1)] = v1
@@ -20,7 +46,7 @@ def flatten_dict(d):
 			outd[(k,)] = v
 	return outd
 
-def unflatten_dict(d):
+def nesteddict_unflatten(d):
 	outd = dict()
 	for k, v in d.items():
 		priors, final = k[:-1], k[-1]
@@ -46,8 +72,8 @@ def ordered_unique_elems(L):
 			outS.add(elem)
 	return outL
 
-def compose_data(*dicts):
-	return unflatten_dict(join_dicts(*[flatten_dict(d) for d in dicts]))
+def nesteddict_compose(*dicts):
+	return nesteddict_unflatten(join_dicts(*[nesteddict_flatten(d) for d in dicts]))
 
 
 class YAMLUtil:
@@ -75,12 +101,12 @@ class PLISTUtil:
 	def read(s):
 		d1 = list(csv.reader(s.splitlines(),delimiter=DELIMITER,  quoting = csv.QUOTE_NONNUMERIC))
 		d2 = {tuple(x.split('.')):y for x,y in d1}
-		return unflatten_dict(d2)
+		return nesteddict_unflatten(d2)
 
 
 	@staticmethod
 	def write(d):
-		rows = [['.'.join(k),v] for k,v in flatten_dict(d).items()]
+		rows = [['.'.join(k),v] for k,v in nesteddict_flatten(d).items()]
 		s = io.StringIO()
 		w = csv.writer(s,delimiter=DELIMITER, quoting = csv.QUOTE_NONNUMERIC)
 		w.writerows(rows)
@@ -98,11 +124,11 @@ class CSVUtil:
 			model = elem[0].split('.')
 			for p,v in zip(headers,elem[1:]):
 				d[tuple(model + [p])] = v
-		return unflatten_dict(d)
+		return nesteddict_unflatten(d)
 
 	@staticmethod
 	def write(d):
-		elems = flatten_dict(d)
+		elems = nesteddict_flatten(d)
 		fieldnames = ['model'] + ordered_unique_elems(k[-1] for k in elems)
 		d1 = defaultdict(dict)
 		for k, v in elems.items():
