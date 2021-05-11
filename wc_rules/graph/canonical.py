@@ -1,30 +1,14 @@
+from .collections import GraphContainer, CanonicalForm, SymmetryGenerator
+from ..utils.collections import BiMap, strgen, concat, printvars, merge_lists, tuplify_dict
+
 from collections import defaultdict,deque
 import math
 from itertools import product
-from functools import partial
-from ..utils.data_structures import BiMap
-from ..utils.utils import strgen, concat, printvars, merge_lists, tuplify_dict
+from functools import partial 
 from operator import itemgetter
 from sortedcontainers import SortedSet
-from dataclasses import dataclass
 
-@dataclass(unsafe_hash=True)
-class CanonicalForm:
-	partition: tuple
-	classes: tuple
-	leaders: tuple
-	edges: tuple
 
-	@property
-	def namespace(self):
-		return dict(zip(merge_lists(self.partition),self.classes))
-	
-
-@dataclass(unsafe_hash=True)
-class SymmetryGenerator:
-	source: tuple
-	targets: tuple
-	
 def canonical_label(g):
 	# g is a graphcontainer
 	if len(g)==0:

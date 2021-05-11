@@ -7,7 +7,7 @@
 """
 
 from obj_model import core
-from ..utils import utils
+from ..utils.random import generate_id
 from .attributes import *
 from .actions import ActionMixin
 
@@ -23,7 +23,7 @@ class BaseClass(core.Model,ActionMixin):
             if args:
                 self.id = args[0]
             else:
-                self.id = utils.generate_id()
+                self.id = generate_id()
         self.attach_actions()
 
     def get_literal_attrdict(self,ignore_id=True,ignore_None=True):

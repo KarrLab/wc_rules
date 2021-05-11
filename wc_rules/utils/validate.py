@@ -1,5 +1,5 @@
 from collections import Counter
-from .utils import all_unique, check_cycle
+from .collections import all_unique, check_cycle
 from keyword import iskeyword
 
 def validate_class(_obj,classes,prefix):

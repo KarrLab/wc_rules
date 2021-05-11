@@ -1,7 +1,8 @@
 from wc_rules.schema.attributes import *
 from wc_rules.schema.entity import Entity
-from wc_rules.pattern.pattern import GraphContainer, Pattern
-from wc_rules.expr.executable_expr import Constraint
+from wc_rules.graph.collections import GraphContainer
+from wc_rules.modeling.pattern import Pattern
+from wc_rules.expressions.executable import Constraint
 import math
 import unittest
 
@@ -65,7 +66,6 @@ class TestPattern(unittest.TestCase):
 		with self.assertRaises(AssertionError):
 			pxx = Pattern(parent=px, helpers={'px':px}, constraints='t==5')
 
-	@unittest.skip("Upgrade to new patterns")
 	def test_boolean_constraints(self):
 		z = Z('z1',z=Z('z2'))
 		pz = Pattern(
@@ -93,11 +93,11 @@ class TestPattern(unittest.TestCase):
 		[False, False, True, False ],
 		]
 
-		computed_values = [[c.exec(match) for match in matches] for c in pz.constraints.values()]
+
+		computed_values = [[c.exec(match) for match in matches] for c in pz.make_executable_constraints()]
 
 		self.assertEqual(computed_values,expected_values)
 
-	@unittest.skip("Upgrade to new patterns")
 	def test_list_constraints(self):		
 		px = Pattern(
 			parent = GraphContainer([X('x')]),
@@ -109,11 +109,12 @@ class TestPattern(unittest.TestCase):
     		])
 
 		match = dict(x = X(y=[Y(),Y()],i=10,j=20,k=30))
-		for c in px.constraints.values():
+		execs = px.make_executable_constraints()
+		for c in execs:
 			self.assertTrue(c.exec(match,{}))
 
-		pz = Pattern(parent=GraphContainer([Z('z')]),constraints='''len(z.z) > 0''')
-		c = list(pz.constraints.values())[0]
+		pz = Pattern(parent=GraphContainer([Z('z')]),constraints=['len(z.z) > 0'])
+		c = pz.make_executable_constraints()[0]
 		self.assertEqual(c.exec(dict( z=Z() )), False)
 		self.assertEqual(c.exec(dict( z=Z(z=Z()) )), True)
 

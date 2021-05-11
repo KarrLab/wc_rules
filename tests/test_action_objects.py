@@ -1,7 +1,7 @@
-from wc_rules.base import BaseClass
-from wc_rules.attributes import *
-from wc_rules.actions import *
-from wc_rules.simulator import SimulationState
+from wc_rules.schema.base import BaseClass
+from wc_rules.schema.attributes import *
+from wc_rules.schema.actions import *
+from wc_rules.simulator.simulator import SimulationState
 import unittest
 
 

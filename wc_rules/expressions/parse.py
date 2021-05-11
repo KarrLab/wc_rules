@@ -1,5 +1,5 @@
 from lark import Lark, tree, Transformer,Visitor, v_args, Tree,Token
-from ..utils.utils import merge_lists, merge_dicts, pipe_map,listmap
+from ..utils.collections import merge_lists, merge_dicts, pipe_map,listmap
 from operator import itemgetter,attrgetter
 from functools import partial
 

@@ -1,5 +1,5 @@
 import unittest
-from wc_rules.utils.data_structures import BiMap
+from wc_rules.utils.collections import BiMap
 
 class TestBiMap(unittest.TestCase):
 

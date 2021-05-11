@@ -1,12 +1,13 @@
-from .expr import process_expression_string, serialize
+from .parse import process_expression_string, serialize
 from .dependency import DependencyCollector
-from ..utils.utils import subdict
+from ..utils.collections import subdict
 from ..schema.actions import RollbackAction, TerminateAction
 import math,builtins
 import scipy.special
 from pprint import pformat
 from collections import ChainMap
 from operator import xor
+from functools import wraps
 
 symmetric_functions = '''
 sum any all max min
@@ -82,6 +83,17 @@ global_builtins = dict(
     
 )
 
+def register_builtin(name,fn,ordered_arguments=True):
+	global ordered_builtins
+	global global_builtins
+
+	global_builtins[name] = fn
+	if ordered_arguments:
+		ordered_builtins.append(name)
+	return
+
+
+
 class ExecutableExpression:
 	# is a fancy lambda function that can be executed
 	start = None
@@ -102,7 +114,6 @@ class ExecutableExpression:
 			fn = self.fn
 			))
 
-
 	@classmethod
 	def initialize(cls,s):
 		try:
@@ -112,6 +123,8 @@ class ExecutableExpression:
 			#	err = 'Code `{s}` is nesting too many variables'
 			#	assert has_subvariables, err.format(s=s) 
 			keywords = list(deps.variables)
+
+			# this step figures what builtins to use, picks them from the global_builtins list
 			builtins = subdict(cls.builtins, ['__builtins__'] + list(deps.builtins))
 			code2 = 'lambda {vars}: {code}'.format(vars=','.join(keywords),code=code)
 			try:

@@ -56,7 +56,7 @@ class TestChem(unittest.TestCase):
         B1 = B('B1')
         Y1 = Y('Y1')
         Y2 = Y('Y2')
-        B1.add_sites(Y1,Y2)
+        B1.sites.extend([Y1,Y2])
 
 
         X1.bond = Y1
@@ -68,3 +68,4 @@ class TestChem(unittest.TestCase):
         self.assertEqual(Y1.bond,None)
 
         return
+

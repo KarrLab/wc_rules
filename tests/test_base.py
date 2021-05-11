@@ -7,7 +7,7 @@
 
 from wc_rules.schema import base
 from wc_rules.schema.attributes import *
-from wc_rules.utils import utils
+from wc_rules.utils import random as randutils
 
 import unittest
 
@@ -23,7 +23,7 @@ class Pet(base.BaseClass):
 class TestBase(unittest.TestCase):
 
     def setUp(self):
-        utils.idgen.seed(0)
+        randutils.idgen.seed(0)
         self.Sherlock = Person(name='Sherlock')
         self.John = Person(name='John')
         self.Mary = Person(name='Mary')
