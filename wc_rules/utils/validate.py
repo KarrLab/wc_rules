@@ -1,5 +1,5 @@
-from collections import Counter
-from .collections import all_unique, check_cycle
+from collections import Counter, deque
+from .collections import all_unique
 from keyword import iskeyword
 
 def validate_class(_obj,classes,prefix):
@@ -71,3 +71,18 @@ def validate_namespace(*args):
 		c.update(arg)
 	duplicates = [x for x in c if c[x]>1]
 	assert len(duplicates) == 0, 'Duplicates found: {0}'.format(duplicates)
+
+def check_cycle(gdict):
+    # gdict is a directed graph represented as a dict
+    nodes,paths = deque(gdict), deque()
+    while nodes or paths:
+        if not paths:
+            paths.append([nodes.popleft()])
+        path = paths.popleft()
+        if len(path)>1 and path[0]==path[-1]:
+            pathstr = '->'.join(path)
+            return pathstr 
+        next_steps = gdict.get(path[-1],[])
+        if len(next_steps)>0:
+            paths.extend([path + [x] for x in next_steps])
+    return ''

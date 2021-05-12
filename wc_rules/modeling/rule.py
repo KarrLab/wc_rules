@@ -1,8 +1,9 @@
 
-from .validate_helpers import *
+from ..utils.validate import *
 from .pattern import Pattern
-from .actions import ActionCaller
-from .executable_expr import Constraint, Computation, RateLaw, initialize_from_string
+from ..expressions.executable import ActionCaller,Constraint, Computation, RateLaw, initialize_from_string
+from collections import Counter
+from ..utils.collections import sort_by_value
 
 class Rule:
 
@@ -81,3 +82,15 @@ class Rule:
 		namespace = list(self.reactants.keys()) + list(self.helpers.keys()) + self.params
 		x = initialize_from_string(rate_prefix,(RateLaw,))
 		validate_contains(self.variables,x.keywords,'Variable')
+
+	def get_rate_law(self):
+		return self.rate_prefix
+
+class InstanceRateRule(Rule):
+
+	def get_rate_law(self):
+		reactant_sets = sort_by_value(self.reactants)
+		elems = [f'comb({x[0]}.count(),{len(x)})' for x in reactant_sets]
+		rate_law = "*".join([self.rate_prefix] + elems)
+		return rate_law
+

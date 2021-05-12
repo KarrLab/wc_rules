@@ -197,19 +197,13 @@ def tuplify_dict(_dict):
 def all_unique(_list):
     return len(set(_list)) == len(_list)
 
+def sort_by_value(_dict):
+    values = collections.Counter(_dict.values()).keys()
+    leaders = collections.defaultdict(list)
+    for v in values:
+        for k,x in _dict.items():
+            if x==v:
+                leaders[v].append(k)
+    return list(leaders.values())
 
 ##### Validating data structures
-def check_cycle(gdict):
-    # gdict is a directed graph represented as a dict
-    nodes,paths = collections.deque(gdict), collections.deque()
-    while nodes or paths:
-        if not paths:
-            paths.append([nodes.popleft()])
-        path = paths.popleft()
-        if len(path)>1 and path[0]==path[-1]:
-            pathstr = '->'.join(path)
-            return pathstr 
-        next_steps = gdict.get(path[-1],[])
-        if len(next_steps)>0:
-            paths.extend([path + [x] for x in next_steps])
-    return ''

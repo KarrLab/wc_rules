@@ -1,5 +1,5 @@
-from wc_rules.base import BaseClass
-from wc_rules.attributes import *
+from wc_rules.schema.base import BaseClass
+from wc_rules.schema.attributes import *
 import unittest
 
 class SomeClass(BaseClass):

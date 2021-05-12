@@ -1,9 +1,9 @@
-from wc_rules.entity import Entity
-from wc_rules.attributes import IntegerAttribute, OneToOneAttribute
-from wc_rules.executable_expr import Constraint, Computation, RateLaw
-from wc_rules.rule2 import InstanceRateRule
-from wc_rules.pattern2 import Pattern, GraphContainer
-from wc_rules.chem import Molecule, Site
+from wc_rules.schema.entity import Entity
+from wc_rules.schema.attributes import IntegerAttribute, OneToOneAttribute
+from wc_rules.expressions.executable import Constraint, Computation, RateLaw
+from wc_rules.modeling.rule import InstanceRateRule
+from wc_rules.modeling.pattern import Pattern, GraphContainer
+from wc_rules.schema.chem import Molecule, Site
 from pprint import pformat
 #from wc_rules.actions import parser
 
@@ -112,54 +112,47 @@ class TestRuleBuild(unittest.TestCase):
 
 	def test_rule_one(self):
 		lignode = Lig('Lig',sites=[RecBindingSite('rec1'),RecBindingSite('rec2')])
-		lig  = Pattern.build(
+		lig  = Pattern(
 			parent = GraphContainer(lignode.get_connected()), 
-			constraints = 'len(rec1.bond)==0 \n len(rec2.bond)==0'
+			constraints = ['len(rec1.bond)==0','len(rec2.bond)==0']
 			)
 		recnode =Rec('Rec',sites=[LigBindingSite('lig')])
-		rec = Pattern.build(
+		rec = Pattern(
 			parent = GraphContainer(recnode.get_connected()),
-			constraints = 'len(lig.bond)==0'
+			constraints = ['len(lig.bond)==0']
 			)
 		# note two bonds being formed at the same time
-		binding_rule = InstanceRateRule.build(
+		binding_rule = InstanceRateRule(
+			name = 'binding_rule',
 			reactants = dict(L=lig,R1=rec,R2=rec),
-			actions = 'k = some_value \n L.rec1.add_bond(R1.lig) \n L.rec2.add_bond(R2.lig) ',
-			rate_law = 'binding_constant',
+			actions = ['k = some_value','L.rec1.add_bond(R1.lig)','L.rec2.add_bond(R2.lig)'],
+			rate_prefix = 'binding_constant',
 			params = ['binding_constant','some_value']
 			)
 
-		namespace = {
-			'reactants': {
-				'L': {
-					'Lig': Lig,
-					'rec1': RecBindingSite,
-					'rec2': RecBindingSite,
-					'_0': 'len(rec1.bond) == 0',
-					'_1': 'len(rec2.bond) == 0'
-				},
-				'R1': {
-					'Rec': Rec,
-					'lig': LigBindingSite,
-					'_0': 'len(lig.bond) == 0'
-				},
-				'R2': {
-					'Rec': Rec,
-					'lig': LigBindingSite,
-					'_0': 'len(lig.bond) == 0'
-				}
+		d = {
+			'L': {
+				'Lig': Lig,
+				'rec2': RecBindingSite,
+				'rec1': RecBindingSite
 			},
-			'helpers': {},
-			'actions':{
-				'k': 'some_value',
-				'_0': 'L.rec1.add_bond(R1.lig)',
-				'_1': 'L.rec2.add_bond(R2.lig)',
+			'R1': {
+				'Rec': Rec,
+				'lig': LigBindingSite,
 			},
-			'params': ('binding_constant', 'some_value'),                                          
-  			'rate_law': 'binding_constant*comb(L.count(),1)*comb(R1.count(),2)',
+			'R2': {
+				'Rec': Rec,
+				'lig': LigBindingSite,
+			},
+			'binding_constant': 'Parameter',
+			'some_value': 'Parameter',
+			'actions':  ['k = some_value','L.rec1.add_bond(R1.lig)','L.rec2.add_bond(R2.lig)'],
+			'rate_prefix': 'binding_constant'
 		}
 		self.maxDiff=None
-		self.assertEqual(pformat(binding_rule.namespace),pformat(namespace))
+		#self.assertEqual(pformat(binding_rule.namespace),pformat(namespace))
+		self.assertEqual(binding_rule.asdict(),d)
+		self.assertEqual(binding_rule.get_rate_law(),'binding_constant*comb(L.count(),1)*comb(R1.count(),2)')
 
 
 

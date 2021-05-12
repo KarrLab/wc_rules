@@ -1,7 +1,7 @@
 
 from ..utils.validate import *
 from ..graph.collections import GraphContainer
-from ..utils.collections import split_string, check_cycle
+from ..utils.collections import split_string
 from ..utils.random import idgen
 from ..expressions.executable import Constraint, Computation, initialize_from_string
 
