@@ -206,4 +206,5 @@ def sort_by_value(_dict):
                 leaders[v].append(k)
     return list(leaders.values())
 
-##### Validating data structures
+def ordered_unique(iterable):
+    return {k:1 for k in iterable}.keys()

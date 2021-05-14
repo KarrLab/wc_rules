@@ -10,61 +10,63 @@ class NestedDict:
 	# assumes keys are all strings
 	
 	@staticmethod
-	def convert_to_pathtuple(s):
-		assert isinstance(s,(str,tuple)), f"Key {s} must be a string (e.g., `a.b.c`) or tuple (e.g., ('a','b','c',))."
-		if isinstance(s,str):
-			return tuple(s.split('.'))
-		return s
-
-	@staticmethod
-	def convert_to_pathstring(t):
-		return '.'.join(t)
+	def resolve_path(key):
+		if isinstance(key,str):
+			return tuple(key.split('.'))
+		return key
 
 	@staticmethod
 	def get(d,key):
-		path =  NestedDict.convert_to_pathtuple(key)
-		for elem in path:
-			d = d[elem]
-		return d
-
-	@staticmethod
-	def make_path(d,path):
-		for elem in path:
-			if not isinstance(d.get(elem,None), dict):
-				d[elem] = dict()
-			d = d[elem]
+		try:
+			for elem in NestedDict.resolve_path(key):
+				d = d[elem]
+		except:
+			raise KeyError(f'Could not resolve key {key}')
 		return d
 
 	@staticmethod
 	def set(d,key,value):
-		path = NestedDict.convert_to_pathtuple(key)
-		lastd = NestedDict.make_path(d,path[:-1])
-		lastd[path[-1]]=value
+		path = NestedDict.resolve_path(key)
+		for elem in path[:-1]:
+			if elem not in d or not isinstance(d[elem],dict):
+				d[elem] = dict()
+			d = d[elem]
+		d[path[-1]] = value
 		return
 
+	# iter_items takes a dict and yields items
+	# compose takes items and yields a dict
 	@staticmethod
-	def iter_items(d,prefix=tuple()):
-		for k,v in d.items():
-			if isinstance(k,str):
-				k = prefix + (k,)
-			if isinstance(v,dict):
-				for k1,v1 in NestedDict.iter_items(v,prefix=k):
-					yield k1,v1
-			else:
-				yield k,v
+	def iter_items(d,mode='tuple'):
+		if mode=='tuple':
+			for k,v in d.items():
+				if isinstance(v,dict):
+					for k1,v1 in NestedDict.iter_items(v):
+						yield (k,*k1),v1
+				else:
+					yield (k,),v
+		if mode=='str':
+			for k,v in NestedDict.iter_items(d):
+				yield '.'.join(k),v
 
 	@staticmethod
-	def compose(*dicts):
+	def compose(*items):
 		outd = dict()
-		for d in dicts:
-			for k,v in d.items():
-				NestedDict.set(outd,k,v)
+		for k,v in items:
+			NestedDict.set(outd,k,v)
 		return outd
 
 	@staticmethod
-	def simplify(d):
-		return {NestedDict.convert_to_pathstring(k):v for k,v in NestedDict.iter_items(d)}
+	def join(*dicts):
+		return NestedDict.compose(*[item for d in dicts for item in NestedDict.iter_items(d)])
 
+	@staticmethod
+	def equals(*dicts):
+		d0_items = sorted(NestedDict.iter_items(dicts[0]))
+		for d in dicts[1:]:
+			if sorted(NestedDict.iter_items(d)) != d0_items:
+				return False
+		return True
 
 DELIMITER = ','
 
@@ -95,12 +97,12 @@ class PLISTUtil:
 
 	@staticmethod
 	def read(s):
-		L = dict(csv.reader(s.splitlines(), delimiter=DELIMITER, quoting = csv.QUOTE_NONNUMERIC))
-		return NestedDict.compose(L)
+		L = list(csv.reader(s.splitlines(), delimiter=DELIMITER, quoting = csv.QUOTE_NONNUMERIC))
+		return NestedDict.compose(*L)
 
 	@staticmethod
 	def write(d):
-		rows = NestedDict.simplify(d).items()
+		rows = [['.'.join(k),v] for k,v in NestedDict.iter_items(d)]
 		s = io.StringIO()
 		w = csv.writer(s, delimiter=DELIMITER, quoting = csv.QUOTE_NONNUMERIC)
 		w.writerows(rows)
@@ -116,15 +118,11 @@ class CSVUtil:
 	#   x.n,'', 3, 4
 
 	@staticmethod
-	def build_one_line(model,headers,values):
-		return {f'{model}.{param}':value for param,value in zip(headers,values) if value != ''}
-
-	@staticmethod
 	def read(s):
 		elems = list(csv.reader(s.splitlines(), delimiter=DELIMITER,  quoting = csv.QUOTE_NONNUMERIC))
 		headers = elems.pop(0)[1:]
-		dicts = [CSVUtil.build_one_line(elem[0],headers,elem[1:]) for elem in elems]
-		return NestedDict.compose(*dicts)
+		items = [(f'{elem[0]}.{h}',v) for elem in elems for h,v in zip(headers,elem[1:]) if v!='']
+		return NestedDict.compose(*items)
 
 	@staticmethod
 	def write(d):

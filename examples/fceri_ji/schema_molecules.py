@@ -1,5 +1,5 @@
 
-from wc_rules.chem import Molecule
+from wc_rules.schema.chem import Molecule
 
 class Ligand(Molecule):
 	pass

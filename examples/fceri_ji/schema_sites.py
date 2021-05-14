@@ -1,6 +1,6 @@
 
-from wc_rules.chem import Site
-from wc_rules.attributes import BooleanAttribute
+from wc_rules.schema.chem import Site
+from wc_rules.schema.attributes import BooleanAttribute
 
 class PhosphoSite(Site):
 	ph = BooleanAttribute()

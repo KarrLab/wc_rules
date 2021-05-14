@@ -1,7 +1,6 @@
 from .rule import Rule
-from .validate_helpers import *
-from .utils import merge_lists
-from .indexer import DictLike
+from ..utils.validate import *
+from ..utils.collections import DictLike,merge_lists
 
 class RuleBasedModel:
 
@@ -20,7 +19,6 @@ class RuleBasedModel:
 	def verify(self,data):
 		for rule in self.rules:
 			validate_contains(data.keys(),rule.params,'Parameter')
-
 	@property
 	def namespace(self):
 		return {x.name: x.__class__.__name__ for x in self.rules}

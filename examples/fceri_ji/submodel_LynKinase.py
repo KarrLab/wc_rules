@@ -1,7 +1,7 @@
 from template_molecular_graphs import *
 from template_rules import *
-from wc_rules.pattern import Pattern
-from wc_rules.model import AggregateModel
+from wc_rules.modeling.pattern import Pattern
+from wc_rules.modeling.model import AggregateModel
 
 def build_model(target,g,active=False):
 	return TransPhosphorylationModel(

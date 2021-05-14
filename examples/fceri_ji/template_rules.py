@@ -1,6 +1,6 @@
 
-from wc_rules.rule import Rule
-from wc_rules.model import RuleBasedModel
+from wc_rules.modeling.rule import Rule
+from wc_rules.modeling.model import RuleBasedModel
 
 class BindingModel(RuleBasedModel):
 	
@@ -62,5 +62,3 @@ class DephosphorylationModel(RuleBasedModel):
 		)
 		super().__init__(name,rules =[dephosphorylation_rule])
 		self.verify(self.defaults)
-
-

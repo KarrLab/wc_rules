@@ -2,7 +2,7 @@
 from schema_molecules import *
 from schema_sites import *
 
-from wc_rules.pattern import GraphContainer
+from wc_rules.modeling.pattern import GraphContainer
 from pprint import pprint
 
 x = Ligand('ligand', sites=[

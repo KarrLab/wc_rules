@@ -8,7 +8,7 @@ from submodel_SykKinase import model as syk_kinase_mdoel
 
 from submodel_dephosphorylation import model as dephosphorylation_model
 
-from wc_rules.model import AggregateModel
+from wc_rules.modeling.model import AggregateModel
 
 
 binding_model = AggregateModel(
