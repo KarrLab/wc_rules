@@ -1,6 +1,7 @@
 from .rule import Rule
 from ..utils.validate import *
 from ..utils.collections import DictLike,merge_lists
+from collections.abc import Sequence
 
 class RuleBasedModel:
 
@@ -18,7 +19,7 @@ class RuleBasedModel:
 
 	def verify(self,data):
 		for rule in self.rules:
-			validate_contains(data.keys(),rule.params,'Parameter')
+			validate_contains(data.keys(),rule.parameters,'Parameter')
 	@property
 	def namespace(self):
 		return {x.name: x.__class__.__name__ for x in self.rules}
@@ -52,7 +53,7 @@ class RuleBasedModel:
 class AggregateModel:
 
 	defaults = None
-
+	
 	def __init__(self,name,models):
 		validate_keywords([name],'Model name')
 		self.name = name

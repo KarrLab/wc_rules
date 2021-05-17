@@ -7,7 +7,7 @@ from ..utils.collections import sort_by_value
 
 class Rule:
 
-	def __init__(self, name='', reactants=dict(), helpers=dict(), actions=[], rate_prefix='', params = []):
+	def __init__(self, name='', reactants=dict(), helpers=dict(), actions=[], rate_prefix='', parameters = []):
 		validate_keywords([name],'Rule name')
 		self.name = name
 		
@@ -17,8 +17,8 @@ class Rule:
 		self.validate_helpers(helpers)
 		self.helpers = helpers
 
-		self.validate_params(params)
-		self.params = params
+		self.validate_parameters(parameters)
+		self.parameters = parameters
 
 		newvars = self.validate_actions(actions)
 		self.actions = actions
@@ -28,7 +28,7 @@ class Rule:
 
 	@property
 	def variables(self):
-		return list(self.reactants.keys()) + list(self.helpers.keys()) + self.params 
+		return list(self.reactants.keys()) + list(self.helpers.keys()) + self.parameters 
 	
 	@property
 	def namespace(self):
@@ -55,7 +55,7 @@ class Rule:
 		validate_dict(helpers,Pattern,'Helper')
 		validate_unique(self.reactants.keys(),helpers.keys(), 'Helper')
 
-	def validate_params(self,params):
+	def validate_parameters(self,params):
 		validate_class(params,list,'Parameters')
 		validate_keywords(params,'Parameter')
 		validate_unique(list(self.reactants.keys()) + list(self.helpers.keys()), params, 'Parameter')
@@ -79,7 +79,7 @@ class Rule:
 
 	def validate_rate_prefix(self,rate_prefix):
 		validate_class(rate_prefix,str,'Rate prefix')
-		namespace = list(self.reactants.keys()) + list(self.helpers.keys()) + self.params
+		namespace = list(self.reactants.keys()) + list(self.helpers.keys()) + self.parameters
 		x = initialize_from_string(rate_prefix,(RateLaw,))
 		validate_contains(self.variables,x.keywords,'Variable')
 
