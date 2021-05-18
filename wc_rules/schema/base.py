@@ -6,7 +6,7 @@
 :License: MIT
 """
 
-from obj_model import core
+from obj_tables import core
 from ..utils.random import generate_id
 from .attributes import *
 from .actions import ActionMixin

@@ -1,5 +1,5 @@
-from obj_model import core
-from obj_model import bio
+from obj_tables import core
+from obj_tables.bio import seq
 from functools import wraps,partial
 
 def check_numeric_value(value,attr,_class,_min=None,_max=None):
@@ -87,7 +87,7 @@ class ManyToManyAttribute(core.ManyToManyAttribute):
     pass
 
 # extra_attributes
-class BioSeqAttribute(bio.BioSeqAttribute):
+class BioSeqAttribute(seq.SeqAttribute):
     def __init__(self):
         super().__init__(default=None)
 

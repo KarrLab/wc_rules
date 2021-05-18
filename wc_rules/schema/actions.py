@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from collections import deque, ChainMap
 from types import MethodType
 from abc import ABC, abstractmethod
-from obj_model import core
+from obj_tables import core
 from .attributes import action
 
 ### Action prototypes

@@ -127,7 +127,7 @@ class TestRuleBuild(unittest.TestCase):
 			reactants = dict(L=lig,R1=rec,R2=rec),
 			actions = ['k = some_value','L.rec1.add_bond(R1.lig)','L.rec2.add_bond(R2.lig)'],
 			rate_prefix = 'binding_constant',
-			params = ['binding_constant','some_value']
+			parameters = ['binding_constant','some_value']
 			)
 
 		d = {

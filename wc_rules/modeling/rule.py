@@ -37,7 +37,7 @@ class Rule:
 			d[r] = x.namespace
 		for h in self.helpers:
 			d[h] = "Helper Pattern"
-		for p in self.params:
+		for p in self.parameters:
 			d[p] = "Parameter"
 		return d
 

@@ -75,7 +75,7 @@ class YAMLUtil:
 
 	@staticmethod
 	def read(s):
-		return yaml.load(s)
+		return yaml.load(s,Loader=yaml.SafeLoader)
 
 	@staticmethod
 	def write(d):
