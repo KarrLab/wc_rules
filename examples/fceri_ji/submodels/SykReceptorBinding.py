@@ -1,8 +1,8 @@
 
 from wc_rules.modeling.pattern import Pattern
 from wc_rules.modeling.model import AggregateModel
-from template_molecular_graphs import *
-from template_rules import BindingModel
+from ..templates.graphs import *
+from ..templates.rules import BindingModel
 
 # Patterns
 free_syk = Pattern(gSykTsh2,constraints = ['len(tsh2.bond)==0'])

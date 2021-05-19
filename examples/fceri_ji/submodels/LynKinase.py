@@ -1,5 +1,5 @@
-from template_molecular_graphs import *
-from template_rules import *
+from ..templates.graphs import *
+from ..templates.rules import *
 from wc_rules.modeling.pattern import Pattern
 from wc_rules.modeling.model import AggregateModel
 

@@ -1,12 +1,12 @@
 
-from submodel_LigandReceptorBinding import model as ligand_receptor_binding_model
-from submodel_LynReceptorBinding import model as lyn_receptor_binding_model
-from submodel_SykReceptorBinding import model as syk_receptor_binding_model
+from .submodels.LigandReceptorBinding import model as ligand_receptor_binding_model
+from .submodels.LynReceptorBinding import model as lyn_receptor_binding_model
+from .submodels.SykReceptorBinding import model as syk_receptor_binding_model
 
-from submodel_LynKinase import model as lyn_kinase_model
-from submodel_SykKinase import model as syk_kinase_mdoel
+from .submodels.LynKinase import model as lyn_kinase_model
+from .submodels.SykKinase import model as syk_kinase_mdoel
 
-from submodel_dephosphorylation import model as dephosphorylation_model
+from .submodels.dephosphorylation import model as dephosphorylation_model
 
 from wc_rules.modeling.model import AggregateModel
 

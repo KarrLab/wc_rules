@@ -1,6 +1,6 @@
 
-from schema_molecules import *
-from schema_sites import *
+from ..schema.molecules import *
+from ..schema.sites import *
 
 from wc_rules.modeling.pattern import GraphContainer
 from pprint import pprint

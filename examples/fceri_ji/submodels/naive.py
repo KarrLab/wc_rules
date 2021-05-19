@@ -1,6 +1,6 @@
 ######## "No templated rules" version #########
 
-from template_molecular_graphs import gLigand, gReceptorAlpha
+from ..templates.graphs import gLigand, gReceptorAlpha
 from wc_rules.modeling.pattern import Pattern
 from wc_rules.modeling.rule import Rule
 from wc_rules.modeling.model import RuleBasedModel, AggregateModel
