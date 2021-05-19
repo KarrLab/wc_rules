@@ -2,7 +2,6 @@ biopython
 blist
 sortedcontainers
 networkx
-textx
 lark_parser
 numpy
 scipy
