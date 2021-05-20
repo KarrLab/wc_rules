@@ -14,7 +14,7 @@ class Entity(base.BaseClass,ActionMixin):
     @classmethod
     def get_classnames(cls):
         x,names = cls, []
-        while x.__name__ is not 'Entity':
+        while x.__name__ != 'Entity':
         	names.append(x.__name__)
         	x = x.__bases__[0]
         return names
