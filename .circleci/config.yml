@@ -36,12 +36,6 @@ jobs:
               done < .circleci/requirements.txt
             fi
       - run:
-          name: Install and upgrade requirements (Python 3)
-          command: |
-            set +e
-            karr_lab_build_utils3 install-requirements
-            karr_lab_build_utils3 upgrade-ka  rr-lab-packages
-      - run:
           name: Install package (Python 3)
           command: python3 -m pip install -U -e .[all]
 
