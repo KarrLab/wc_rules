@@ -4,6 +4,6 @@ networkx
 lark_parser
 numpy
 scipy
-obj_tables
+git+https://github.com/KarrLab/obj_tables.git#egg=obj_tables
 setuptools
 pyyaml
