@@ -1,8 +1,10 @@
 #from blist import blist
-from .utils import generate_id, AddError
-from .indexer import SetLike, DictLike
+from ..utils.random import generate_id
+from ..utils.collections import DictLike
 import random
 blist = list
+
+# Note, an edge in this module is the tuple (node1,attr1,attr2,node2)
 class EulerTour(object):
     def __init__(self,id=None,iterable=None,edges=None,spares=None):
         self.id = id if id is not None else generate_id()
@@ -32,6 +34,7 @@ class EulerTour(object):
         if node in self:
             return self._tour.index(node)
         return None
+    
     def last_occurrence(self,node):
         if node in self:
             for i,x in reversed(list(enumerate(self._tour))):
@@ -82,7 +85,7 @@ class EulerTour(object):
             self._edges.remove(edge)
         return self
 
-class EulerTourIndex(SetLike):
+class EulerTourIndex:
     def __init__(self):
         super().__init__()
         self._tourmap = dict()
