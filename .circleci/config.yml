@@ -1,4 +1,19 @@
-version: 2
+version: 2.1
+
+parameters:
+  upstream_repo_name:
+    type: string
+    default: ""
+  upstream_build_num:
+    type: integer
+    default: 0
+
+workflows:
+  build:
+    jobs:
+      - build:
+          context: karr_lab
+
 jobs:
   build:
     working_directory: /root/project
@@ -16,32 +31,41 @@ jobs:
       # Python 3 installation tasks
       - run:
           name: Install pkg_utils (Python 3)
-          command: pip3 install -U --process-dependency-links git+https://github.com/KarrLab/pkg_utils.git#egg=pkg_utils
+          command: python3 -m pip install -U git+https://github.com/KarrLab/pkg_utils.git#egg=pkg_utils
       - run:
           name: Install karr_lab_build_utils (Python 3)
-          command: pip3 install -U --process-dependency-links git+https://github.com/KarrLab/karr_lab_build_utils.git#egg=karr_lab_build_utils[all]
+          command: |
+            python3 -m pip install -U git+https://github.com/KarrLab/sphinxcontrib-googleanalytics.git#egg=sphinxcontrib_googleanalytics
+            python3 -m pip install -U git+https://github.com/KarrLab/wc_utils.git#egg=wc_utils[all]
+            python3 -m pip install -U git+https://github.com/KarrLab/karr_lab_build_utils.git#egg=karr_lab_build_utils[all]
       - run:
           name: Install package configuration files including credentials
           command: karr_lab_build_utils3 download-install-package-config-files
       - run:
-          name: Install and upgrade requirements (Python 3)
+          name: Setup Python environment
           command: |
-            set +e
-            karr_lab_build_utils3 install-requirements
-            karr_lab_build_utils3 upgrade-karr-lab-packages
+            if [[ -f .circleci/requirements.txt ]]; then
+              while IFS="" read -r line || [ -n "$line" ]; do
+                if [[ ! -z "$line" ]] && [[ ! "$line" =~ ^# ]]; then
+                  python3 -m pip install -U "$line"
+                fi
+              done < .circleci/requirements.txt
+            fi
       - run:
           name: Install package (Python 3)
-          command: pip3 install -U --process-dependency-links -e .[all]
+          command: python3 -m pip install -U -e .[all]
 
       # Save packages to cache
       - save_cache:
           key: v1-{{ arch }}-{{ .Branch }}-{{ checksum "/etc/docker-image-tag" }}-{{ checksum "requirements.txt" }}
           paths:
-            - /usr/local/lib/python3.6/site-packages
+            - /usr/local/lib/python3.7/site-packages
 
       # Test code
       - run:
           name: Test code
+          environment:
+            PYTHONFAULTHANDLER: 1
           command: |
             set +e
 
@@ -61,6 +85,9 @@ jobs:
       - run:
           name: Generate reports, archive results, and send notifications
           when: always
+          environment:
+            UPSTREAM_REPONAME: << pipeline.parameters.upstream_repo_name >>
+            UPSTREAM_BUILD_NUM: << pipeline.parameters.upstream_build_num >>
           command: |
             if [[ -f TEST_EXIT_CODE ]]; then
               INSTALLATION_EXIT_CODE=0
@@ -83,10 +110,3 @@ jobs:
       - store_artifacts:
           path: /root/project/docs/_build/html
           destination: docs
-
-# workflows:
-#  version: 2
-#  build:
-#    jobs:
-#      - build:
-#          context: karr_lab

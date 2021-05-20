@@ -39,6 +39,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
+    'sphinx_fontawesome',
     'sphinxcontrib.addmetahtml',
     'sphinxcontrib.bibtex',
     'sphinxcontrib.googleanalytics',
@@ -72,9 +73,16 @@ author = u'John Sekar'
 # built documents.
 #
 # The short X.Y version.
-filename = os.path.join(os.path.dirname(__file__), '..', 'wc_rules', 'VERSION')
-with open(filename, 'r') as file:
-    version = file.read()
+import re
+filename = os.path.join(os.path.dirname(__file__), "..", "wc_rules", "_version.py")
+if os.path.isfile(filename):
+    verstrline = open(filename, "rt").read()
+    VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
+    mo = re.search(VSRE, verstrline, re.M)
+    if mo:
+        version = mo.group(1)
+    else:
+        version = None
 # The full version, including alpha/beta/rc tags.
 release = version
 

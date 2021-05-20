@@ -5,16 +5,15 @@
 :License: MIT
 """
 from . import chem
-from ..utils import utils
-from obj_model import core,bio
-
+from obj_tables import core
+from obj_tables.bio import seq
 import Bio.Seq
-import Bio.Alphabet
+
 
 class SequenceMolecule(chem.Molecule):
     """ Generic SequenceMolecule (template for DNA, RNA, protein sequence objects) """
 
-    sequence = bio.BioSeqAttribute()
+    sequence = seq.SeqAttribute()
     alphabet_dict = { 'strict': None, 'permissive': None }
     use_permissive_alphabet = True
     alphabet = None
@@ -77,15 +76,12 @@ class SequenceMolecule(chem.Molecule):
     def verify_sequence(self,start=None,end=None,length=None):
         sequence = self.get_sequence(start=start,end=end,length=length)
         invalid_chars = ''.join(sorted(list(set(sequence) - set(self.alphabet.letters))))
-        if len(invalid_chars) > 0:
-            raise utils.SeqError('Invalid characters found: ' + invalid_chars)
+        assert len(invalid_chars) == 0, f'Invalid characters found: {invalid_chars}'
         return
 
     def verify_location(self,start=None,end=None):
         L = self.get_sequence_length()
-        if not 0 <= start <= end <= L:
-            raise utils.SeqError('Start/end must be in range [0,L], where L is sequence length.')
-        return
+        assert not 0 <= start <= end <= L, f'Start/end must be in range [0,L], where L is sequence length.'
 
 
 class SequenceFeature(chem.Site):
