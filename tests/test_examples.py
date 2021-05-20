@@ -28,7 +28,7 @@ class TestFceriJI(unittest.TestCase):
 		model.verify(d)
 		
 		for k,v in NestedDict.iter_items(d):
-			if k==('dephosphorylation','free_syk','dephosphorylation_rate'):
+			if k==('dephosphorylation','free_syk','dephosphorylation_rate' ):
 				self.assertTrue(v != NestedDict.get(params,k))
 			else:
 				self.assertTrue(v == NestedDict.get(params,k))
