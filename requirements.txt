@@ -1,5 +1,4 @@
 biopython
-blist
 sortedcontainers
 networkx
 lark_parser

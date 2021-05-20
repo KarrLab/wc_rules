@@ -1,8 +1,8 @@
-from blist import blist
+#from blist import blist
 from .utils import generate_id, AddError
 from .indexer import SetLike, DictLike
 import random
-
+blist = list
 class EulerTour(object):
     def __init__(self,id=None,iterable=None,edges=None,spares=None):
         self.id = id if id is not None else generate_id()
