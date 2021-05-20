@@ -16,7 +16,7 @@ jobs:
       # Python 3 installation tasks
       - run:
           name: Install pkg_utils (Python 3)
-          command: python3 -m install -U git+https://github.com/KarrLab/pkg_utils.git#egg=pkg_utils
+          command: python3 -m pip install -U git+https://github.com/KarrLab/pkg_utils.git#egg=pkg_utils
       - run:
           name: Install karr_lab_build_utils (Python 3)
           command: |
@@ -30,7 +30,7 @@ jobs:
           command: |
             set +e
             karr_lab_build_utils3 install-requirements
-            karr_lab_build_utils3 upgrade-karr-lab-packages
+            karr_lab_build_utils3 upgrade-ka  rr-lab-packages
       - run:
           name: Install package (Python 3)
           command: pip3 install -U --process-dependency-links -e .[all]
