@@ -14,4 +14,4 @@ import unittest
 class ApiTestCase(unittest.TestCase):
     def test(self):
         self.assertIsInstance(wc_rules, types.ModuleType)
-        self.assertIsInstance(wc_rules.base, types.ModuleType)
+        #self.assertIsInstance(wc_rules.base, types.ModuleType)

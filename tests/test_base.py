@@ -5,10 +5,10 @@
 :License: MIT
 """
 
-from wc_rules import base
-from wc_rules import graph_utils
-from wc_rules import utils
-from wc_rules.attributes import *
+from wc_rules.schema import base
+from wc_rules.schema.attributes import *
+from wc_rules.utils import random as randutils
+
 import unittest
 
 
@@ -17,19 +17,13 @@ class Person(base.BaseClass):
     parents = ManyToManyAttribute('Person', max_related_rev=2, related_name='children')
     pets = OneToManyAttribute('Pet', related_name='owner')
 
-    class GraphMeta(graph_utils.GraphMeta):
-        outward_edges = ('children', 'pets')
-        semantic = ('name',)
-
-
 class Pet(base.BaseClass):
     name = StringAttribute()
-
 
 class TestBase(unittest.TestCase):
 
     def setUp(self):
-        utils.idgen.seed(0)
+        randutils.idgen.seed(0)
         self.Sherlock = Person(name='Sherlock')
         self.John = Person(name='John')
         self.Mary = Person(name='Mary')
@@ -59,3 +53,12 @@ class TestBase(unittest.TestCase):
     def test_duplicate(self):
         John2 = self.John.duplicate()
         self.assertEqual(John2.name,self.John.name)
+
+    def test_get_connected(self):
+        self.Sherlock.parents = [self.Mary, self.John]
+        self.Sherlock.pets = [self.Dog001]
+        self.Sherlock.children = [self.Kid001, self.Kid002]
+
+        L = self.John.get_connected()
+        self.assertEqual(len(L),6)
+        self.assertEqual(set(L),set([self.Mary, self.John, self.Sherlock, self.Kid001, self.Kid002, self.Dog001]))

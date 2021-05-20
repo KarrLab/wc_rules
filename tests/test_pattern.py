@@ -1,129 +1,172 @@
-from obj_tables import core
-from wc_rules import utils, chem
-from wc_rules.utils import ParseExpressionError
-from wc_rules import pattern
+from wc_rules.schema.attributes import *
+from wc_rules.schema.entity import Entity
+from wc_rules.graph.collections import GraphContainer
+from wc_rules.modeling.pattern import Pattern
+from wc_rules.expressions.executable import Constraint
+import math
 import unittest
 
-class A(chem.Molecule):pass
-class X(chem.Site):
-    ph1 = core.BooleanAttribute(default=None)
-    ph2 = core.BooleanAttribute(default=None)
-class Y(chem.Site):
-    ph = core.BooleanAttribute(default=None)
-    v = core.IntegerAttribute(default=None)
-@unittest.skip("")
+class X(Entity): 
+	i = IntegerAttribute()
+	j = IntegerAttribute()
+	k = IntegerAttribute()
+
+class Y(Entity):
+	x = ManyToOneAttribute(X,related_name='y')
+
+class Z(Entity):
+	a = BooleanAttribute()
+	b = BooleanAttribute()
+	z = OneToOneAttribute('Z',related_name='z')
+
+class K(Entity):
+	x = OneToOneAttribute('K',related_name='y')
+
 class TestPattern(unittest.TestCase):
 
-    def test_pattern_init(self):
-        a1 = A(id='a1')
-        x1 = X(id='x1')
-        x2 = X(id='x2')
-        a1.add_sites(x1,x2)
+	def test_graphcontainer(self):
+		with self.assertRaises(AssertionError):
+			x = X('x',y=[Y('y1'),Y('y1')])
+			GraphContainer(x.get_connected())
 
-        p1 = pattern.Pattern('p1')
-        self.assertTrue(len(p1)==0)
-        p1.add_node(x1,recurse=False)
-        self.assertTrue(len(p1)==1)
-        del p1
+		x = X('x',y=[Y('y1'),Y('y2')])
+		g = GraphContainer(x.get_connected())
+		self.assertEqual([g[elem].__class__ for elem in ['x','y1','y2']], [X,Y,Y])
+		g.validate_connected()
 
-        p1 = pattern.Pattern('p1',nodelist=[a1],recurse=True)
-        self.assertTrue(len(p1)==3)
-        del p1
+		with self.assertRaises(AssertionError):
+			g = GraphContainer([X('x'),Y('y1'),Y('y2')])
+			g.validate_connected()
+			
+	def test_pattern_build(self):
 
-        p1 = pattern.Pattern('p1',nodelist=[x1])
-        self.assertTrue(len(p1)==3)
+		with self.assertRaises(AssertionError):
+			x = object()
+			px = Pattern(x)
+		
+		x = X('x',y=[Y('y1'),Y('y2')])
+		px = Pattern(parent=GraphContainer(x.get_connected()))
+		self.assertEqual(px.namespace, dict(x=X,y1=Y,y2=Y))
 
-        p2 = p1.duplicate()
-        self.assertTrue(len(p2)==3)
+		pxx = Pattern(parent=px)
+		self.assertEqual(pxx.namespace, dict(x=X,y1=Y,y2=Y))
+		del px,pxx
+		
 
-        p2 = p1.duplicate(preserve_ids=True)
-        self.assertTrue(len(p2)==3)
-        p1_ids = sorted([x.id for x in p1])
-        p2_ids = sorted([x.id for x in p2])
-        self.assertEqual(p1_ids,p2_ids)
+		px = Pattern(parent=GraphContainer([X('x',i=10)]))
+		# self.assertEqual(px.namespace, dict(x=X,_0='x.i == 10'))
 
-    def test_generate_queries(self):
-        a = A(id='a')
-        y1 = Y(id='y1',ph=True,v=0)
-        y2 = Y(id='y2',ph=False,v=-5)
-        a.add_sites(y1,y2)
+		pxx = Pattern(px, helpers={'px':px}, constraints=['px.contains(x=x)==True'])
+		#self.assertEqual(pxx.namespace, dict(x=X,px=px,_0='x.i == 10',_1='px.contains(x=x) == True'))
+		del pxx
 
-        p = pattern.Pattern('p').add_node(a,recurse=True)
+		with self.assertRaises(AssertionError):
+			pxx = Pattern(parent=px, helpers={'px':px}, constraints='px=5')
 
-        qdict = p.generate_queries()
+		with self.assertRaises(AssertionError):
+			pxx = Pattern(parent=px, helpers={'px':px}, constraints='t==5')
 
-        x = ['attr','rel','type','is_in','is_not_in']
-        self.assertEqual(sorted(list(qdict.keys())), sorted(x))
+	def test_boolean_constraints(self):
+		z = Z('z1',z=Z('z2'))
+		pz = Pattern(
+			parent = GraphContainer(z.get_connected()), 
+			constraints = [
+				'any(z1.a,z1.b,z2.a,z2.b) == True',
+				'inv(any(z1.a,z1.b,z2.a,z2.b)) == False',
+				'all(z1.a,z1.b,z2.a,z2.b) == True',
+				'only_one_true(z1.a,z1.b,z2.a,z2.b) == True',
+				'only_one_false(z1.a,z1.b,z2.a,z2.b) == True',
+			])
+		
+		matches = [
+		dict(z1=Z(a=False,b=False), z2=Z(a=False,b=False)),
+		dict(z1=Z(a=False,b=False), z2=Z(a=False,b=True)),
+		dict(z1=Z(a=True,b=True), z2=Z(a=True,b=False)),
+		dict(z1=Z(a=True,b=True), z2=Z(a=True,b=True)),
+		]
 
-        for idx in qdict['type']:
-            node = p.get_node(idx)
-            tuplist = qdict['type'][idx]
-            for tup in tuplist:
-                _class = tup[1]
-                self.assertTrue(isinstance(node,_class))
+		expected_values = [
+		[False, True, True, True ],
+		[False, True, True, True ],
+		[False, False, False, True ],
+		[False, True, False, False ],
+		[False, False, True, False ],
+		]
 
-        for idx in qdict['attr']:
-            node = p.get_node(idx)
-            tuplist = qdict['attr'][idx]
-            for tup in tuplist:
-                attr = tup[1]
-                op = tup[2]
-                value = tup[3]
-                self.assertTrue(op(getattr(node,attr),value))
 
-        for tup in qdict['rel']:
-            idx1 = tup[1]
-            attr1 = tup[2]
-            attr2 = tup[3]
-            idx2 = tup[4]
+		computed_values = [[c.exec(match) for match in matches] for c in pz.make_executable_constraints()]
 
-            node1 = p.get_node(idx1)
-            node2 = p.get_node(idx2)
-            self.assertTrue(node1 in node2.listget(attr2))
-            self.assertTrue(node2 in node1.listget(attr1))
+		self.assertEqual(computed_values,expected_values)
 
-        for tup in qdict['is_in']:
-            target_var = tup[1][0]
-            source_pattern = tup[1][1][0]
-            source_var = tup[1][1][1]
+	def test_list_constraints(self):		
+		px = Pattern(
+			parent = GraphContainer([X('x')]),
+			constraints = [
+			'max(x.i,x.j,x.k) == 30',
+			'min(x.i,x.j,x.k) == 10',
+    		'sum(x.i,x.j,x.k) == 60',
+    		'len(x.y) == 2',
+    		])
 
-        for tup in qdict['is_not_in']:
-            target_var = tup[1][0]
-            source_pattern = tup[1][1][0]
-            source_var = tup[1][1][1]
+		match = dict(x = X(y=[Y(),Y()],i=10,j=20,k=30))
+		execs = px.make_executable_constraints()
+		for c in execs:
+			self.assertTrue(c.exec(match,{}))
 
-    def test_expressions(self):
-        x1 = X('x1')
-        p1 = pattern.Pattern('p1')  \
-        .add_expression('!x1.ph1')     \
-        .add_expression('x1.ph2 != False')
+		pz = Pattern(parent=GraphContainer([Z('z')]),constraints=['len(z.z) > 0'])
+		c = pz.make_executable_constraints()[0]
+		self.assertEqual(c.exec(dict( z=Z() )), False)
+		self.assertEqual(c.exec(dict( z=Z(z=Z()) )), True)
 
-        #
-        exprs1 = sorted(p1._expressions['bool_cmp'])
-        tup1 = ('x1','ph1','!=',True)
-        tup2 = ('x1','ph2','==',True)
-        exprs2 = [tup1,tup2]
-        self.assertEqual(exprs1,exprs2)
+	@unittest.skip("Upgrade to new patterns")
+	def test_canonical_expr(self):
+		z = Z('z1',z=Z('z2'))
+		pz = Pattern(parent=GraphContainer(z.get_connected()))
 
-        with self.assertRaises(ParseExpressionError):
-            p1.add_expression('x1')
+		cP, cL = (('z1','z2'),), (('z1','z2'),)
+		self.assertEqual(pz.partition,cP)
+		self.assertEqual(pz.leaders,cL)
 
-        #
-        y1 = Y('y1')
-        p2= pattern.Pattern('p2')   \
-        .add_expression('y1.v > 5')
+		# symmetry preserving
+		pzz = Pattern(
+			parent = pz,
+			constraints = [
+			'a = any(z1.a,z2.a)',
+			'b = all(z1.b,z2.b)',
+			'c = any(z1.a,z1.b)',
+			'd = any(z2.a,z2.b)',
+			'any(a,b,c,d) == True',
+			])
 
-        exprs1 = sorted(p2._expressions['num_cmp'])
-        tup2 = ('y1','v','>',5)
-        exprs2 = [tup2]
-        self.assertEqual(exprs1,exprs2)
+		self.assertEqual(pzz.partition,cP)
+		self.assertEqual(pzz.leaders,cL)
 
-        #
-        y1 = Y('y1')
-        p2= pattern.Pattern('p2')   \
-        .add_expression('y1 in p1.x')
+		# symmetry breaking
+		cP, cL = (('z1',),('z2',),), tuple()
+		pzzz = Pattern(pz,constraints=['a = any(z1.a,z1.b,z2.a)'])
 
-        exprs1 = sorted(p2._expressions['is_in'])
-        tup2 = (('y1',),'p1',('x',))
-        exprs2 = [tup2]
-        self.assertEqual(exprs1,exprs2)
+		self.assertEqual(pzzz.partition,cP)
+		self.assertEqual(pzzz.leaders,cL)
+
+
+		# symmetry preserving + using helpers
+		z = Z('z',a=True,b=False)
+		pz = Pattern(parent=GraphContainer([z]))
+
+		zz = Z('z1',z=Z('z2'))
+		pzz = Pattern(parent=GraphContainer(zz.get_connected()),
+			helpers = {'pz':pz},
+			constraints = 'pz.contains(z=z1)==True \n pz.contains(z=z2)==True',
+			)
+		cP, cL = (('z1','z2'),), (('z1','z2'),)
+		self.assertEqual(pzz.partition,cP)
+		self.assertEqual(pzz.leaders,cL)
+
+		# symmetry breaking + using helpers
+		pzz = Pattern(parent=GraphContainer(zz.get_connected()),
+			helpers = {'pz':pz},
+			constraints = 'pz.contains(z=z1)==True',
+			)
+		cP, cL = (('z2',),('z1',),), tuple()
+		self.assertEqual(pzz.partition,cP)
+		self.assertEqual(pzz.leaders,cL)

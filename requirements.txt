@@ -1,10 +1,9 @@
-attrdict
-biopython
-blist
+biopython==1.77
 sortedcontainers
 networkx
-textx
 lark_parser
 numpy
-obj_tables[bio]
-palettable
+scipy
+git+https://github.com/KarrLab/obj_tables.git#egg=obj_tables
+setuptools
+pyyaml

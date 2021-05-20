@@ -1,19 +1,11 @@
-import re
 import setuptools
-import subprocess
-import sys
 try:
-    result = subprocess.run(
-        [sys.executable, "-m", "pip", "show", "pkg_utils"],
-        check=True, capture_output=True)
-    match = re.search(r'\nVersion: (.*?)\n', result.stdout.decode(), re.DOTALL)
-    assert match and tuple(match.group(1).split('.')) >= ('0', '0', '5')
-except (subprocess.CalledProcessError, AssertionError):
-    subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-U", "pkg_utils"],
-        check=True)
+    import pkg_utils
+except ImportError:
+    import pip._internal
+    pip._internal.main(['install', '--process-dependency-links', 'git+https://github.com/KarrLab/pkg_utils.git#egg=pkg_utils'])
+    import pkg_utils
 import os
-import pkg_utils
 
 name = 'wc_rules'
 dirname = os.path.dirname(__file__)
@@ -34,6 +26,11 @@ setuptools.setup(
     license="MIT",
     keywords='whole-cell systems biology',
     packages=setuptools.find_packages(exclude=['tests', 'tests.*']),
+    package_data={
+        name: [
+            'VERSION',
+        ],
+    },
     install_requires=md.install_requires,
     extras_require=md.extras_require,
     tests_require=md.tests_require,
