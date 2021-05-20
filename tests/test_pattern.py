@@ -1,11 +1,9 @@
-
 from wc_rules.schema.attributes import *
 from wc_rules.schema.entity import Entity
 from wc_rules.graph.collections import GraphContainer
 from wc_rules.modeling.pattern import Pattern
 from wc_rules.expressions.executable import Constraint
 import math
-
 import unittest
 
 class X(Entity): 

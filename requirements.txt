@@ -1,5 +1,4 @@
 biopython==1.77
-biopython
 sortedcontainers
 networkx
 lark_parser
