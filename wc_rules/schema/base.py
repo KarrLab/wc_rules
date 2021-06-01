@@ -88,6 +88,12 @@ class BaseClass(core.Model,ActionMixin):
     def degree(self):
         return len(self.listget_all_related())
 
+    def iter_edges(self):
+        for attr in self.get_related_attributes(ignore_None=True):
+            for node in self.listget(attr):
+                yield (attr,node)
+        
+
     def get_edge_tuples(self):
         # returns list of tuples (attr,related_attr,x)
         attrs = self.get_related_attributes(ignore_None=True)

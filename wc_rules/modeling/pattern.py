@@ -45,7 +45,7 @@ class Pattern:
 		if isinstance(parent,GraphContainer):
 			parent.validate_connected()
 			validate_keywords(parent._dict.keys(),'Parent Variable')
-			for idx,node in parent.iternodes():
+			for idx,node in parent.iter_nodes():
 				validate_literal_attributes(node)
 				validate_related_attributes(node)
 

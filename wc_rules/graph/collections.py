@@ -28,20 +28,18 @@ class GraphContainer(DictLike):
         # there must be only one way to create a GraphContainer and that must be to create a list
         super().__init__(_list)
 
-    def iternodes(self):
+    def iter_nodes(self):
         for idx, node in self._dict.items():
             yield idx,node
 
-    def iteredges(self):
-        edges_visited = set()
-        for idx,node in self.iternodes():
-            for attr in node.get_related_attributes(ignore_None=True):
-                related_attr = node.get_related_name(attr)
-                for related_node in node.listget(attr):
-                    edge = Edge.make(node.id, attr,related_node.id,related_attr)
-                    if edge not in edges_visited:
-                        edges_visited.add(edge)
-                        yield edge
+    def iter_edges(self):
+        visited = set()
+        for idx,node in self.iter_nodes():
+            for attr,node2 in node.iter_edges():
+                edge = Edge.make(idx,attr,node2.id,node.get_related_name(attr))
+                if edge not in visited:
+                    visited.add(edge)
+                    yield edge
 
     def update(self):
         idx,root = list(self._dict.items())[0]
@@ -53,13 +51,13 @@ class GraphContainer(DictLike):
             include = self.keys()
 
         newnodes = dict()
-        for idx,node in self.iternodes():
+        for idx,node in self.iter_nodes():
             if idx not in include:
                 continue
             idx = varmap.get(idx,idx)
             newnodes[idx] = node.duplicate(id=idx)
 
-        for edge in self.iteredges():
+        for edge in self.iter_edges():
             idx1,attr1,idx2,attr2 = edge.unpack()
             if idx1 not in include or idx2 not in include:
                 continue
@@ -69,7 +67,7 @@ class GraphContainer(DictLike):
 
     def strip_attrs(self):
         attrs = dict()
-        for idx,node in self.iternodes():
+        for idx,node in self.iter_nodes():
             attrs[idx] = node.get_literal_attrdict()
             for attr in attrs[idx]:
                 setattr(node,attr,None)

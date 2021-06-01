@@ -14,7 +14,7 @@ def canonical_label(g):
 	if len(g)==0:
 		partition, order, leaders = [],[],[]
 	elif len(g)==1:
-		idx,node = next(g.iternodes())
+		idx,node = next(g.iter_nodes())
 		partition, order, leaders = [[idx,]], [idx,], []	
 	else:
 		partition,order,leaders = canonical_ordering(g)
