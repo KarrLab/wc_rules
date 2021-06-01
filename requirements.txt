@@ -1,9 +1,9 @@
-biopython==1.77
+biopython
 sortedcontainers
 networkx
 lark_parser
 numpy
 scipy
-git+https://github.com/KarrLab/obj_tables.git#egg=obj_tables
+obj_tables
 setuptools
 pyyaml
