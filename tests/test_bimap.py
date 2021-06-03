@@ -1,5 +1,34 @@
 import unittest
-from wc_rules.utils.collections import BiMap
+from wc_rules.utils.collections import BiMap, Mapping
+
+class TestMapping(unittest.TestCase):
+
+	def test_mapping_basic(self):
+		v = Mapping.create('xyz')
+		self.assertEqual([v.get(x) for x in 'xyz'],list('xyz'))
+
+		v = Mapping.create('xyz','abc')
+		self.assertEqual([v.get(x) for x in 'xyz'],list('abc'))
+		self.assertEqual(v, Mapping.create('xyz','abc'))
+		self.assertEqual(v.sources,tuple('xyz'))
+		self.assertEqual(v.targets,tuple('abc'))
+		self.assertEqual(v._dict,dict(zip('xyz','abc')))
+		self.assertEqual(v.reverse()._dict,dict(zip('abc','xyz')))
+		self.assertEqual(v.restrict(['x','y'])._dict,dict(zip('xy','ab')))
+		with self.assertRaises(AssertionError):
+			Mapping.create('xyy','abc')._dict
+
+	def test_mapping_mul(self):
+		# Multiplying a match with a vertex relabeling
+		v = Mapping.create('xyz','abc')
+		m = Mapping.create('abc',range(3))
+		self.assertEqual(m*v,Mapping.create('xyz',range(3)))
+
+		# Multiplying with a rotation permutation
+		v = Mapping.create('xyz','yzx')
+		self.assertEqual(v*v, Mapping.create('xyz','zxy'))
+		self.assertEqual(v*v*v, Mapping.create('xyz'))
+
 	def test_mapping_sorting(self):
 		# internal sorting 
 		v = Mapping.create('zyx','cba')

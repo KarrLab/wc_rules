@@ -7,6 +7,7 @@
 import math, itertools, functools, collections, operator, pprint
 from dataclasses import dataclass, field
 from typing import Tuple, Dict
+from backports.cached_property import cached_property
 
 @dataclass(order=True,frozen=True)
 class Mapping:
@@ -15,7 +16,7 @@ class Mapping:
     sources: Tuple[str]
     targets: Tuple[str]
 
-    @functools.cached_property
+    @cached_property
     def _dict(self):
         assert len(self.sources) == len(set(self.sources)), f"Non-unique mappings found in zip({self.sources},{self.targets})"
         return dict(zip(self.sources,self.targets)) 
