@@ -6,7 +6,46 @@
 """
 import math, itertools, functools, collections, operator, pprint
 from dataclasses import dataclass, field
+from typing import Tuple, Dict
 
+@dataclass(order=True,frozen=True)
+class Mapping:
+    # Note: this is intended to replace BiMap
+    #__slots__ = ['sources','targets',]
+    sources: Tuple[str]
+    targets: Tuple[str]
+
+    @functools.cached_property
+    def _dict(self):
+        assert len(self.sources) == len(set(self.sources)), f"Non-unique mappings found in zip({self.sources},{self.targets})"
+        return dict(zip(self.sources,self.targets)) 
+
+    @classmethod
+    def create(cls,sources,targets=None):
+        if targets is None:
+            targets = sources
+        assert len(sources)==len(targets), f"Could not create mapping between {sources} and {targets}"
+        return cls(tuple(sources),tuple(targets))
+
+    def reverse(self):
+        return self.__class__.create(self.targets,self.sources)
+
+    def get(self,value):
+        return self._dict[value]
+
+    def restrict(self,sources):
+        return self.__class__.create(sources,self*sources)
+
+    def __mul__(self,other):
+        if isinstance(other,Mapping):
+            return other.__class__.create(other.sources,self*other.targets)
+        if isinstance(other,dict):
+            return dict(zip(other.keys(), self*list(other.values())))
+        elif isinstance(other,(list,tuple,set)):
+            return other.__class__([self.get(x) for x in other])
+        return self.get(other)
+
+    
 @dataclass(unsafe_hash=True)
 class BiMap:
     # create and copy_from class methods sort items before creation

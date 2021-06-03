@@ -14,11 +14,12 @@ class Edge:
     ports: Tuple[Port]
 
     @staticmethod
-    def make(n1,e1,n2,e2):
+    def create(n1,e1,n2,e2):
         return Edge(tuple(sorted([Port(n1,e1),Port(n2,e2)])))
 
     def unpack(self):
         return (self.ports[0].node, self.ports[0].attr, self.ports[1].node, self.ports[1].attr,)
+
 
 class GraphContainer(DictLike):
     # A temporary container for a graph that can be used to create
@@ -36,15 +37,10 @@ class GraphContainer(DictLike):
         visited = set()
         for idx,node in self.iter_nodes():
             for attr,node2 in node.iter_edges():
-                edge = Edge.make(idx,attr,node2.id,node.get_related_name(attr))
+                edge = Edge.create(idx,attr,node2.id,node.get_related_name(attr))
                 if edge not in visited:
                     visited.add(edge)
                     yield edge
-
-    def update(self):
-        idx,root = list(self._dict.items())[0]
-        for node in root.get_connected():
-            self.add(node)
 
     def duplicate(self,varmap={},include=None):
         if include is None:
@@ -59,10 +55,9 @@ class GraphContainer(DictLike):
 
         for edge in self.iter_edges():
             idx1,attr1,idx2,attr2 = edge.unpack()
-            if idx1 not in include or idx2 not in include:
-                continue
-            idx1, idx2 = [varmap.get(x,x) for x in [idx1,idx2]]
-            newnodes[idx1].safely_add_edge(attr1,newnodes[idx2])
+            if idx1 in include and idx2 in include:
+                idx1, idx2 = [varmap.get(x,x) for x in [idx1,idx2]]
+                newnodes[idx1].safely_add_edge(attr1,newnodes[idx2])
         return GraphContainer(newnodes.values())
 
     def strip_attrs(self):
