@@ -45,6 +45,12 @@ class Mapping:
             return other.__class__([self.get(x) for x in other])
         return self.get(other)
 
+    def sort(self,sources=None):
+        if sources is None:
+            sources = sorted(self.sources)
+        sources = tuple(sources)
+        return self.__class__.create(sources,self*sources)
+
     
 @dataclass(unsafe_hash=True)
 class BiMap:

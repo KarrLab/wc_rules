@@ -7,3 +7,4 @@ scipy
 obj_tables
 setuptools
 pyyaml
+backports.cached_property

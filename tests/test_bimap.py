@@ -1,8 +1,31 @@
 import unittest
 from wc_rules.utils.collections import BiMap
+	def test_mapping_sorting(self):
+		# internal sorting 
+		v = Mapping.create('zyx','cba')
+		self.assertEqual(v.sort(),Mapping.create('xyz','abc'))
+		self.assertEqual(v.sort('yxz'),Mapping.create('yxz','bac'))
+
+		# external sorting
+		# new behavior from bimap
+		# sorting is done by order of sources, then order of targets
+		v = sorted([Mapping.create(x) for x in ['yzx','zxy','xyz']])
+		sources = [''.join(x.sources) for x in v]
+		self.assertEqual(sources,['xyz','yzx','zxy'])
+
+		# set behavior
+		# note that all three mappings above are functionally identical, 
+		# but have different orders of sources
+		# set will treat each of them differently unless internally sorted
+		self.assertEqual(len(set(v)),3)
+		self.assertEqual(len(set([x.sort() for x in v])),1)
+
+
 
 class TestBiMap(unittest.TestCase):
 
+
+		
 	def test_bimap_basic(self):
 		v = BiMap(dict(zip('xyz','abc')))
 		self.assertEqual([v.get(x) for x in 'xyz'],list('abc'))
