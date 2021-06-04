@@ -91,7 +91,7 @@ class TestPermutation(unittest.TestCase):
 		self.assertEqual(permsources.pop(),'abc')
 		permtargets = [''.join(x.targets) for x in perms]
 		self.assertEqual(permtargets,['abc', 'acb', 'bac', 'bca', 'cab', 'cba'])
-		self.assertEqual(G.orbits(simple=True),'(abc)')
+		self.assertEqual(G.orbits(simple=True),r'{abc}')
 
 		
 	def test_permutation_group_4square(self):
@@ -114,7 +114,7 @@ class TestPermutation(unittest.TestCase):
 		self.assertEqual(permsources.pop(),'abcd')
 		permtargets = [''.join(x.targets) for x in perms]
 		self.assertEqual(permtargets,['abcd', 'adcb', 'badc', 'bcda', 'cbad', 'cdab', 'dabc', 'dcba'])
-		self.assertEqual(G.orbits(simple=True),'(abcd)')
+		self.assertEqual(G.orbits(simple=True),r'{abcd}')
 
 
 

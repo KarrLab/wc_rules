@@ -190,6 +190,11 @@ def grouper(n,inputs):
     # grouper(2,[1,2,3,4,5,6]) -> [[1,2],[3,4],[5,6]]
     return [inputs[n*i:n*i+n] for i in range(0,len(inputs)//n)]
 
+def remap_values(d,oldvalues,newvalue):
+    for elem in d:
+        if d[elem] in oldvalues:
+            d[elem] = newvalue
+    return d
 
 ###### Methods ######
 def iter_to_string(iterable):
