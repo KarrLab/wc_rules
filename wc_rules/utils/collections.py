@@ -52,6 +52,10 @@ class Mapping:
         sources = tuple(sources)
         return self.__class__.create(sources,self*sources)
 
+    def iter_items(self):
+        # returns k,v pairs from sources and targets respectively
+        for s,t in zip(self.sources,self.targets):
+            yield (s,t)
     
 @dataclass(unsafe_hash=True)
 class BiMap:

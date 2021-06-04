@@ -1,5 +1,6 @@
 import unittest
 from wc_rules.utils.collections import BiMap, Mapping
+from wc_rules.graph.permutations import Permutation, PermutationGroup
 
 class TestMapping(unittest.TestCase):
 
@@ -48,6 +49,74 @@ class TestMapping(unittest.TestCase):
 		# set will treat each of them differently unless internally sorted
 		self.assertEqual(len(set(v)),3)
 		self.assertEqual(len(set([x.sort() for x in v])),1)
+
+def print_cyclic_form(c):
+	return ''.join([''.join(f"({''.join(x)})") for x in c])
+
+class TestPermutation(unittest.TestCase):
+
+	def test_cyclic_form(self):
+		v = [
+			Permutation.create('abc'), 
+			Permutation.create('abc','acb'), 
+			Permutation.create('abc','bac')
+		]
+		cyclic_forms = [print_cyclic_form(x.cyclic_form()) for x in v]
+		self.assertEqual(cyclic_forms,[
+			'(a)(b)(c)',
+			'(a)(bc)',
+			'(ab)(c)'
+		])
+
+	def test_permutation_group_3triangle(self):
+
+		with self.assertRaises(AssertionError):
+			G = PermutationGroup.create([Permutation.create('abc','abd')])
+			G.validate()
+
+		# NOTE: the permutations here have been drawn by an 
+		# imaginary implementation of ISMAGS algorithm on the 3triangle graph.
+		G = PermutationGroup.create(
+			[
+				Permutation.create('abc','abc'),
+				Permutation.create('abc','acb'),
+				Permutation.create('abc','bac'),
+			]
+		)
+
+		perms = G.expand()
+		self.assertEqual(len(perms),6)
+		permsources = set([''.join(x.sources) for x in perms])
+		self.assertEqual(len(permsources),1)
+		self.assertEqual(permsources.pop(),'abc')
+		permtargets = [''.join(x.targets) for x in perms]
+		self.assertEqual(permtargets,['abc', 'acb', 'bac', 'bca', 'cab', 'cba'])
+		self.assertEqual(G.orbits(simple=True),'(abc)')
+
+		
+	def test_permutation_group_4square(self):
+
+		# NOTE: the permutations here have been drawn by an 
+		# imaginary implementation of ISMAGS algorithm on the 4square graph.
+		
+		G = PermutationGroup.create(
+			[
+				Permutation.create('abcd','abcd'),
+				Permutation.create('abcd','adcb'),
+				Permutation.create('abcd','badc'),
+			]
+		)
+
+		perms = G.expand()
+		self.assertEqual(len(perms),8)
+		permsources = set([''.join(x.sources) for x in perms])
+		self.assertEqual(len(permsources),1)
+		self.assertEqual(permsources.pop(),'abcd')
+		permtargets = [''.join(x.targets) for x in perms]
+		self.assertEqual(permtargets,['abcd', 'adcb', 'badc', 'bcda', 'cbad', 'cdab', 'dabc', 'dcba'])
+		self.assertEqual(G.orbits(simple=True),'(abcd)')
+
+
 
 
 
