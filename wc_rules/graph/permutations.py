@@ -1,22 +1,10 @@
 from ..utils.collections import Mapping, merge_lists, remap_values, invert_dict, tuplify
+from itertools import combinations
 from dataclasses import dataclass
 from typing import Tuple
 
-def get_cycles(d):
-    values, orbits = list(d.keys()), []
-    while values:
-        orb = [values.pop(0)]
-        while values:
-            t = d[orb[-1]]
-            if t in orb:
-                break
-            orb.append(t)
-            values.remove(t)
-        orbits.append(orb)
-    return tuplify(orbits)
-
-def print_cycles(cycles):
-    return ''.join([f"{{{''.join(x)}}}" for x in cycles])
+def print_cycles(cycles,lb=r'(',rb=r')'):
+    return ''.join([f"{lb}{''.join(x)}{rb}" for x in cycles])
 
 class Permutation(Mapping):
 
@@ -26,9 +14,19 @@ class Permutation(Mapping):
 	# a permutation with sorted sources
 
 	def cyclic_form(self,simple=False):
+		values, orbits = list(self.sources), []
+		while values:
+			orb = [values.pop(0)]
+			while values:
+				t = self._dict[orb[-1]]
+				if t in orb:
+					break
+				orb.append(t)
+				values.remove(t)
+			orbits.append(orb)
 		if simple:
-			return print_cycles(self.cyclic_form())
-		return get_cycles(dict(zip(self.sources,self.targets)))
+			return print_cycles(orbits)
+		return tuplify(orbits)
 
 	def is_identity(self):
 		return self.sources == self.targets
@@ -62,22 +60,37 @@ class PermutationGroup:
 			assert isinstance(x,Permutation), "Generators must be valid permutations."
 			x.validate()
 			assert set(x.sources) == set(self.canonical_order), "Generators must be valid permutations."
-		assert any([x.is_identity() for x in self.generators]), f"Atleast one generator must be an identity permutation."
+		assert self.generators[0].is_identity(), f"Atleast one generator must be an identity permutation."
 		
 	def orbits(self,simple=False):
 		# note: orbits are ordered by canonical order
-		if simple:
-			return print_cycles(self.orbits())
-
-		cycles = set([x for g in self.generators for x in g.cyclic_form() if len(x)>1])
 		orbindex = dict(zip(self.canonical_order,range(len(self.canonical_order))))
-		for cyc in cycles:
-			orbnums = [orbindex[x] for x in cyc]
-			orbindex = remap_values(orbindex,orbnums,min(orbnums))
-		orbits = tuplify(invert_dict(orbindex).values())
-		return orbits
+		for g in self.generators:
+			for cyc in g.cyclic_form():
+				if len(cyc) > 1:
+					nums = [orbindex[x] for x in cyc]
+					orbindex = remap_values(orbindex,nums,min(nums))	
+		orbits = invert_dict(orbindex).values()
+		if simple:
+			return print_cycles(orbits,r'{',r'}')
+		return tuplify(orbits)
 		
 	def iter_subgroups(self):
+		# returns subgroups of self
+		# a BFS exploration of the resolution diagram
+		# e.g. if [0,1,2] are the generators of the group, 0 being identity
+		# then iter_subgroups() yields groups:
+		# [0], [0,1], [0,2], [0,1,2]
+
 		self.validate()
+		identity, remaining = self.generators[0], self.generators[1:]
+		yield PermutationGroup((identity,), self.canonical_order)
+		for n in range(1,len(remaining)+1):
+			for gens in combinations(remaining,n):
+				yield PermutationGroup.create((identity,) + gens, self.canonical_order)
+
+	def is_trivial(self):
+		return len(self.generators)==1
+
 
 

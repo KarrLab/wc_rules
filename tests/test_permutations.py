@@ -50,9 +50,6 @@ class TestMapping(unittest.TestCase):
 		self.assertEqual(len(set(v)),3)
 		self.assertEqual(len(set([x.sort() for x in v])),1)
 
-def print_cyclic_form(c):
-	return ''.join([''.join(f"({''.join(x)})") for x in c])
-
 class TestPermutation(unittest.TestCase):
 
 	def test_cyclic_form(self):
@@ -61,7 +58,7 @@ class TestPermutation(unittest.TestCase):
 			Permutation.create('abc','acb'), 
 			Permutation.create('abc','bac')
 		]
-		cyclic_forms = [print_cyclic_form(x.cyclic_form()) for x in v]
+		cyclic_forms = [x.cyclic_form(simple=True) for x in v]
 		self.assertEqual(cyclic_forms,[
 			'(a)(b)(c)',
 			'(a)(bc)',
@@ -93,6 +90,10 @@ class TestPermutation(unittest.TestCase):
 		self.assertEqual(permtargets,['abc', 'acb', 'bac', 'bca', 'cab', 'cba'])
 		self.assertEqual(G.orbits(simple=True),r'{abc}')
 
+		gendict = dict(zip(G.generators,range(len(G.generators))))
+		subgroups = [[gendict[g] for g in Gsub.generators] for Gsub in G.iter_subgroups()]
+		self.assertEqual(subgroups,[[0],[0,1],[0,2],[0,1,2]])
+
 		
 	def test_permutation_group_4square(self):
 
@@ -116,7 +117,9 @@ class TestPermutation(unittest.TestCase):
 		self.assertEqual(permtargets,['abcd', 'adcb', 'badc', 'bcda', 'cbad', 'cdab', 'dabc', 'dcba'])
 		self.assertEqual(G.orbits(simple=True),r'{abcd}')
 
-
+		gendict = dict(zip(G.generators,range(len(G.generators))))
+		subgroups = [[gendict[g] for g in Gsub.generators] for Gsub in G.iter_subgroups()]
+		self.assertEqual(subgroups,[[0],[0,1],[0,2],[0,1,2]])
 
 
 
