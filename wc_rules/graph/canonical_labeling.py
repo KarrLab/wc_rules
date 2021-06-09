@@ -72,6 +72,15 @@ def canonical_label(g):
 	search_tree = deque([search_tree_element(opp)])
 	generators = []
 
+	# convention: 
+	# if source,target==None, then 
+	# 	we are at a node of the search tree, 
+	# 	we either decide to terminate or 
+	#	create branching options based on the first non-trivial cell
+	# if source,target != None, then 
+	# 	we are examining a branching option
+	# 	so we must prune, switch-and-split, refine
+	# appendleft + reversing mapping options ensures DFS
 	while search_tree:
 		opp, source, target = search_tree.popleft()
 		if source == target == None:
@@ -82,8 +91,7 @@ def canonical_label(g):
 					search_tree.appendleft(search_tree_element(deepcopy(opp),source,target))
 			else:
 				# terminal node of search tree
-				sources,targets = listmap(merge_lists,opp)
-				gen = Permutation.create(sources,targets)
+				gen = make_permutation(opp)
 				generators.append(gen)
 				# update orbindex
 				orbindex = update_orbindex(orbindex,gen)
@@ -114,6 +122,9 @@ def switch_and_split(opp,source,target):
 	opp[0].insert(idx,[source])
 	opp[1].insert(idx,[target])
 	return opp
+
+def make_permutation(opp):
+	return Permutation.create(merge_lists(opp[0]), merge_lists(opp[1]))
 
 ####### Ordered Partition Pair
 def ordered_partition_pair(p1,p2):
