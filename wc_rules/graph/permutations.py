@@ -1,4 +1,4 @@
-from ..utils.collections import Mapping, merge_lists, remap_values, invert_dict, tuplify
+from ..utils.collections import Mapping, merge_lists, remap_values, invert_dict, tuplify, index_dict
 from itertools import combinations
 from dataclasses import dataclass
 from typing import Tuple
@@ -64,7 +64,7 @@ class PermutationGroup:
 		
 	def orbits(self,simple=False):
 		# note: orbits are ordered by canonical order
-		orbindex = dict(zip(self.canonical_order,range(len(self.canonical_order))))
+		orbindex = index_dict(self.canonical_order)
 		for g in self.generators:
 			for cyc in g.cyclic_form():
 				if len(cyc) > 1:
@@ -83,11 +83,11 @@ class PermutationGroup:
 		# [0], [0,1], [0,2], [0,1,2]
 
 		self.validate()
-		identity, remaining = self.generators[0], self.generators[1:]
-		yield PermutationGroup((identity,), self.canonical_order)
+		identity, remaining = self.generators[0:1], self.generators[1:]
+		yield PermutationGroup(identity, self.canonical_order)
 		for n in range(1,len(remaining)+1):
 			for gens in combinations(remaining,n):
-				yield PermutationGroup.create((identity,) + gens, self.canonical_order)
+				yield PermutationGroup.create(identity + gens, self.canonical_order)
 
 	def is_trivial(self):
 		return len(self.generators)==1

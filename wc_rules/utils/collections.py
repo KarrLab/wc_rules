@@ -8,6 +8,7 @@ import math, itertools, functools, collections, operator, pprint
 from dataclasses import dataclass, field
 from typing import Tuple, Dict
 from backports.cached_property import cached_property
+from collections import defaultdict
 
 @dataclass(order=True,frozen=True)
 class Mapping:
@@ -263,3 +264,12 @@ def sort_by_value(_dict):
 
 def ordered_unique(iterable):
     return {k:1 for k in iterable}.keys()
+
+def index_dict(iterable):
+    return dict(zip(iterable,range(len(iterable))))
+
+def accumulate(iter_of_pairs,fn=lambda x:x):
+    d = defaultdict(list)
+    for x,y in iter_of_pairs:
+        d[x].append(fn(y))
+    return dict(d)

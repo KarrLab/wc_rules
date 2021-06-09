@@ -48,6 +48,8 @@ class BaseClass(core.Model,ActionMixin):
         return {**d1,**d2}
     
     def get_literal_attributes(self,ignore_id=False,ignore_None=False):
+        # get_literal_attrs() is deterministic?
+        # attrs are sorted?
         L = list(self.get_literal_attrs().keys())
         if ignore_id:
             L.remove('id')
@@ -56,6 +58,8 @@ class BaseClass(core.Model,ActionMixin):
         return L
 
     def get_related_attributes(self,ignore_None=False):
+        # get_related_attrs() is deterministic?
+        # attrs are sorted?
         L = list(self.get_related_attrs().keys())
         if ignore_None:
             L = [x for x in L if self.get(x) not in [[],None]]
@@ -86,14 +90,17 @@ class BaseClass(core.Model,ActionMixin):
         return list(x)
 
     def degree(self):
-        return len(self.listget_all_related())
+        return len(list(self.iter_edges()))
 
     def iter_edges(self):
         for attr in self.get_related_attributes(ignore_None=True):
             for node in self.listget(attr):
                 yield (attr,node)
-        
 
+    def iter_literal_attrs(self,ignore_id=True,ignore_None=True):
+        for attr in self.get_literal_attributes(ignore_id=ignore_id,ignore_None=ignore_None):
+            yield (attr,self.get(attr))
+        
     def get_edge_tuples(self):
         # returns list of tuples (attr,related_attr,x)
         attrs = self.get_related_attributes(ignore_None=True)
