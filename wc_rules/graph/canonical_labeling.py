@@ -20,14 +20,14 @@ from copy import deepcopy
 # Refining a partition
 #	Break up the cells into smaller cells so that
 # 	Elements of a cell have identical same edge-relationships to elements of other cells
-#	E.g., (a|bcd) -> (a|b|cd) or (a|b|c|d), whichever has the above property.
+#	E.g., (a|bcd) -> (a|b|cd) or (a|b|c|d), whichever satisfies the above property.
 # Mapping Options
 #	For the first non-trivial cell of the OPP
 #	The lexicographic leader in the top partition can be mapped
 #	To each element in the bottom partition
-#	E.g.,
-#	(a|bcd)    (a|bcd)    (a|bcd)
-#	(a|bcd)    (a|cbd)    (a|dbc)
+#	E.g., b->b, b->c, b->d in 
+#	(a|bcd)    
+#	(a|bcd)    
 # Switch-and-Split
 #	For the first non-trivial cell of the OPP
 #	Given a mapping option (source->target)
@@ -35,7 +35,7 @@ from copy import deepcopy
 #	Create a separate cell for the target in the bottom partition
 #   E.g., for the mapping option b->c
 #	(a|bcd)    (a|b|cd)
-#	(a|cbd) -> (a|c|bd) 
+#	(a|bcd) -> (a|c|bd) 
 # Search tree
 # Search tree nodes consist of successively refined OPPs
 # Search tree edges consist of mapping options
@@ -73,10 +73,10 @@ def canonical_label(g):
 	generators = []
 
 	# convention: 
-	# if source,target==None, then 
-	# 	we are at a node of the search tree, 
-	# 	we either decide to terminate or 
-	#	create branching options based on the first non-trivial cell
+	# if source==target==None, then 
+	# 	we are at a node of the search tree, so we either
+	#	have a non-trivial cell and must branch out again,
+	#   or we have reached the leaf of the search tree and must terminate.
 	# if source,target != None, then 
 	# 	we are examining a branching option
 	# 	so we must prune, switch-and-split, refine
@@ -136,13 +136,10 @@ def first_nontrivial_cell(opp):
 		return idxs[0]
 	return None
 
-def has_nontrivial_cell(opp):
-	return first_nontrivial_cell(opp) is not None
-
-###### Partitions
 def vis_opp(opp):
 	return ''.join(['(' + '|'.join([''.join(x) for x in p]) + ')' for p in opp])
 
+###### Partitions
 def initialize_partition(g):
 	partition = group_by_certificate(initial_certificate,g.variables,g=g)
 	partition = refine_partition(partition,g)
