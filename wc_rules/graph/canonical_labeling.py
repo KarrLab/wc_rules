@@ -1,9 +1,10 @@
-from ..utils.collections import invert_dict, accumulate, listmap, tuplify, merge_lists, remap_values
-from collections import deque, Counter
-from sortedcontainers import SortedDict, SortedList
-from .permutations import Permutation
+from ..utils.collections import Mapping, merge_lists, strgen, tuplify
+from collections import deque, Counter, namedtuple, defaultdict
+from .collections import CanonicalForm
+from .permutations import Permutation, PermutationGroup
 from copy import deepcopy
-
+from dataclasses import dataclass
+from typing import Tuple
 # Implements ISMAGS PLoS One 2014 (Houbraken et al.) Fig 4
 # DEFINITIONS
 # Ordered partition
@@ -72,39 +73,38 @@ def canonical_label(g):
 	search_tree = deque([search_tree_element(opp)])
 	generators = []
 
-	# convention: 
-	# if source==target==None, then 
-	# 	we are at a node of the search tree, so we either
-	#	have a non-trivial cell and must branch out again,
-	#   or we have reached the leaf of the search tree and must terminate.
-	# if source,target != None, then 
-	# 	we are examining a branching option
-	# 	so we must prune, switch-and-split, refine
-	# appendleft + reversing mapping options ensures DFS
 	while search_tree:
 		opp, source, target = search_tree.popleft()
 		if source == target == None:
+			# we are at a node of the search tree
 			idx = first_nontrivial_cell(opp)
 			if idx is not None:
-				# create branching options
+				# create branching options (edges)
 				for source, target in mapping_options(opp,idx):
 					search_tree.appendleft(search_tree_element(deepcopy(opp),source,target))
 			else:
-				# terminal node of search tree
+				# we are at a leaf node
 				gen = make_permutation(opp)
 				generators.append(gen)
-				# update orbindex
 				orbindex = update_orbindex(orbindex,gen)
 		else:
+			# we are exploring an edge of the search tree
 			# prune with orbindex
 			if source == target or orbindex[source] != orbindex[target]:
 				# execute branching option and refine
 				opp = switch_and_split(opp,source,target)
 				opp = [refine_partition(p,g) for p in opp]
-				search_tree.appendleft(search_tree_element(opp))
+				search_tree.appendleft(search_tree_element(opp))	
 	
-	for gen in generators:
-		print(gen.cyclic_form(simple=True))
+	order = generators[0].sources
+	mapping = Mapping.create(order,strgen(len(order)))
+	C = CanonicalForm.create(g,order,mapping)
+	G = PermutationGroup.create(generators).duplicate(mapping)
+	G.validate()
+	reverse_mapping = mapping.reverse().sort()
+	# return the reverse of mapping so that
+	# C.build_graph_container(reverse_mapping) recapitulates g
+	return reverse_mapping,C,G
 
 # Search tree
 def search_tree_element(opp,source=None,target=None):
@@ -178,20 +178,27 @@ def update_orbindex(orbindex,gen):
 ####### Certification of nodes
 def initial_certificate(idx,g):
 	x = g[idx]
-	cert = (-x.degree(), x.__class__, tuple(sorted(x.iter_literal_attrs())))
+	cert = (
+		-x.degree(),
+		x.__class__,
+		tuple(sorted(x.iter_literal_attrs())),
+		tuple(sorted(Counter([a for a,_ in x.iter_edges()]))),
+		)
 	return cert
 
 def edge_certificate(idx,indexes,g):
-	x,certs = g[idx], deque()
-	for a, nodes in accumulate(x.iter_edges()).items():
-		ids = tuple(sorted(Counter(indexes[x.id] for x in nodes).items()))
-		certs.append((a,ids,))
-	return tuple(sorted(certs))
-
+	x,cert = g[idx], deque()
+	for attr,node in x.iter_edges():
+		if attr <= x.get_related_name(attr):
+			cert.append((indexes[node.id],attr))
+	cert = tuple(sorted(cert))
+	return cert
+	
 def group_by_certificate(fn,elems,**kwargs):
-	certs = {elem:fn(elem,**kwargs) for elem in elems}
-	groups = [sorted(x) for x in list(SortedDict(invert_dict(certs)).values())]
+	d = defaultdict(list)
+	for elem in elems:
+		d[fn(elem,**kwargs)].append(elem)
+	groups = [sorted(d[cert]) for cert in sorted(d.keys())]
 	return groups
-
 	
 	

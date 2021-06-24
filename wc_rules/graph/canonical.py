@@ -1,6 +1,5 @@
-from .collections import GraphContainer, CanonicalForm, SymmetryGenerator
+from .collections import GraphContainer, CanonicalForm2, SymmetryGenerator
 from ..utils.collections import BiMap, strgen, concat, printvars, merge_lists, tuplify_dict
-
 from collections import defaultdict,deque
 import math
 from itertools import product
@@ -28,7 +27,7 @@ def canonical_label(g):
 	'leaders':   tuple(sorted(label_map.replace(leaders))),
 	'edges': 	 tuple(SortedSet(relabel_edge(e,label_map) for e in g.iteredges()))
 	}
-	return CanonicalForm(*new_data.values()), label_map.reverse()
+	return CanonicalForm2(*new_data.values()), label_map.reverse()
 
 def relabel_edge(edge,label_map):
 	(x,a),(y,b) = edge

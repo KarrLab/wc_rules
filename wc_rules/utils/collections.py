@@ -47,16 +47,21 @@ class Mapping:
             return other.__class__([self.get(x) for x in other])
         return self.get(other)
 
-    def sort(self,sources=None):
-        if sources is None:
-            sources = sorted(self.sources)
-        sources = tuple(sources)
-        return self.__class__.create(sources,self*sources)
+    def sort(self,order=None):
+        if order is None:
+            order = sorted(self.sources)
+        return self.__class__.create(order,self*order)
 
     def iter_items(self):
         # returns k,v pairs from sources and targets respectively
         for s,t in zip(self.sources,self.targets):
             yield (s,t)
+
+    def duplicate(self,mapping):
+        return self.__class__.create(mapping*self.sources,mapping*self.targets)
+
+    def pprint(self):
+        return 'Mapping\n' + '\n'.join([f'{x}->{y}' for x,y in zip(self.sources,self.targets)]) + '\n'
     
 @dataclass(unsafe_hash=True)
 class BiMap:
@@ -224,10 +229,13 @@ def subdict(d,keys):
     return {k:d[k] for k in keys}
 
 def strgen(n,template='abcdefgh'):
-    # the +0.01 is to handle the case when n==0
-    digits = math.ceil((math.log(n) + 0.01)/math.log(len(template)))
+    if n==0:
+        return []
+    # the +0.01 is to handle the case when n==1
+    digits = math.ceil((math.log(n)+0.001)/math.log(len(template)))
     enumerator = enumerate(itertools.product(template,repeat=digits))
-    return list(''.join(x) for i,x in enumerator if i<n)
+    L = list(''.join(x) for i,x in enumerator if i<n)
+    return L
 
 def concat(LL):
     return [x for L in LL for x in L if x]
@@ -272,4 +280,6 @@ def accumulate(iter_of_pairs,fn=lambda x:x):
     d = defaultdict(list)
     for x,y in iter_of_pairs:
         d[x].append(fn(y))
+
+    print(d)
     return dict(d)

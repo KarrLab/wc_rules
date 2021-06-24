@@ -1,10 +1,11 @@
 from ..utils.collections import Mapping, merge_lists, remap_values, invert_dict, tuplify, index_dict
-from itertools import combinations
+from itertools import combinations, product
 from dataclasses import dataclass
 from typing import Tuple
+from sortedcontainers import SortedSet
 
-def print_cycles(cycles,lb=r'(',rb=r')'):
-    return ''.join([f"{lb}{''.join(x)}{rb}" for x in cycles])
+def print_cycles(cycles,lb=r'(',rb=r')',sep=','):
+    return ''.join([f"{lb}{sep.join(x)}{rb}" for x in cycles])
 
 class Permutation(Mapping):
 
@@ -12,6 +13,7 @@ class Permutation(Mapping):
 	# if sources are sorted,
 	# then x*y for any permutation will always produce
 	# a permutation with sorted sources
+	# However, the responsibility of sorting a permutation is elsewhere
 
 	def cyclic_form(self,simple=False):
 		values, orbits = list(self.sources), []
@@ -34,37 +36,35 @@ class Permutation(Mapping):
 	def validate(self):
 		assert set(self.sources) == set(self.targets), f"{self.sources}->{self.targets} not a valid permutation."
 
+	def duplicate(self,mapping):
+		return self.__class__.create(mapping*self.sources,mapping*self.targets)
+
 
 @dataclass(order=True,frozen=True)
 class PermutationGroup:
 	generators: Tuple[Permutation]
-	canonical_order: Tuple[str]
 
 	@classmethod
-	def create(cls,generators,canonical_order=None):
-		if canonical_order is None:
-			canonical_order = sorted(generators[0].sources)
-		canonical_order = tuple(canonical_order)
-		generators = tuple(sorted(set([x.sort(canonical_order) for x in generators])))	
-		return PermutationGroup(generators,canonical_order)
+	def create(cls,generators):
+		# permutation groups always have ordered permutations
+		generators = tuple(sorted([g.sort() for g in generators]))
+		return PermutationGroup(generators)
 
 	def expand(self):
-		new,visited = set(self.generators), set()
+		new,visited = SortedSet(self.generators), SortedSet()
 		while new:
 			visited |= new
-			new = set([x*y for x in new for y in visited]) - visited
-		return sorted([x.sort(self.canonical_order) for x in visited])
+			new = SortedSet([x*y for x,y in product(new,visited)]) - visited
+		return list(visited)
 
 	def validate(self):
 		for x in self.generators:
 			assert isinstance(x,Permutation), "Generators must be valid permutations."
-			x.validate()
-			assert set(x.sources) == set(self.canonical_order), "Generators must be valid permutations."
+			x.validate()			
 		assert self.generators[0].is_identity(), f"Atleast one generator must be an identity permutation."
 		
 	def orbits(self,simple=False):
-		# note: orbits are ordered by canonical order
-		orbindex = index_dict(self.canonical_order)
+		orbindex = index_dict(self.generators[0].sources)
 		for g in self.generators:
 			for cyc in g.cyclic_form():
 				if len(cyc) > 1:
@@ -84,13 +84,23 @@ class PermutationGroup:
 
 		self.validate()
 		identity, remaining = self.generators[0:1], self.generators[1:]
-		yield PermutationGroup(identity, self.canonical_order)
+		yield PermutationGroup(identity)
 		for n in range(1,len(remaining)+1):
 			for gens in combinations(remaining,n):
-				yield PermutationGroup.create(identity + gens, self.canonical_order)
+				yield PermutationGroup.create(identity + gens)
 
 	def is_trivial(self):
 		return len(self.generators)==1
+
+	def duplicate(self,mapping):
+		return self.__class__.create([g.duplicate(mapping) for g in self.generators])
+
+	def pprint(self,simple=True):
+		s = 'Permutation Group\n'
+		for g in self.generators:
+			s += str(g.cyclic_form(simple=simple)) + '\n'
+		return s
+
 
 
 
