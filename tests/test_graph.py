@@ -14,17 +14,9 @@ class CanonicalLabelBuild:
 	labeling: Any
 	group: Any
 
+graphs = [(k,*v) for k,v in gex.gen_all_graphs().items()]
 class TestCanonicalLabel(unittest.TestCase):
-	@parameterized.expand([
-		("single_node",*gex.single_node()),
-		("spoke",*gex.spoke()),
-		("directed_wheel",*gex.directed_wheel()),
-		("undirected_wheel",*gex.undirected_wheel()),
-		("directed_wheel",*gex.directed_wheel()),
-		("directed_cube",*gex.directed_cube()),
-		("undirected_cube",*gex.undirected_cube()),
-		("clique",*gex.clique())
-	])
+	@parameterized.expand(graphs)
 	def test_graph(self,name,g,nsyms):
 		build0 = CanonicalLabelBuild(*canonical_label(g))
 
@@ -55,3 +47,6 @@ class TestCanonicalLabel(unittest.TestCase):
 
 		# the expanded-form must have the expected number of permutations
 		self.assertEqual(len(p0),nsyms)
+
+		# count_symmetries (orb-stab theorem) must give the expected num of permutations
+		self.assertEqual(build0.group.count_symmetries(),nsyms)

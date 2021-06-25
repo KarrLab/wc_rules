@@ -3,6 +3,9 @@ from itertools import combinations, product
 from dataclasses import dataclass
 from typing import Tuple
 from sortedcontainers import SortedSet
+from copy import deepcopy
+from collections import Counter
+import math
 
 def print_cycles(cycles,lb=r'(',rb=r')',sep=','):
     return ''.join([f"{lb}{sep.join(x)}{rb}" for x in cycles])
@@ -38,6 +41,12 @@ class Permutation(Mapping):
 
 	def duplicate(self,mapping):
 		return self.__class__.create(mapping*self.sources,mapping*self.targets)
+
+	def remove(self,variable):
+		target = self.get(variable)
+		sources = [x for x in self.sources if x!=variable]
+		targets = [x for x in self.targets if x!=target]
+		return self.__class__.create(sources,targets)
 
 
 @dataclass(order=True,frozen=True)
@@ -101,6 +110,27 @@ class PermutationGroup:
 			s += str(g.cyclic_form(simple=simple)) + '\n'
 		return s
 
+	def stabilizer(self,variable):
+		gens = [g.remove(variable) for g in self.generators if g.get(variable)==variable]
+		return self.__class__.create(gens)
+
+	def orbit(self,variable):
+		for orb in self.orbits():
+			if variable in orb:
+				return orb
+
+	def count_symmetries(self):
+		# use orbit stabilizer theorem
+		# take the first variable
+		# compute its orbit length in self
+		# compute the stabilizer group of that variable
+		# recurse and multiply
+		if self.is_trivial():
+			return 1
+		variable = self.generators[0].sources[0]
+		norbits = len(self.orbit(variable)) 
+		stabilizer = self.stabilizer(variable)
+		return norbits*stabilizer.count_symmetries()
 
 
 

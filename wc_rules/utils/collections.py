@@ -33,7 +33,8 @@ class Mapping:
         return self.__class__.create(self.targets,self.sources)
 
     def get(self,value):
-        return self._dict[value]
+        idx = self.sources.index(value)
+        return self.targets[idx]
 
     def restrict(self,sources):
         return self.__class__.create(sources,self*sources)

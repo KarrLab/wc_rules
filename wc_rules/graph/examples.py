@@ -85,3 +85,17 @@ def clique():
 	seed_node,nsyms = m[0], math.factorial(len('abcde'))
 	g = GraphContainer(seed_node.get_connected())
 	return g,nsyms
+
+
+def gen_all_graphs():
+
+	graphs = [
+		single_node,
+		spoke,
+		directed_wheel,
+		undirected_wheel,
+		directed_cube,
+		undirected_cube,
+		clique
+		]
+	return {g.__name__:g() for g in graphs}
