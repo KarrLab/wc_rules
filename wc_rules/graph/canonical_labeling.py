@@ -1,10 +1,9 @@
-from ..utils.collections import Mapping, merge_lists, strgen, tuplify
-from collections import deque, Counter, namedtuple, defaultdict
+from ..utils.collections import Mapping, merge_lists, strgen
+from collections import deque, Counter, defaultdict
 from .collections import CanonicalForm
 from .permutations import Permutation, PermutationGroup
 from copy import deepcopy
-from dataclasses import dataclass
-from typing import Tuple
+
 # Implements ISMAGS PLoS One 2014 (Houbraken et al.) Fig 4
 # DEFINITIONS
 # Ordered partition
@@ -67,6 +66,7 @@ from typing import Tuple
 # With orbit pruning, the symmetries produced must be sufficient to generate the full set.
 
 def canonical_label(g):
+
 	partition = initialize_partition(g)
 	opp = ordered_partition_pair(partition,partition)
 	orbindex = initialize_orbindex(partition)
@@ -137,7 +137,13 @@ def first_nontrivial_cell(opp):
 	return None
 
 def vis_opp(opp):
-	return ''.join(['(' + '|'.join([''.join(x) for x in p]) + ')' for p in opp])
+	return ''.join([vis_partition(p) for p in opp])
+
+def vis_partition(p):
+	return '(' + '|'.join([vis_cell(c) for c in p]) + ')'
+
+def vis_cell(c):
+	return ','.join(c)
 
 ###### Partitions
 def initialize_partition(g):
@@ -189,8 +195,7 @@ def initial_certificate(idx,g):
 def edge_certificate(idx,indexes,g):
 	x,cert = g[idx], deque()
 	for attr,node in x.iter_edges():
-		if attr <= x.get_related_name(attr):
-			cert.append((indexes[node.id],attr))
+		cert.append((indexes[node.id],attr))
 	cert = tuple(sorted(cert))
 	return cert
 	

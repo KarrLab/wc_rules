@@ -229,10 +229,11 @@ def subdict(d,keys):
     return {k:d[k] for k in keys}
 
 def strgen(n,template='abcdefgh'):
-    if n==0:
-        return []
+    if n< len(template):
+        return template[:n]
+
     # the +0.01 is to handle the case when n==1
-    digits = math.ceil((math.log(n)+0.001)/math.log(len(template)))
+    digits = math.ceil((math.log(n))/math.log(len(template)))
     enumerator = enumerate(itertools.product(template,repeat=digits))
     L = list(''.join(x) for i,x in enumerator if i<n)
     return L

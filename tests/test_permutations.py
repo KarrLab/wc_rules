@@ -34,7 +34,7 @@ class TestMapping(unittest.TestCase):
 		# internal sorting 
 		v = Mapping.create('zyx','cba')
 		self.assertEqual(v.sort(),Mapping.create('xyz','abc'))
-		self.assertEqual(v.sort('yxz'),Mapping.create('yxz','bac'))
+		self.assertEqual(v.sort(list('yxz')),Mapping.create('yxz','bac'))
 
 		# external sorting
 		# new behavior from bimap
