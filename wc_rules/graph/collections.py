@@ -29,6 +29,9 @@ class Edge:
         n1,e1,n2,e2 = self.unpack()
         return f'{n1}.{e1}--{n2}.{e2}'
 
+    def nodes(self):
+        return (self.ports[0].node,self.ports[1].node)
+
 @dataclass(order=True,frozen=True)
 class Attr:
     __slots__ = ['node','attr','value']

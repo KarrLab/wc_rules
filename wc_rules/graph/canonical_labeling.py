@@ -165,6 +165,8 @@ def index_partition(partition):
 	return dict([(x,i) for i,gr in enumerate(partition) for x in gr])
 
 def refine_cell(cell,indexes,g):
+	if len(cell)==1:
+		return [cell]
 	groups = group_by_certificate(edge_certificate,cell,indexes=indexes,g=g)
 	return groups
 

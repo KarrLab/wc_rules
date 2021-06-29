@@ -192,10 +192,16 @@ def listmap(op,inputs):
 def split_string(s,sep='\n'):
     return [y for y in [x.strip() for x in s.split(sep)] if len(y)>0]
 
-def grouper(n,inputs):
+def grouper(inputs,n):
     # assume len(input) is a multiple of n:
     # grouper(2,[1,2,3,4,5,6]) -> [[1,2],[3,4],[5,6]]
     return [inputs[n*i:n*i+n] for i in range(0,len(inputs)//n)]
+
+def split_iter(inputs,n):
+    outputs = [[] for i in range(n)]
+    for i,x in zip(itertools.cycle(range(n)),inputs):
+        outputs[i].append(x)
+    return outputs
 
 def remap_values(d,oldvalues,newvalue):
     for elem in d:
@@ -282,6 +288,4 @@ def accumulate(iter_of_pairs,fn=lambda x:x):
     d = defaultdict(list)
     for x,y in iter_of_pairs:
         d[x].append(fn(y))
-
-    print(d)
     return dict(d)

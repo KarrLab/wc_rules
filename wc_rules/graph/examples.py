@@ -24,6 +24,14 @@ def single_node():
 	g = GraphContainer(seed_node.get_connected())
 	return g,nsyms	
 
+def directed_square():
+	k = [K(x) for x in 'abcd']
+	for i in range(-1,len(k)-1):
+		k[i].x = k[i+1]
+	seed_node,nsyms = k[0], len('abcd')
+	g = GraphContainer(seed_node.get_connected())
+	return g,nsyms
+
 def spoke():
 	x = X('a')
 	x.y = [Y(z) for z in random.sample('bcdef',len('bcdef'))]

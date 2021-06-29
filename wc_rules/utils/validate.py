@@ -74,6 +74,8 @@ def validate_namespace(*args):
 
 def check_cycle(gdict):
     # gdict is a directed graph represented as a dict
+    # node0: [node1, node2]
+    # node3: [node4]
     nodes,paths = deque(gdict), deque()
     while nodes or paths:
         if not paths:
