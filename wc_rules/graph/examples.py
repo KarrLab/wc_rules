@@ -100,6 +100,7 @@ def gen_all_graphs():
 	graphs = [
 		single_node,
 		spoke,
+		directed_square,
 		directed_wheel,
 		undirected_wheel,
 		directed_cube,
