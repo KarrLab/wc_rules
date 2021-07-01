@@ -8,4 +8,5 @@ obj_tables
 setuptools
 pyyaml
 backports.cached_property
+pyvis
 parameterized
