@@ -1,5 +1,5 @@
 from ..utils.collections import strgen, split_iter, merge_lists, invert_dict
-from .collections import CanonicalForm
+from .collections import CanonicalForm, Mapping
 from .canonical_labeling import canonical_label
 from itertools import combinations, product
 from collections import Counter
@@ -11,12 +11,42 @@ def partition_canonical_form(labeling,group):
 	# partition it using Kernighan/Lin
 	# reconstruct the halves of the original graph
 
-	# first construct a line graph from the original graph
+	# trivial case: at most one edge, cannot subdivide further
+	if len(labeling.edges) <= 1:
+		return None,None
+
 	lg_nodes, lg_edges,lg_orbits = line_graph(labeling.names,labeling.edges,group.orbits())
 	partition = kernighan_lin(lg_nodes.values(),lg_edges,lg_orbits)
 	g1, g2 = [deinduce(labeling,lg_nodes,x) for x in partition]
-	L1, L2 = [canonical_label(x) for x in [g1,g2]]
-	return L1,L2
+	CL1, CL2 = [canonical_label(x) for x in [g1,g2]]
+	return CL1,CL2
+
+def partition_until_edge(labeling,group,examined=set(),partitions=[]):
+	# input: canonically labeled graph
+	# repeatedly partition with partition_canonical_form until you obtain single-edge graphs
+	# output: examined set of labels (hashed versions), successive partitions of the graph
+	CL1, CL2 = partition_canonical_form(labeling,group)
+	if CL1 is None:
+		return examined,partitions
+	m1,L1,G1 = CL1
+	m2,L2,G2 = CL2
+
+	arrow = "\u2192"
+	g = labeling.build_graph_container()
+	m1 = Mapping.create(m1.sources,[f"{s}{arrow}{t}" for s,t in zip(m1.sources,m1.targets)])
+	g1 = L1.build_graph_container(m1)
+	m2 = Mapping.create(m2.sources,[f"{s}{arrow}{t}" for s,t in zip(m2.sources,m2.targets)])
+	g2 = L2.build_graph_container(m2)
+	examined.add(hash(labeling))
+	partitions.append((g,g1,g2,))
+
+	if hash(L1) not in examined and len(L1.edges)>1:
+		examined,partitions = partition_until_edge(L1,G1,examined,partitions)
+	if hash(L2) not in examined and len(L1.edges)>1:
+		examined,partitions = partition_until_edge(L2,G2,examined,partitions)
+
+	return examined,partitions
+	
 
 def line_graph(nodes,edges,orbits):
 	# nodes is a list of names
@@ -60,6 +90,8 @@ def kernighan_lin(nodes,edges,orbits):
 	# Start with an initial bi-partition of nodes
 	# Keep track of swappable node pairs
 	# Greedily choose the best swap in the current available ones
+	#	K/L only count crossover edges as cut cost
+	#	Here, we also examine if the cut is symmetrically balanced w.r.t. node orbits
 	# Fix the swap, eliminate other swapping choices involving the fixed nodes
 
 	partition = split_iter(nodes,2)

@@ -8,5 +8,5 @@ obj_tables
 setuptools
 pyyaml
 backports.cached_property
-pyvis
+jinja2
 parameterized
