@@ -1,7 +1,7 @@
 from pathlib import Path
 import jinja2
 
-def visualize_graph_container(g,asdict=True):
+def visualize_graph_container(g,asdict=False):
 	nodes,edges = [],[]
 	for idx,node in g.iter_nodes():
 		classname = node.__class__.__name__
@@ -18,17 +18,18 @@ def visualize_graph_container(g,asdict=True):
 			arrows.update({'from':{'enabled':True,'type':'arrow'}})
 		_from, _to = n1,n2
 		edges.append({'from':_from,'to':_to,'title':edge.pprint(),'arrows':arrows})
+	d = dict(nodes=nodes,edges=edges)
+	
 	if asdict:
-		return dict(nodes=nodes,edges=edges)
-	else:
-		template = load_template('template_graphcontainer.html')
-		return template.render(graph=dict(nodes=nodes,edges=edges))
-	assert False
-
+		return d
+	
+	template = load_template('template_graphcontainer.html')
+	return template.render(graph=d)
+	
 def visualize_graph_partitioning(graphs):
 	# each g is a graph container
 	# assume every three elements is a partition tuple: parent,child,child
-	graphs = [visualize_graph_container(g) for g in graphs]
+	graphs = [visualize_graph_container(g,asdict=True) for g in graphs]
 	template = load_template('template_partitioning.html')
 	return template.render(graphs=graphs)
 

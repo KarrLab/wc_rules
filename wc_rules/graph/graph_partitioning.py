@@ -2,7 +2,7 @@ from ..utils.collections import strgen, split_iter, merge_lists, invert_dict
 from .collections import CanonicalForm, Mapping
 from .canonical_labeling import canonical_label
 from itertools import combinations, product
-from collections import Counter
+from collections import Counter, ChainMap
 from copy import deepcopy
 
 def partition_canonical_form(labeling,group):
@@ -37,16 +37,29 @@ def partition_until_edge(labeling,group,examined=set(),partitions=[]):
 	g1 = L1.build_graph_container(m1)
 	m2 = Mapping.create(m2.sources,[f"{s}{arrow}{t}" for s,t in zip(m2.sources,m2.targets)])
 	g2 = L2.build_graph_container(m2)
-	examined.add(hash(labeling))
+	examined.add(labeling)
 	partitions.append((g,g1,g2,))
 
-	if hash(L1) not in examined and len(L1.edges)>1:
+	if L1 not in examined and len(L1.edges)>1:
 		examined,partitions = partition_until_edge(L1,G1,examined,partitions)
-	if hash(L2) not in examined and len(L1.edges)>1:
+	if L2 not in examined and len(L1.edges)>1:
 		examined,partitions = partition_until_edge(L2,G2,examined,partitions)
 
 	return examined,partitions
-	
+
+def recompose(m1,L1,m2,L2):
+	L11 = L1.remap(m1._dict)
+	L21 = L2.remap(m2._dict)
+	# names classes attrs edges
+	names = tuple(sorted(set(L11.names + L21.names)))
+	classesdict = ChainMap(dict(zip(L11.names,L11.classes)), dict(zip(L21.names,L21.classes)))
+	classes = tuple([classesdict[x] for x in names])
+	attrs = tuple(sorted(set(L11.attrs + L21.attrs)))
+	edges = tuple(sorted(set(L11.edges + L21.edges)))
+	big_L = CanonicalForm(names,classes,attrs,edges)
+	big_g = big_L.build_graph_container()
+	return canonical_label(big_g)
+
 
 def line_graph(nodes,edges,orbits):
 	# nodes is a list of names

@@ -32,6 +32,10 @@ class Edge:
     def nodes(self):
         return (self.ports[0].node,self.ports[1].node)
 
+    def remap(self,d):
+        n1,e1,n2,e2 = self.unpack()
+        return self.__class__.create(d[n1],e1,d[n2],e2)
+
 @dataclass(order=True,frozen=True)
 class Attr:
     __slots__ = ['node','attr','value']
@@ -47,6 +51,10 @@ class Attr:
 
     def pprint(self):
         return f'{self.node}.{self.attr}=={self.value}'
+
+    def remap(self,d):
+        n,a,v = self.unpack()
+        return self.__class__(d[n],a,v)
 
 
 class GraphContainer(DictLike):
@@ -164,6 +172,13 @@ class CanonicalForm:
             n1,a1,n2,a2 = edge.unpack()
             g[mapping.get(n1)].safely_add_edge(a1,g[mapping.get(n2)])
         return g
+
+    def remap(self,d):
+        names = [d[x] for x in self.names]
+        classes = self.classes
+        attrs = [x.remap(d) for x in self.attrs]
+        edges = [x.remap(d) for x in self.edges]
+        return self.__class__(names,classes,attrs,edges)
 
 @dataclass(unsafe_hash=True)
 class CanonicalForm2:

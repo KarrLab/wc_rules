@@ -188,7 +188,7 @@ def initial_certificate(idx,g):
 	x = g[idx]
 	cert = (
 		-x.degree(),
-		x.__class__,
+		x.__class__.__name__,
 		tuple(sorted(x.iter_literal_attrs())),
 		tuple(sorted(Counter([a for a,_ in x.iter_edges()]))),
 		)
