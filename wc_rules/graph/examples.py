@@ -17,6 +17,12 @@ class M(Entity):
 class N(Entity):
 	x = ManyToManyAttribute('N',related_name='y')	
 
+class E(Entity):
+	e = OneToOneAttribute('E',related_name='e')
+
+class F(Entity):
+	e = OneToManyAttribute(E,related_name='f')
+	f = OneToOneAttribute('F',related_name='f_rel')
 
 def single_node():
 	x = X('x')
@@ -94,6 +100,20 @@ def clique():
 	g = GraphContainer(seed_node.get_connected())
 	return g,nsyms
 
+def bowtie():
+	f1,f2 = F('f1'), F('f2')
+	e1,e2,e3,e4 = [E('e'+str(i)) for i in range(1,5)]
+	f1.e = [e1,e2]
+	f2.e = [e3,e4]
+	f1.f = f2
+	f2.f = f1
+	e1.e = e2
+	e3.e = e4
+
+	seed_node,nsyms = f1, 8
+	g = GraphContainer(seed_node.get_connected())
+	return g,nsyms
+
 
 def gen_all_graphs():
 
@@ -105,6 +125,7 @@ def gen_all_graphs():
 		undirected_wheel,
 		directed_cube,
 		undirected_cube,
-		clique
+		clique,
+		bowtie
 		]
 	return {g.__name__:g() for g in graphs}
