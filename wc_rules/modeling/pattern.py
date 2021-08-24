@@ -20,7 +20,6 @@ class Pattern:
 		self.assigned_variables = self.validate_constraints(constraints)
 		self.constraints = constraints
 
-
 	@property
 	def variables(self):
 		return list(self.namespace.keys())
@@ -82,6 +81,8 @@ class Pattern:
 
 	def make_executable_constraints(self):
 		return [initialize_from_string(s,(Constraint,Computation)) for s in self.constraints]
+
+
 			
 class SynthesisPattern:
 

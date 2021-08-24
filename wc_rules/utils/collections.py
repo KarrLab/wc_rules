@@ -232,7 +232,9 @@ def tuplify(x):
         return tuple([tuplify(y) for y in x])
     return x
 
-def subdict(d,keys):
+def subdict(d,keys,ignore=False):
+    if ignore:
+        keys = [x for x in keys if x in d] 
     return {k:d[k] for k in keys}
 
 def strgen(n,template='abcdefgh'):

@@ -203,6 +203,13 @@ class BaseClass(core.Model,ActionMixin):
         return 'Object of {0} with id \'{1}\''.format(self.__class__,self.id)
 
 
+    def pprint(self):
+        s = [f'<{self.__class__.__name__}: {id(self)}>']
+        for a,v in self.iter_literal_attrs():
+            s.append(f'   {a}={v}')
+        for a,n in self.iter_edges():
+            s.append(f"   {a}--><{n.__class__.__name__}: {id(n)}>")
+        return '\n'.join(s)
 
 
     

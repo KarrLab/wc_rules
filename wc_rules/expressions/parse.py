@@ -1,4 +1,4 @@
-from lark import Lark, tree, Transformer,Visitor, v_args, Tree,Token
+from lark import Lark, Transformer,Visitor, v_args, Tree,Token
 from ..utils.collections import merge_lists, merge_dicts, pipe_map,listmap
 from operator import itemgetter,attrgetter
 from functools import partial
@@ -6,6 +6,19 @@ from pathlib import Path
 
 grammarfile = Path(__file__).parent / 'expression.lark'
 grammar = grammarfile.read_text()
+
+LITERALS = ['number','true','false','string']
+VARIABLES = ['variable','declared_variable','subvariable']
+FNAMES = ['function_name','attribute']
+CONTAINS_STRINGTOKENS = VARIABLES + FNAMES + ['kw']
+OPERATORS = [
+    'noflip','flipsign',
+    'add','subtract',
+    'multiply','divide',
+    'eq','ne','ge','geq','le','leq',
+    ]
+ORDERED_OPERATORS = ['ge','geq','le','leq']
+GROUP_BY_LEADERS = ['sum','term']
 
 ### process constraint string
 def process_expression_string(string_input,start='start'):
