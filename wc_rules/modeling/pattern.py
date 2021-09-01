@@ -82,7 +82,8 @@ class Pattern:
 	def make_executable_constraints(self):
 		return [initialize_from_string(s,(Constraint,Computation)) for s in self.constraints]
 
-
+	def compute_symmetry_group(self,source_symmetry_group):
+		return None
 			
 class SynthesisPattern:
 

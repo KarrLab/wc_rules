@@ -136,7 +136,7 @@ class GraphContainer(DictLike):
 
 
 @dataclass(eq=True,order=True,frozen=True)
-class CanonicalForm:
+class TextualForm:
     __slots__ = ['names','classes','attrs','edges']
 
     names: Tuple[str]
@@ -154,12 +154,13 @@ class CanonicalForm:
         return s
 
     @classmethod
-    def create(cls,g,order,mapping):
-        names = mapping*order
+    def create(cls,g):
+        names = sorted(g._dict.keys())
         classes = tuple([g[x].__class__ for x in order])
-        attrs = tuple(sorted([x.duplicate(mapping) for x in g.iter_literal_attrs()]))
-        edges = tuple(sorted([x.duplicate(mapping) for x in g.iter_edges()]))
+        attrs = tuple(sorted(g.iter_literal_attrs()))
+        edges = tuple(sorted(g.iter_edges()))
         return cls(names,classes,attrs,edges)
+
 
     def build_graph_container(self,mapping=None):
         if mapping is None:
@@ -180,6 +181,18 @@ class CanonicalForm:
         edges = [x.remap(d) for x in self.edges]
         return self.__class__(names,classes,attrs,edges)
 
+@dataclass(eq=True,order=True,frozen=True)
+class CanonicalForm(TextualForm):
+    
+    @classmethod
+    def create(cls,g,order,mapping):
+        names = mapping*order
+        classes = tuple([g[x].__class__ for x in order])
+        attrs = tuple(sorted([x.duplicate(mapping) for x in g.iter_literal_attrs()]))
+        edges = tuple(sorted([x.duplicate(mapping) for x in g.iter_edges()]))
+        return cls(names,classes,attrs,edges)
+
+
 @dataclass(unsafe_hash=True)
 class CanonicalForm2:
     partition: tuple
@@ -191,6 +204,7 @@ class CanonicalForm2:
     def namespace(self):
         return dict(zip(merge_lists(self.partition),self.classes))
     
+
 
 @dataclass(unsafe_hash=True)
 class SymmetryGenerator:

@@ -26,6 +26,12 @@ class BaseClass(core.Model,ActionMixin):
                 self.id = generate_id()
         self.attach_actions()
 
+    @classmethod
+    def resolve_classes(cls):
+        _class = cls
+        classes = list(reversed(_class.__mro__[:_class.__mro__.index(BaseClass)]))
+        return classes
+
     def get_literal_attrdict(self,ignore_id=True,ignore_None=True):
         return {x:self.get(x) for x in self.get_literal_attributes(ignore_id=ignore_id,ignore_None=ignore_None)}
 

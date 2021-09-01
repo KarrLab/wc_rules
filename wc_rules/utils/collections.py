@@ -63,7 +63,8 @@ class Mapping:
 
     def pprint(self):
         return 'Mapping\n' + '\n'.join([f'{x}->{y}' for x,y in zip(self.sources,self.targets)]) + '\n'
-    
+
+# Should be downgraded and removed
 @dataclass(unsafe_hash=True)
 class BiMap:
     # create and copy_from class methods sort items before creation
@@ -157,9 +158,6 @@ class DictLike(object):
     def items(self): return list(self._dict.items())
 
     def __getitem__(self,key): return self._dict[key]
-
-    def __str__(self):
-        return pprint.pformat(self._dict)
 
     def __eq__(self,other):
         return self._dict == other._dict
