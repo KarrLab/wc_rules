@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from ..utils.collections import DictLike, listmap, Mapping
+from ..utils.collections import DictLike, listmap, Mapping, merge_dicts, no_overlaps
 from itertools import chain
 from typing import Tuple, Any
 
@@ -133,6 +133,12 @@ class GraphContainer(DictLike):
         for attr in chain(self.iter_literal_attrs(),self.iter_edges()):
             s += attr.pprint() + '\n'
         return s
+
+    def join(self,other):
+        assert no_overlaps([self._dict,other._dict])
+        self._dict = merge_dicts([self._dict,other._dict])
+        return self
+
 
 
 @dataclass(eq=True,order=True,frozen=True)

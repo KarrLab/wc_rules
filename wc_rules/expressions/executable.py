@@ -91,7 +91,6 @@ class ExecutableExpression:
 	def build_exprgraph(self):
 		tree, deps = process_expression_string(self.code,start=self.__class__.start)
 		return dfs_make(tree)
-
 		
 
 class Constraint(ExecutableExpression):
@@ -105,6 +104,13 @@ class Computation(ExecutableExpression):
 	builtins = global_builtins
 	allowed_forms = ['<var> = <expr>']
 	allowed_returns = None
+
+	def build_exprgraph(self):
+		assert self.deps.declared_variable is not None
+		code = f'{self.deps.declared_variable} = {self.code}'
+		tree, deps = process_expression_string(code,start=self.__class__.start)
+		return dfs_make(tree)
+
 
 class RateLaw(ExecutableExpression):
 	start = 'expression'

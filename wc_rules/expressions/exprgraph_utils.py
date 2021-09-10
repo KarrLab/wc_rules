@@ -4,8 +4,13 @@ from ..schema.attributes import StringAttribute
 class ExprBase(BaseClass):
 	data = StringAttribute()
 
+	def serialize_for_vis(self):
+		d = self.get_literal_attrdict()
+		return '\n'.join([f'{k}:{v}' for k,v in d.items()])
+
 class StringToken(ExprBase):
 	value = StringAttribute()
+
 
 def dfs_iter(tree):
 	return [tree] + merge_lists([dfs_iter(x) for x in getattr(tree,'children',[])])

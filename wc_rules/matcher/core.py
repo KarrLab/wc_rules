@@ -60,9 +60,9 @@ class ReteNet:
 	def pprint(self):
 		s = []
 		for label,node in self.nodes.items():
-			s.append(f"Node {label}: {id(node)}: {node.core}")
+			s.append(f"Node\n\tlabel={label}\n\tcore={node.core}\n\tdata={node.data}")
 		for channel in self.channels:
-			s.append(f"Channel {channel['chtype']} {str(channel['source'])} -> {str(channel['target'])},  {channel['data']}")
+			s.append(f"Channel\n\tchtype={channel['chtype']}\n\tsource={str(channel['source'])}\n\ttarget={str(channel['target'])}\n\tdata={channel['data']}")
 		return '\n'.join(s)
 
 	def filter_channels(self,**kwargs):

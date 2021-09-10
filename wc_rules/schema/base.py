@@ -210,11 +210,11 @@ class BaseClass(core.Model,ActionMixin):
 
 
     def pprint(self):
-        s = [f'<{self.__class__.__name__}: {id(self)}>']
+        s = [f'<{self.__class__.__name__}: {self.id}>']
         for a,v in self.iter_literal_attrs():
             s.append(f'   {a}={v}')
         for a,n in self.iter_edges():
-            s.append(f"   {a}--><{n.__class__.__name__}: {id(n)}>")
+            s.append(f"   {a}--><{n.__class__.__name__}: {n.id}>")
         return '\n'.join(s)
 
 

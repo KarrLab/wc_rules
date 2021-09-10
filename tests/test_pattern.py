@@ -118,6 +118,21 @@ class TestPattern(unittest.TestCase):
 		self.assertEqual(c.exec(dict( z=Z() )), False)
 		self.assertEqual(c.exec(dict( z=Z(z=Z()) )), True)
 
+	def test_assignment(self):
+		z = Z('z1',z=Z('z2'))
+		# symmetry preserving
+		pz = Pattern(
+			parent = GraphContainer(z.get_connected()),
+			constraints = [
+			'a = any(z1.a,z2.a)',
+			'b = all(z1.b,z2.b)',
+			'c = any(z1.a,z1.b)',
+			'd = any(z2.a,z2.b)',
+			'any(a,b,c,d) == True',
+			])
+		execs = pz.make_executable_constraints()
+
+
 	@unittest.skip("Upgrade to new patterns")
 	def test_canonical_expr(self):
 		z = Z('z1',z=Z('z2'))

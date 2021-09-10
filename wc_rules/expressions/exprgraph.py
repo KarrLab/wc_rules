@@ -9,17 +9,42 @@ from .parse import CONTAINS_STRINGTOKENS, LITERALS, ORDERED_OPERATORS, GROUP_BY_
 from functools import partial
 from collections import defaultdict
 
+# READ THIS BEFORE CODING NEW METHODS
+# dfs_make iterates depth-wise through an expression tree (output of lark parser)
+#	and creates a parallel obj_tables graph using Expr nodes
+# when dfs_make encounters a term with data=x, it calls make_x() if it exists,
+# else it returns a default Expr node
+# make_x methods must have the interface:
+# def make_x(children):
+#	return Expr()
+
 class Expr(ExprBase):
 	order = IntegerAttribute()
 	children = OneToManyAttribute(ExprBase,related_name='parents')
+	assignment = BooleanAttribute()
+	
+class PatternReference(Expr):
+	pattern_id = StringAttribute()
 
 class FunctionReference(Expr):
+
 	variable = StringAttribute()
-	declared_variable = StringAttribute()
 	attribute = StringAttribute()
 	subvariable = StringAttribute()
 	function_name = StringAttribute()
-	source = OneToOneAttribute(BaseClass)
+	_source = ManyToOneAttribute(BaseClass,related_name='_targets')
+	
+	def variable_reference(self):
+		if self.subvariable is not None:
+			return f'{self.variable}.{self.subvariable}'
+		return self.variable
+		
+	def attach_source(self,source):
+		self.variable = None
+		self.subvariable = None
+		self.safely_add_edge('_source',source)
+		return self
+
 
 class Arg(Expr):
 	keyword = StringAttribute()
@@ -40,8 +65,11 @@ def make_literal(data,children=[]):
 for x in LITERALS:
 	globals()[f'make_{x}'] = partial(make_literal,data=x)
 
-def make_declared_variable(children):
-	return Expr(data='declared_variable',children=[FunctionReference(variable=children[0].value)])
+def make_assignment(children):
+	# get the declared variable from child0 and assign it as id to child1
+	child0, child1 = children
+	child1.id, child1.assignment = collect_elements([child0])['declared_variable'], True
+	return child1
 
 def make_function_call(children):
 	contents,args = collect_elements(children), []
