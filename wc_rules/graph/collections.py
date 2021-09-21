@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from ..utils.collections import DictLike, listmap, Mapping, merge_dicts, no_overlaps
+from ..utils.collections import DictLike, listmap, Mapping, merge_dicts, no_overlaps, merge_lists
 from itertools import chain
 from typing import Tuple, Any
 
@@ -139,7 +139,41 @@ class GraphContainer(DictLike):
         self._dict = merge_dicts([self._dict,other._dict])
         return self
 
+    @classmethod
+    def initialize_from(cls,classes,names,edges=[],literal_attrs=[]):
+        g = cls([c(n) for c,n in zip(classes,names)])
+        for e in edges:
+            g.add_edge(*e)
+        for a in literal_attrs:
+            g.set_attr(*a)
+        return g
 
+    @classmethod
+    def compose_from(cls,*graphs):
+        return cls(merge_lists([x.duplicate().values() for x in graphs]))
+
+    def add_attribute(self,node_name,attr,value):
+        self[node_name].safely_set_attr(attr,value)
+        return self
+
+    def add_edge(self,node1,attr,node2):
+        self[node1].safely_add_edge(attr,self[node2])
+        return self
+
+    def set_attr(self,node,attr,value):
+        self[node].safely_set_attr(attr,value)
+        return self
+
+    def add_edges(self,edges):
+        for e in edges:
+            self.add_edge(*e)
+        return self
+
+    def set_attrs(self,attrs):
+        for a in attrs:
+            self.set_attr(*a)
+        return self
+        
 
 @dataclass(eq=True,order=True,frozen=True)
 class TextualForm:

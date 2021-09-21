@@ -11,6 +11,9 @@ x = Ligand('ligand', sites=[
 	])
 gLigand = GraphContainer(x.get_connected())
 
+x = Ligand('ligand',sites=[FcBind('fc')])
+gLigandFc = GraphContainer(x.get_connected())
+
 x = Receptor('receptor',sites=[
 	Alpha('alpha'), 
 	Beta('beta'), 

@@ -92,3 +92,5 @@ class AggregateModel:
 
 	def collect_rules(self):
 		return {model.name: model.collect_rules() for model in self.models}
+
+		
