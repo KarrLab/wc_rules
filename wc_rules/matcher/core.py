@@ -1,71 +1,71 @@
+
 from collections import deque
-from frozendict import frozendict
-from types import MethodType
-
-from ..schema.base import BaseClass
+from .configuration import ReteNetConfiguration
+from .dbase import initialize_database, Record
 from attrdict import AttrDict
-from pydblite import Base as dBase
 
-class SimulationObject(AttrDict):
-	pass
+class ReteNodeState:
 
-class ReteNode:
-
-	def __init__(self,core,**data):
-		# label is a hashable label produced from any core object in the model
-		self.core = core
-		self.data = frozendict(data) if data else None
-		self.slots = deque()
+	def __init__(self):
 		self.cache = None
+		self.incoming = deque()
+		self.outgoing = deque()
+
 
 class ReteNet:
 
-	def __init__(self,methods=[]):
-		self.nodes = dict()
-		self.channels = dBase(':memory:')
-		self.channels.create('source','target','chtype','data')
-		self.configure(methods)
+	@classmethod
+	def default_initialization(cls):
+		return ReteNetConfiguration().configure(cls()).initialize_start()
 
-	def configure(self,methods):
-		for method in methods:
-			self.bind_method(method)
+	def __init__(self):
+		self.nodes = initialize_database(['type','core','data','state'])
+		self.channels = initialize_database(['type','source','target','data'])
+
+	def add_node(self,**kwargs):
+		record = {k:kwargs.pop(k) for k in ['type','core']}
+		record.update(dict(data=kwargs,state=ReteNodeState()))
+		Record.insert(self.nodes,record)
 		return self
 
-	def resolve_node(self,label):
-		return self.nodes[label]
+	def get_node(self,**kwargs):
+		node = Record.retrieve_exactly(self.nodes,kwargs)
+		return AttrDict(node) if node else None
 
-	def add_node(self,label,core,**data):
-		assert label not in self.nodes
-		self.nodes[label] = ReteNode(core,**data)
+	def add_channel(self,**kwargs):
+		record = {k:kwargs.pop(k) for k in ['type','source','target']}
+		record.update(dict(data=kwargs))
+		Record.insert(self.channels,record)
 		return self
 
-	def add_channel(self,source,target,chtype,**data):
-		assert all([x in self.nodes for x in [source,target]])
-		data = frozendict(data) if data else None
-		channel = dict(source=source,target=target,chtype=chtype,data=data)
+	def get_channel(self,**kwargs):
+		channel = Record.retrieve_exactly(self.channels,kwargs) 
+		return AttrDict(channel) if channel else None
 
-		if not self.filter_channels(**channel):
-			self.channels.insert(**channel)
-		return self
-
-	def bind_method(self,method):
-		m = MethodType(method, self)
-		assert method.__name__ not in dir(self)
-		setattr(self,method.__name__,m)
-		return self
-
-	def list_methods(self):
-		return [x for x in dir(self) if x[0:2]!='__' and isinstance(getattr(self,x),MethodType)]
+	def get_outgoing_channels(self,source):
+		return [AttrDict(ch) for ch in Record.retrieve(self.channels,{'source':source})]
 
 	def pprint(self):
 		s = []
-		for label,node in self.nodes.items():
-			s.append(f"Node\n\tlabel={label}\n\tcore={node.core}\n\tdata={node.data}")
+		for node in self.nodes:
+			s += [f'Node\n{Record.print(node)}']
 		for channel in self.channels:
-			s.append(f"Channel\n\tchtype={channel['chtype']}\n\tsource={str(channel['source'])}\n\ttarget={str(channel['target'])}\n\tdata={channel['data']}")
+			s += [f'Channel\n{Record.print(channel)}']
 		return '\n'.join(s)
 
-	def filter_channels(self,**kwargs):
-		return self.channels(**kwargs)
-
+	def sync(self,node):
+		if node.state.outgoing:
+			elem = node.state.outgoing.popleft()
+			channels = self.get_outgoing_channels(node.core)
+			for channel in channels:
+				method = getattr(self,f'function_channel_{channel.type}')
+				method(channel,elem)
+				self.sync(self.get_node(core=channel.target))
+			self.sync(node)
+		if node.state.incoming:
+			elem = node.state.incoming.popleft()
+			method = getattr(self,f'function_node_{node.type}')
+			method(node,elem)
+			self.sync(node)
+		return self
 
