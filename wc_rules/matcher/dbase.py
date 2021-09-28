@@ -1,5 +1,6 @@
 from pydblite import Base 
 
+SEP = '   '
 
 def initialize_database(fields):
 	db =  Base(':memory:')
@@ -9,8 +10,8 @@ def initialize_database(fields):
 class Record:
 
 	@staticmethod
-	def itemize(r):
-		return ((k,v) for k,v in r.items() if not k.startswith('__') and v)
+	def itemize(r,ignore_keys=[]):
+		return ((k,v) for k,v in r.items() if k not in ignore_keys and not k.startswith('__') and v)
 
 	@staticmethod
 	def retrieve(dbase,kwargs):
@@ -24,8 +25,9 @@ class Record:
 		return record
 
 	@staticmethod
-	def print(record,sep='    '):
-		return '\n'.join([f'{sep}{k}: {v}' for k,v in Record.itemize(record)])
+	def print(record,nsep=1,ignore_keys=[]):
+		sep = SEP*nsep
+		return '\n'.join([f'{sep}{k}: {v}' for k,v in Record.itemize(record,ignore_keys)])
 
 	@staticmethod
 	def insert(dbase,record):

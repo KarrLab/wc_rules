@@ -1,5 +1,6 @@
 from ...schema.base import BaseClass
 from ...utils.random import generate_id
+from collections import deque
 # nodes must be a dict with keys
 # 'type','core',
 # 'state' gets automatically initialized
@@ -20,6 +21,7 @@ def initialize_class(net,_class):
 def initialize_collector(net,source,label):
 	idx = f'collector_{label}'
 	net.add_node(type='collector',core=idx)
+	net.get_node(type='collector',core=idx).state.cache = deque()
 	net.add_channel(type='pass',source=source,target=idx)
 	return net
 

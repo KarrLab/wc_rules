@@ -2,6 +2,7 @@ from wc_rules.schema.base import BaseClass
 from wc_rules.schema.attributes import *
 from wc_rules.schema.actions import *
 from wc_rules.simulator.simulator import SimulationState
+from wc_rules.matcher.core import ReteNet
 import unittest
 
 
@@ -212,3 +213,45 @@ class TestActionObjects(unittest.TestCase):
 		self.assertEqual( RemoveEdgeAttr(card,'signatories').expand(), [RemoveEdge('card','signatories','jack','cards') ])
 		self.assertEqual( RemoveAllEdges(card).expand(), [RemoveEdgeAttr(card,'owner'), RemoveEdgeAttr(card,'signatories') ])
 		self.assertEqual( Remove(card).expand(), [RemoveAllEdges(card), RemoveNode(ReportCard,'card',attrs)])
+
+
+	def test_rete_simple(self):
+		actions = [
+			AddNode(Animal,'doggy',{'sound':'ruff'}),
+			AddNode(Animal,'kitty',{'sound':'woof'}),
+			AddNode(Person,'john',{}),
+			SetAttr('kitty','sound','meow','woof'),
+			AddEdge('doggy','owner','john','pets'),
+			AddEdge('kitty','owner','john','pets'),
+			AddEdge('doggy','friends','kitty','friends'),
+			RemoveEdge('john','pets','doggy','owner'),
+			RemoveEdge('john','pets','kitty','owner'),
+			RemoveEdge('kitty','friends','doggy','friends'),
+			RemoveNode(Person,'john',{}),
+			RemoveNode(Animal,'doggy',{'sound':'ruff'}),
+			RemoveNode(Animal,'kitty',{'sound':'meow'}),
+		]
+
+		ss = ReteNet.default_initialization()
+		net = ReteNet.default_initialization()
+		net.initialize_class(Animal)
+		net.initialize_class(Person)
+		net.initialize_collector(Animal,'Animal')
+		net.initialize_collector(Person,'Person')
+
+		ss = SimulationState(matcher=net)
+		ss.push_to_stack(actions)
+		ss.simulate()
+
+		collector_Animal = ss.matcher.get_node(core='collector_Animal')
+		collector_Person = ss.matcher.get_node(core='collector_Person')
+		
+		# 2 AddNodes, 2 RemoveNodes, 1 SetAttr
+		# 2x1 AddEdge + 2x1 RemoveEdge with John
+		# 1x2 AddEdge + 1x2 RemoveEdge with each other
+		self.assertEqual(len(collector_Animal.state.cache),13)
+		
+		# 1 AddNode, 1 RemoveNode
+		# 1 AddEdge + 1 RemoveEdge with kitty
+		# 1 AddEdge + 1 RemoveEdge with doggy
+		self.assertEqual(len(collector_Person.state.cache),6)
