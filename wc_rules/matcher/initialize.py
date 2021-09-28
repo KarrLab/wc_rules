@@ -1,5 +1,5 @@
-from ...schema.base import BaseClass
-from ...utils.random import generate_id
+from ..schema.base import BaseClass
+from ..utils.random import generate_id
 from collections import deque
 # nodes must be a dict with keys
 # 'type','core',
@@ -25,4 +25,14 @@ def initialize_collector(net,source,label):
 	net.add_channel(type='pass',source=source,target=idx)
 	return net
 
+def initialize_canonical_label(net,clabel,symmetry_group):
+	if len(clabel.names)==1 and net.get_node(core=clabel) is None:
+		# it is a singleton graph
+		net.initialize_class(clabel.classes[0])
+		net.add_node(type='canonical_label',core=clabel,symmetry_group=symmetry_group)
+		net.initialize_cache(clabel,clabel.names)
+		net.add_channel(type='transform_node_token',source=clabel.classes[0],target=clabel,mapping={'idx':'a'})
+	return net
 
+
+default_initialization_methods = [method for name,method in globals().items() if name.startswith('initialize_')]

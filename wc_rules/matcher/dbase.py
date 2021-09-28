@@ -33,3 +33,8 @@ class Record:
 	def insert(dbase,record):
 		dbase.insert(**record)
 		return
+
+	@staticmethod
+	def remove(dbase,record):
+		dbase.delete(dbase(**record))
+		return

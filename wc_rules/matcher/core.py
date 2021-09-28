@@ -1,9 +1,9 @@
 
-from collections import deque
 from .configuration import ReteNetConfiguration
 from .dbase import initialize_database, Record, SEP
 from .actions import *
 from attrdict import AttrDict
+from collections import deque
 import logging
 import os
 
@@ -13,7 +13,10 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL","NOTSET"), format=FORMAT)
 
 log.propagate = False
 
-
+# testing new rete-net functionality
+# first test initialization
+# then test propagation using ReteNet.sync()
+# then test function_{}_{}
 
 class ReteNodeState:
 
@@ -23,7 +26,7 @@ class ReteNodeState:
 		self.outgoing = deque()
 
 	def pprint(self,nsep=2):
-		d = AttrDict({'cache':self.cache,'incoming':self.incoming,'outgoing':self.outgoing})
+		d = AttrDict({'cache':[x for x in self.cache],'incoming':self.incoming,'outgoing':self.outgoing})
 		return Record.print(d,nsep=2)
 
 
@@ -46,6 +49,28 @@ class ReteNet:
 	def get_node(self,**kwargs):
 		node = Record.retrieve_exactly(self.nodes,kwargs)
 		return AttrDict(node) if node else None
+
+	def initialize_cache(self,core,variables=None):
+		node = self.get_node(core=core)
+		if variables is not None:
+			node.state.cache = initialize_database(variables)
+		else:
+			node.state.cache = deque()
+		return self
+
+	def filter_cache(self,core,elem):
+		node = self.get_node(core=core)
+		return Record.retrieve(node.state.cache,elem)
+
+	def insert_into_cache(self,core,elem):
+		node = self.get_node(core=core)
+		Record.insert(node.state.cache,elem)
+		return self
+
+	def remove_from_cache(self,core,elem):
+		node = self.get_node(core=core)
+		Record.remove(node.state.cache,elem)
+		return self
 
 	def add_channel(self,**kwargs):
 		record = {k:kwargs.pop(k) for k in ['type','source','target']}

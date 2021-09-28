@@ -1,5 +1,5 @@
 from types import MethodType
-from .initialize.defaults import default_initialization_methods
+from .initialize import default_initialization_methods
 from .functionalize import default_functionalization_methods
 
 default_kwargs = dict(
