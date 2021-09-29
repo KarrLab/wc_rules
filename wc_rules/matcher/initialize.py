@@ -1,6 +1,7 @@
 from ..schema.base import BaseClass
 from ..utils.random import generate_id
 from ..utils.collections import Mapping
+from ..graph.graph_partitioning import partition_canonical_form
 from collections import deque
 # nodes must be a dict with keys
 # 'type','core',
@@ -12,11 +13,12 @@ def initialize_start(net):
 	return net
 
 def initialize_class(net,_class):
-	if net.get_node(core=_class) is None:
-		net.add_node(type='class',core=_class)
-		parent = _class.__mro__[1]
-		net.initialize_class(parent)
-		net.add_channel(type='pass',source=parent,target=_class)
+	if net.get_node(core=_class) is not None:
+		return net
+	net.add_node(type='class',core=_class)
+	parent = _class.__mro__[1]
+	net.initialize_class(parent)
+	net.add_channel(type='pass',source=parent,target=_class)
 	return net
 
 def initialize_collector(net,source,label):
@@ -27,14 +29,27 @@ def initialize_collector(net,source,label):
 	return net
 
 def initialize_canonical_label(net,clabel,symmetry_group):
+
+	if net.get_node(core=clabel) is not None:
+		return net
+
 	if len(clabel.names)<=2 and net.get_node(core=clabel) is None:
-		# it is a singleton graph
+		# it is a graph with a single node or single edge
 		net.initialize_class(clabel.classes[0])
 		net.add_node(type='canonical_label',core=clabel,symmetry_group=symmetry_group)
 		net.initialize_cache(clabel,clabel.names)
 		chtype = {1:'node',2:'edge'}[len(clabel.names)]
 		mapping = {1:Mapping(['idx'],['a']),2:Mapping(['idx1','idx2'],['a','b'])}[len(clabel.names)]
-		net.add_channel(type=f'transform_{chtype}_token',source=clabel.classes[0],target=clabel,mapping=mapping)
+		net.add_channel(type=f'transform_{chtype}_token',source=clabel.classes[0],target=clabel,mapping=mapping)		
+
+	else:
+		(m1,L1,G1), (m2,L2,G2) = partition_canonical_form(clabel,symmetry_group)
+		net.initialize_canonical_label(L1,G1)
+		net.initialize_canonical_label(L2,G2)
+		net.add_node(type='canonical_label',core=clabel,symmetry_group=symmetry_group)
+		net.initialize_cache(clabel,clabel.names)
+		net.add_channel(type='merge',source=L1,target=clabel,mapping=m1)
+		net.add_channel(type='merge',source=L2,target=clabel,mapping=m2)
 	return net
 
 

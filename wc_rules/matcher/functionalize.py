@@ -51,6 +51,11 @@ def function_channel_transform_edge_token(net,channel,elem):
 		node.state.incoming.append(d)
 	return net
 
+def function_channel_merge(net,channel,elem):
+	if elem['action'] in ['AddEntry','RemoveEntry']:
+		pass
+	return net
+
 
 
 default_functionalization_methods = [method for name,method in globals().items() if name.startswith('function_')]
