@@ -16,8 +16,8 @@ def function_node_collector(net,node,elem):
 
 def function_node_canonical_label(net,node,elem):
 	clabel = node.core
-	entry, action, channel = [elem[x] for x in ['entry','action','channel']]
-	if len(clabel.names)==1:
+	entry, action = [elem[x] for x in ['entry','action']]
+	if len(clabel.names)<=2:
 		# its a single node graph
 		if elem['action'] == 'AddEntry':
 			assert net.filter_cache(clabel,entry) == []
@@ -36,9 +36,21 @@ def function_channel_pass(net,channel,elem):
 def function_channel_transform_node_token(net,channel,elem):
 	if elem['action'] in ['AddNode','RemoveNode']:
 		action = {'AddNode':'AddEntry','RemoveNode':'RemoveEntry'}[elem['action']]		
-		d = {'entry':{'a':elem['idx']},'action':action,'channel':channel}
+		entry = channel.data.mapping.transform(elem)
+		d = {'entry':entry,'action':action}
 		node = net.get_node(core=channel.target)
 		node.state.incoming.append(d)
 	return net
+
+def function_channel_transform_edge_token(net,channel,elem):
+	if elem['action'] in ['AddEdge','RemoveEdge']:
+		action = {'AddEdge':'AddEntry','RemoveEdge':'RemoveEntry'}[elem['action']]
+		entry = channel.data.mapping.transform(elem)
+		d = {'entry':entry,'action':action}
+		node = net.get_node(core=channel.target)
+		node.state.incoming.append(d)
+	return net
+
+
 
 default_functionalization_methods = [method for name,method in globals().items() if name.startswith('function_')]

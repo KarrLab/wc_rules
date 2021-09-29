@@ -48,6 +48,9 @@ class Mapping:
             return other.__class__([self.get(x) for x in other])
         return self.get(other)
 
+    def transform(self,d):
+        return {self._dict[k]:d[k] for k in d if k in self.sources}
+
     def sort(self,order=None):
         if order is None:
             order = sorted(self.sources)

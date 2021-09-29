@@ -1,6 +1,6 @@
 from wc_rules.schema.entity import Entity
-from wc_rules.schema.attributes import BooleanAttribute
-from wc_rules.schema.actions import AddNode,RemoveNode
+from wc_rules.schema.attributes import BooleanAttribute, ManyToOneAttribute
+from wc_rules.schema.actions import AddNode,RemoveNode,AddEdge,RemoveEdge
 from wc_rules.modeling.pattern import GraphContainer, Pattern
 from wc_rules.simulator.simulator import SimulationState
 from wc_rules.matcher.core import ReteNet
@@ -12,7 +12,7 @@ class X(Entity):
 	pass
 
 class Y(X):
-	pass
+	z = ManyToOneAttribute('Z',related_name='y')
 
 class Z(X):
 	pass
@@ -78,8 +78,50 @@ class TestRete(unittest.TestCase):
 		cache_sizes = [len(g.state.cache) for g in gnodes]
 		self.assertEqual(cache_sizes,[0,0,0])
 		
+	def test_single_edge_canonical_label(self):
+		net = ReteNet.default_initialization()
+		ss = SimulationState(matcher=net)
+		
+		g = GraphContainer(Y('y',z=Z('z')).get_connected())
+		m,L,G = canonical_label(g)
+		net.initialize_canonical_label(L,G)
+		net.initialize_collector(L,'XYEdge')
+		gnode, collector = net.get_node(core=L), net.get_node(core='collector_XYEdge')
 
 
+		# command to push nodes y1 z1
+		ss.push_to_stack([
+			AddNode.make(Y,'y1'),
+			AddNode.make(Z,'z1'),
+			]
+		)
+		ss.simulate()
+
+		# both the rete node for the edge as well
+		# as the downstream collector 
+		# should have zero cache entries
+		self.assertEqual(len(gnode.state.cache),0)
+		self.assertEqual(len(collector.state.cache),0)
+		
+		# add edge y1-z1
+		ss.push_to_stack(AddEdge('y1','z','z1','y'))
+		ss.simulate()
+
+		# rete node for edge and collector should have
+		# one entry each
+		self.assertEqual(len(gnode.state.cache),1)
+		self.assertEqual(len(collector.state.cache),1)
+		
+		# remove edge y1-z1
+		ss.push_to_stack(RemoveEdge('y1','z','z1','y'))
+		ss.simulate()
+
+		# rete node for edge should have no entries
+		# but collector should have two entries 
+		# (one for add, one for remove)
+		self.assertEqual(len(gnode.state.cache),0)
+		self.assertEqual(len(collector.state.cache),2)
+		
 
 
 

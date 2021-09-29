@@ -26,7 +26,8 @@ class ReteNodeState:
 		self.outgoing = deque()
 
 	def pprint(self,nsep=2):
-		d = AttrDict({'cache':[x for x in self.cache],'incoming':self.incoming,'outgoing':self.outgoing})
+		d = dict(incoming=self.incoming,outgoing=self.outgoing)
+		d['cache'] = [x for x in self.cache] if self.cache is not None else None
 		return Record.print(d,nsep=2)
 
 
