@@ -38,3 +38,9 @@ class Record:
 	def remove(dbase,record):
 		dbase.delete(dbase(**record))
 		return
+
+	@staticmethod
+	def retrieve_minus(dbase,include_kwargs,exclude_kwargs):
+		exclude_ids = [x['__id__'] for x in dbase(**exclude_kwargs)]
+		includes = [dict(Record.itemize(x)) for x in dbase(**include_kwargs) if x['__id__'] not in exclude_ids]
+		return includes

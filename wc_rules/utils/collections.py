@@ -238,6 +238,12 @@ def subdict(d,keys,ignore=False):
         keys = [x for x in keys if x in d] 
     return {k:d[k] for k in keys}
 
+def triple_split(iter1,iter2):
+    # L1, L2 are iters
+    # returns (iter1-iter2), (iter1 & iter2), (iter2-iter1)
+    s1, s2 = set(iter1), set(iter2)
+    return [list(x) for x in [s1 - s2, s1 & s2, s2 - s1]]
+
 def strgen(n,template='abcdefgh'):
     if n< len(template):
         return template[:n]

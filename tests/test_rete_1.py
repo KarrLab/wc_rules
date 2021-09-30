@@ -85,8 +85,8 @@ class TestRete(unittest.TestCase):
 		g = GraphContainer(Y('y',z=Z('z')).get_connected())
 		m,L,G = canonical_label(g)
 		net.initialize_canonical_label(L,G)
-		net.initialize_collector(L,'XYEdge')
-		gnode, collector = net.get_node(core=L), net.get_node(core='collector_XYEdge')
+		net.initialize_collector(L,'YZEdge')
+		gnode, collector = net.get_node(core=L), net.get_node(core='collector_YZEdge')
 
 
 		# command to push nodes y1 z1
@@ -121,7 +121,52 @@ class TestRete(unittest.TestCase):
 		# (one for add, one for remove)
 		self.assertEqual(len(gnode.state.cache),0)
 		self.assertEqual(len(collector.state.cache),2)
+
+	def test_two_edges_canonical_label(self):
+		net = ReteNet.default_initialization()
+		ss = SimulationState(matcher=net)
 		
+		g = GraphContainer(Z('z',y=[Y('y1'),Y('y2')]).get_connected())
+		m,L,G = canonical_label(g)
+		net.initialize_canonical_label(L,G)
+		net.initialize_collector(L,'ZYYGraph')
+		gnode, collector = net.get_node(core=L), net.get_node(core='collector_ZYYGraph')
+
+		# command to push nodes y1,y2,z1, and edge y1-z1
+		ss.push_to_stack([
+			AddNode.make(Y,'y1'),
+			AddNode.make(Y,'y2'),
+			AddNode.make(Z,'z1'),
+			AddEdge('y1','z','z1','y'),
+			]
+		)
+		ss.simulate()
+		
+		# both the rete node for the graph as well
+		# as the downstream collector 
+		# should have zero cache entries
+		self.assertEqual(len(gnode.state.cache),0)
+		self.assertEqual(len(collector.state.cache),0)
+		
+		# add edge y2-z1
+		ss.push_to_stack(AddEdge('y2','z','z1','y'))
+		ss.simulate()
+
+		# rete node for graph should have two entries
+		# (z1-y1-y2) and (z2-y2-y1)
+		# and collector should have two entries as well
+		self.assertEqual(len(gnode.state.cache),2)
+		self.assertEqual(len(collector.state.cache),2)
+		
+		# remove edge y1-z1
+		ss.push_to_stack(RemoveEdge('y1','z','z1','y'))
+		ss.simulate()
+
+		# rete node for graph should have no entries
+		# but collector should have four entries 
+		# (two for add, two for remove)
+		self.assertEqual(len(gnode.state.cache),0)
+		self.assertEqual(len(collector.state.cache),4)
 
 
 

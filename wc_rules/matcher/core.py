@@ -86,6 +86,10 @@ class ReteNet:
 	def get_outgoing_channels(self,source):
 		return [AttrDict(ch) for ch in Record.retrieve(self.channels,{'source':source})]
 
+	def get_channels(self,include_kwargs,exclude_kwargs=None):
+		includes = Record.retrieve_minus(self.channels,include_kwargs,exclude_kwargs) if exclude_kwargs is not None else Record.retrieve(self.channels,include_kwargs)
+		return [AttrDict(ch) for ch in includes]
+
 	def pprint(self,state=False):
 		s = []
 
