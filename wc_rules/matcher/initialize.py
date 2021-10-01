@@ -2,7 +2,7 @@ from ..schema.base import BaseClass
 from ..utils.random import generate_id
 from ..utils.collections import Mapping
 from ..graph.graph_partitioning import partition_canonical_form
-from collections import deque
+from collections import deque,Counter
 # nodes must be a dict with keys
 # 'type','core',
 # 'state' gets automatically initialized
@@ -44,6 +44,7 @@ def initialize_canonical_label(net,clabel,symmetry_group):
 
 	else:
 		(m1,L1,G1), (m2,L2,G2) = partition_canonical_form(clabel,symmetry_group)
+		#print(print_merge_form(clabel.names,m1,m2))
 		net.initialize_canonical_label(L1,G1)
 		net.initialize_canonical_label(L2,G2)
 		net.add_node(type='canonical_label',core=clabel,symmetry_group=symmetry_group)
@@ -52,5 +53,10 @@ def initialize_canonical_label(net,clabel,symmetry_group):
 		net.add_channel(type='merge',source=L2,target=clabel,mapping=m2)
 	return net
 
+def print_merge_form(names,m1,m2):
+	s1 = '(' + ','.join(names) + ')'
+	s2 = '(' + ','.join(m1.sources) + ')' + '->' + '(' + ','.join(m1.targets) + ')'
+	s3 = '(' + ','.join(m2.sources) + ')' + '->' + '(' + ','.join(m2.targets) + ')'
+	return s1 + ' <-> (' + s2 + ') + (' + s3 + ')'
 
 default_initialization_methods = [method for name,method in globals().items() if name.startswith('initialize_')]

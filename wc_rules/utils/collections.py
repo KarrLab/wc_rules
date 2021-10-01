@@ -67,6 +67,9 @@ class Mapping:
     def pprint(self):
         return 'Mapping\n' + '\n'.join([f'{x}->{y}' for x,y in zip(self.sources,self.targets)]) + '\n'
 
+    def pprint2(self,sep=','):
+        return f'(({sep.join(self.sources)})->({sep.join(self.targets)}))'      
+
 # Should be downgraded and removed
 @dataclass(unsafe_hash=True)
 class BiMap:
@@ -176,6 +179,20 @@ def merge_lists(list_of_lists):
 def merge_dicts(list_of_dicts):
     # ensure keys dont overlap
     return dict(collections.ChainMap(*list_of_dicts))
+
+def merge_dicts_strictly(list_of_dicts):
+    # build master list of keys
+    outd, keys = dict(), set(merge_lists([d.keys() for d in list_of_dicts]))
+    for key in keys:
+        values = set([d.get(key,None) for d in list_of_dicts]) - set([None])
+        assert len(values) == 1, f'Key {key} is mapped to multiple values {values} and cannot be merged.'
+        outd[key] = values.pop()
+    return outd
+
+def is_one_to_one(_dict):
+    assert None not in _dict.values()
+    return len(set(_dict.values())) == len(_dict)
+
 
 def no_overlaps(list_of_iters):
     joint_set = set.union(*[set(x) for x in list_of_iters])
@@ -298,3 +315,11 @@ def accumulate(iter_of_pairs,fn=lambda x:x):
     for x,y in iter_of_pairs:
         d[x].append(fn(y))
     return dict(d)
+
+def rotate_until(dq,conditionfn):
+    nrots = 0
+    while not conditionfn(dq[0]):
+        dq.rotate(-1)
+        nrots += 1
+        assert nrots < len(dq)
+    return dq

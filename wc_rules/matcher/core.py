@@ -24,7 +24,7 @@ class ReteNodeState:
 		self.cache = None
 		self.incoming = deque()
 		self.outgoing = deque()
-
+		
 	def pprint(self,nsep=2):
 		d = dict(incoming=self.incoming,outgoing=self.outgoing)
 		d['cache'] = [x for x in self.cache] if self.cache is not None else None
@@ -38,13 +38,17 @@ class ReteNet:
 		return ReteNetConfiguration().configure(cls()).initialize_start()
 
 	def __init__(self):
-		self.nodes = initialize_database(['type','core','data','state'])
-		self.channels = initialize_database(['type','source','target','data'])
+		self.nodes = initialize_database(['type','core','data','state','num'])
+		self.channels = initialize_database(['type','source','target','data','num'])
+		self.nodemax = 0
+		self.channelmax = 0
 
 	def add_node(self,**kwargs):
 		record = {k:kwargs.pop(k) for k in ['type','core']}
 		record.update(dict(data=kwargs,state=ReteNodeState()))
+		record['num'] = self.nodemax
 		Record.insert(self.nodes,record)
+		self.nodemax += 1
 		return self
 
 	def get_node(self,**kwargs):
@@ -76,7 +80,9 @@ class ReteNet:
 	def add_channel(self,**kwargs):
 		record = {k:kwargs.pop(k) for k in ['type','source','target']}
 		record.update(dict(data=kwargs))
+		record['num'] = self.channelmax +1
 		Record.insert(self.channels,record)
+		self.channelmax += 1
 		return self
 
 	def get_channel(self,**kwargs):
@@ -94,17 +100,17 @@ class ReteNet:
 		s = []
 
 		def printfn(x):
-			return Record.print(node,ignore_keys=['state'])
+			return Record.print(node,ignore_keys=['state','num'])
 
 		for node in self.nodes:
-			s += [f'Node\n{printfn(node)}']
+			s += [f"Node {node.get('num')}\n{printfn(node)}"]
 			if state:
 				s1 = node['state'].pprint()
 				if s1:
 					s[-1] += f'\n{SEP}state:\n{s1}'
 
 		for channel in self.channels:
-			s += [f'Channel\n{Record.print(channel)}']
+			s += [f"Channel {channel.get('num')}\n{Record.print(channel,ignore_keys=['num'])}"]
 		return '\n'.join(s)
 
 	def sync(self,node):

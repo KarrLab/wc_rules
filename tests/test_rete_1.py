@@ -5,7 +5,7 @@ from wc_rules.modeling.pattern import GraphContainer, Pattern
 from wc_rules.simulator.simulator import SimulationState
 from wc_rules.matcher.core import ReteNet
 from wc_rules.graph.canonical_labeling import canonical_label
-
+import math
 import unittest
 
 class X(Entity):
@@ -168,5 +168,44 @@ class TestRete(unittest.TestCase):
 		self.assertEqual(len(gnode.state.cache),0)
 		self.assertEqual(len(collector.state.cache),4)
 
+
+	def test_n_edges_canonical_label(self):
+		net = ReteNet.default_initialization()
+		ss = SimulationState(matcher=net)
+
+		n=6
+		z = Z('z1',y=[Y(f'y{i}') for i in range(1,1+n)])
+		g = GraphContainer(z.get_connected())
+		m,L,G = canonical_label(g)
+		net.initialize_canonical_label(L,G)
+		net.initialize_collector(L,'ZYnGraph')
+		gnode, collector = net.get_node(core=L), net.get_node(core='collector_ZYnGraph')
+
+		# command to push nodes z1, y1-y5
+		ss.push_to_stack([AddNode.make(Z,'z1')] + [AddNode.make(Y,f'y{i}') for i in range(1,1+n)])
+		ss.simulate()
+
+		# add edges z1-[y1-yn-1] (n-1 edges)
+		ss.push_to_stack([AddEdge(f'y{i}','z','z1','y') for i in range(1,n)])
+		ss.simulate()
+
+		# cache and collector should have zero entries
+		self.assertEqual(len(gnode.state.cache),0)
+		self.assertEqual(len(collector.state.cache),0)
+
+		ss.push_to_stack(AddEdge(f'y{n}','z','z1','y'))
+		ss.simulate()
+
+		# cache and collector should have n! add-entries
+		self.assertEqual(len(gnode.state.cache),math.factorial(n))
+		self.assertEqual(len(collector.state.cache),math.factorial(n))
+
+		# remove z1-y1 edge
+		ss.push_to_stack(RemoveEdge(f'y1','z','z1','y'))
+		ss.simulate()
+		
+		#cache should be empty, but collector should have 2*n! entries
+		self.assertEqual(len(gnode.state.cache),0)
+		self.assertEqual(len(collector.state.cache),2*math.factorial(n))
 
 

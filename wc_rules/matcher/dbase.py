@@ -11,7 +11,7 @@ class Record:
 
 	@staticmethod
 	def itemize(r,ignore_keys=[]):
-		return ((k,v) for k,v in r.items() if k not in ignore_keys and not k.startswith('__') and v)
+		return ((k,v) for k,v in r.items() if k not in ignore_keys and not k.startswith('__') and v is not None)
 
 	@staticmethod
 	def retrieve(dbase,kwargs):
