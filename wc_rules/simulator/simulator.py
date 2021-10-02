@@ -39,7 +39,7 @@ class SimulationState:
 			# assume list has to be executed left to right
 			self.action_stack = deque(action) + self.action_stack
 		else:
-			self.action_stack.appendleft(action)
+			self.action_stack.append(action)
 		return self
 
 	def simulate(self):

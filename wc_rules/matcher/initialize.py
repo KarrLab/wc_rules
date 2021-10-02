@@ -4,6 +4,7 @@ from ..utils.collections import Mapping
 from ..graph.graph_partitioning import partition_canonical_form
 from ..graph.canonical_labeling import canonical_label
 from ..graph.collections import GraphContainer
+from ..modeling.pattern import Pattern
 from collections import deque,Counter
 # nodes must be a dict with keys
 # 'type','core',
@@ -58,6 +59,10 @@ def initialize_canonical_label(net,clabel,symmetry_group):
 
 
 def initialize_pattern(net,pattern):
+
+	if net.get_node(core=pattern) is not None:
+		return net
+
 	if len(pattern.constraints) == 0:
 		parent = pattern.parent
 		# is an alias for its parent
@@ -66,6 +71,14 @@ def initialize_pattern(net,pattern):
 			net.initialize_canonical_label(L,G)
 			net.add_node(type='pattern',core=pattern,symmetry_group=G,parent=L,mapping=m,alias=True)
 			net.add_channel(type='alias',source=L,target=pattern,mapping=m)
+		# is an alias for another pattern
+		if isinstance(parent,Pattern):
+			net.initialize_pattern(parent)
+			m = Mapping.create(parent.variables)
+			G = net.get_node(core=parent).data.symmetry_group
+			net.add_node(type='pattern',core=pattern,symmetry_group=G,parent=parent,mapping=m,alias=True)
+			net.add_channel(type='alias',source=parent,target=pattern,mapping=m)
+		
 	return net
 
 def print_merge_form(names,m1,m2):

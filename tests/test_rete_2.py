@@ -26,7 +26,7 @@ class TestRete(unittest.TestCase):
 		net = ReteNet.default_initialization()
 		ss = SimulationState(matcher=net)
 
-		n=3
+		n=4
 		z = Z('z1',y=[Y(f'y{i}') for i in range(1,1+n)])
 		p = Pattern(parent=GraphContainer(z.get_connected()))
 
@@ -87,3 +87,31 @@ class TestRete(unittest.TestCase):
 		fil = net.filter_cache(p,{'z1':'z1'})
 		self.assertEqual(len(fil),0)
 		
+	def test_double_alias_pattern(self):
+		net = ReteNet.default_initialization()
+		ss = SimulationState(matcher=net)
+
+		n=3
+		z = Z('z1',y=[Y(f'y{i}') for i in range(1,1+n)])
+		p = Pattern(parent=GraphContainer(z.get_connected()))
+		q = Pattern(parent=p)
+		net.initialize_pattern(q)
+		net.initialize_collector(q,'q')
+
+		# # command to push nodes z1, y1-yn
+		ss.push_to_stack([AddNode.make(Z,'z1')] + [AddNode.make(Y,f'y{i}') for i in range(1,1+n)])
+		ss.simulate()
+		ss.push_to_stack([AddEdge(f'y{i}','z','z1','y') for i in range(1,1+n)])
+		ss.simulate()
+
+		pnode, qnode = [net.get_node(core=x) for x in [p,q]]
+		collector = net.get_node(core='collector_q')
+
+		for x in [pnode,qnode]:
+			self.assertEqual(x.data.get('alias',False),True)
+			self.assertTrue(x.state.cache is None)
+
+
+		self.assertEqual(len(collector.state.cache),math.factorial(n))
+		self.assertEqual(len(net.filter_cache(q,{'z1':'z1'})), math.factorial(n))
+
