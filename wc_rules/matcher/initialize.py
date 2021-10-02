@@ -2,6 +2,8 @@ from ..schema.base import BaseClass
 from ..utils.random import generate_id
 from ..utils.collections import Mapping
 from ..graph.graph_partitioning import partition_canonical_form
+from ..graph.canonical_labeling import canonical_label
+from ..graph.collections import GraphContainer
 from collections import deque,Counter
 # nodes must be a dict with keys
 # 'type','core',
@@ -43,6 +45,7 @@ def initialize_canonical_label(net,clabel,symmetry_group):
 		net.add_channel(type=f'transform_{chtype}_token',source=clabel.classes[0],target=clabel,mapping=mapping)		
 
 	else:
+		# it is a graph with atleast 2 edges
 		(m1,L1,G1), (m2,L2,G2) = partition_canonical_form(clabel,symmetry_group)
 		#print(print_merge_form(clabel.names,m1,m2))
 		net.initialize_canonical_label(L1,G1)
@@ -51,6 +54,18 @@ def initialize_canonical_label(net,clabel,symmetry_group):
 		net.initialize_cache(clabel,clabel.names)
 		net.add_channel(type='merge',source=L1,target=clabel,mapping=m1)
 		net.add_channel(type='merge',source=L2,target=clabel,mapping=m2)
+	return net
+
+
+def initialize_pattern(net,pattern):
+	if len(pattern.constraints) == 0:
+		parent = pattern.parent
+		# is an alias for its parent
+		if isinstance(parent,GraphContainer):
+			m, L, G = canonical_label(parent)
+			net.initialize_canonical_label(L,G)
+			net.add_node(type='pattern',core=pattern,symmetry_group=G,parent=L,mapping=m,alias=True)
+			net.add_channel(type='alias',source=L,target=pattern,mapping=m)
 	return net
 
 def print_merge_form(names,m1,m2):

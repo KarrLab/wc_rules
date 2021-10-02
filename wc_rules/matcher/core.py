@@ -65,6 +65,11 @@ class ReteNet:
 
 	def filter_cache(self,core,elem):
 		node = self.get_node(core=core)
+		if node.data.get('alias',False):
+			ch = self.get_channel(target=core,type='alias')
+			elem = ch.data.mapping.reverse().transform(elem)
+			return self.filter_cache(core=ch.source,elem=elem)
+		
 		return Record.retrieve(node.state.cache,elem)
 
 	def insert_into_cache(self,core,elem):

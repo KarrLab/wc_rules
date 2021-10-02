@@ -27,7 +27,13 @@ def function_node_canonical_label(net,node,elem):
 		assert net.filter_cache(clabel,entry) != []
 		net.remove_from_cache(clabel,entry)
 	node.state.outgoing.append({'entry':entry,'action':action})
-	
+	return net
+
+def function_node_pattern(net,node,elem):
+	if node.data.get('alias',False):
+		node.state.outgoing.append(elem)
+	else:
+		assert False, "Not Yet!"
 	return net
 
 def function_channel_pass(net,channel,elem):
@@ -72,6 +78,13 @@ def function_channel_merge(net,channel,elem):
 		node = net.get_node(core=channel.target)	
 		for e in entries:
 			node.state.incoming.append({'entry':e,'action':action})
+	return net
+
+def function_channel_alias(net,channel,elem):
+	outd = {k:v for k,v in elem.items() if k!='entry'}
+	outd['entry'] = channel.data.mapping.transform(elem['entry'])
+	node = net.get_node(core=channel.target)
+	node.state.incoming.append(outd)
 	return net
 
 default_functionalization_methods = [method for name,method in globals().items() if name.startswith('function_')]
