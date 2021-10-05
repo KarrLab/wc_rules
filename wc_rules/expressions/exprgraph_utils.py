@@ -1,5 +1,6 @@
 from ..schema.base import BaseClass
 from ..schema.attributes import StringAttribute
+from lark import Token
 
 class ExprBase(BaseClass):
 	data = StringAttribute()

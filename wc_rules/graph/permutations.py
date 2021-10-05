@@ -132,5 +132,8 @@ class PermutationGroup:
 		stabilizer = self.stabilizer(variable)
 		return norbits*stabilizer.count_symmetries()
 
+	def restrict(self,variables):
+		return self.__class__.create([x.restrict(variables) for x in self.generators])
+
 
 

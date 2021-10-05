@@ -323,3 +323,9 @@ def rotate_until(dq,conditionfn):
         nrots += 1
         assert nrots < len(dq)
     return dq
+
+def quoted(x):
+    return f'\"{x}\"' if isinstance(x,str) else x
+
+def unzip(zipped):
+    return list(zip(*zipped))

@@ -77,13 +77,17 @@ class Pattern:
 				kwdeps[v] = x.keywords
 			executables.append(x)
 		validate_acyclic(kwdeps)
+
 		return newvars
 
 	def make_executable_constraints(self):
+		# mark for downgrade
 		return [initialize_from_string(s,(Constraint,Computation)) for s in self.constraints]
 
-	def compute_symmetry_group(self,source_symmetry_group):
-		return None
+	def make_executable_constraint(self,s):
+		return initialize_from_string(s,(Constraint,Computation))
+
+
 			
 class SynthesisPattern:
 

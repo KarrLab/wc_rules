@@ -91,7 +91,9 @@ class ExecutableExpression:
 	def build_exprgraph(self):
 		tree, deps = process_expression_string(self.code,start=self.__class__.start)
 		return dfs_make(tree)
-		
+
+	def full_string(self):
+		return self.code	
 
 class Constraint(ExecutableExpression):
 	start = 'boolean_expression'
@@ -110,6 +112,9 @@ class Computation(ExecutableExpression):
 		code = f'{self.deps.declared_variable} = {self.code}'
 		tree, deps = process_expression_string(code,start=self.__class__.start)
 		return dfs_make(tree)
+
+	def full_string(self):
+		return f'{self.deps.declared_variable} = {self.code}'
 
 
 class RateLaw(ExecutableExpression):

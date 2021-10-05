@@ -279,7 +279,6 @@ class Serializer(Transformer):
     kwarg = lambda x,y: '='.join(y)
     kwargs = args
     
-
     def function_call(self,args):
         d,s = dict(args), ''
         if 'function_name' in d and 'args' not in d:
@@ -303,4 +302,3 @@ def serialize(tree):
     s = Serializer().transform(tree=tree)
     return s
     
-   
