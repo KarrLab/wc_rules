@@ -101,7 +101,6 @@ def initialize_pattern(net,pattern):
 			graph.add(PatternReference(id=var,pattern_id=id(p)))
 		for c in constraints:
 			x = pattern.make_executable_constraint(c)
-			constraint_objects.append(x)
 			exprgraph = GraphContainer(x.build_exprgraph().get_connected())
 			for _,node in exprgraph.iter_nodes():
 				if getattr(node,'variable',None) is not None:
@@ -116,31 +115,46 @@ def initialize_pattern(net,pattern):
 		
 		# collect update channels
 		constraint_pattern_relationships = set()
-		for x in constraint_objects:
-			for fname_tuple in x.deps.function_calls:
-				pname = fname_tuple[0]
-				if pname in helpers:
-					kwpairs = x.deps.function_calls[fname_tuple]['kwpairs']
-					kwpairs = [(x,y) for x,y in kwpairs if x in helpers[pname].variables and y in pattern.variables]
-					m = Mapping.create(*unzip(kwpairs)) if kwpairs else None
-					constraint_pattern_relationships.add((x,pname,m,))
 		constraint_attr_relationships = set()
 		for x in constraint_objects:
+			for fname_tuple in x.deps.function_calls:
+				varname = fname_tuple[0]
+				if varname in pattern.variables and isinstance(pattern.namespace[varname],type) and issubclass(pattern.namespace[varname],BaseClass):
+					fname = fname_tuple[1]
+					fn = getattr(pattern.namespace[varname],fname)
+					if getattr(fn,'_is_computation',False):
+						attrs = pattern.namespace[varname]().get_attrdict(ignore_id=True,ignore_None=False,use_id_for_related=False).keys()
+						kws = (set(fn._kws) - set(x.deps.function_calls[fname_tuple]['kws'])) & set(attrs)
+						for kw in kws:
+							constraint_attr_relationships.add((x,varname,kw,))
+				if varname in helpers:
+					kwpairs = x.deps.function_calls[fname_tuple]['kwpairs']
+					kwpairs = [(x,y) for x,y in kwpairs if x in helpers[varname].variables and y in pattern.variables]
+					m = Mapping.create(*unzip(kwpairs)) if kwpairs else None
+					constraint_pattern_relationships.add((x,varname,m,))
 			for var, attrs in x.deps.attribute_calls.items():
 				for attr in attrs:
 					if var in pattern.variables:
 						constraint_attr_relationships.add((x,var,attr,))
 
-		print(constraint_pattern_relationships)
-		print(constraint_attr_relationships)
-		net.add_node(type='pattern',core=pattern,symmetry_group=symmetry_group,exprgraph=graph)
+		
+		helper_channels = set([(pattern,mapping) for _,pattern,mapping in constraint_pattern_relationships])
+		attr_channels = set([(var,attr) for _,var,attr in constraint_attr_relationships])
+			
+
+		# print(constraint_pattern_relationships)
+		# print(constraint_attr_relationships)
+		net.add_node(type='pattern',core=pattern,symmetry_group=symmetry_group,exprgraph=graph,helpers=helpers)
 		net.add_channel(type='parent',source=pdict.parent,target=pattern,mapping=pdict.mapping)
 
-		# for x,pname,m in constraint_pattern_relationships:
-		# 	net.add_channel(type='update',source=pname,target=pattern,mapping=m)
-		# for x,var,attr in constraint_attr_relationships:
-		# 	net.add_channel(type='update',source=<get_var_class>,target=pattern,mapping=Mapping.create(['a'],[var]))
-		
+		for pname, mapping in helper_channels:
+			net.add_channel(type='update',source=pname,target=pattern,mapping=mapping)
+		for var,attr in attr_channels:
+			varclass = pattern.namespace[var]
+			mapping = Mapping.create(['a'],[var])
+			net.initialize_class(varclass)
+			net.add_channel(type='update',source=varclass,target=pattern,mapping=mapping)
+
 	return net
 
 	
