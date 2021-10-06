@@ -47,10 +47,16 @@ class SimulationState:
 			action = self.action_stack.popleft()
 			if hasattr(action,'expand'):
 				self.push_to_stack(action.expand())
+			elif action.__class__.__name__ == 'RemoveNode':
+				self.rollback_stack.appendleft(action)
+				matcher_tokens = self.compile_to_matcher_tokens(action)
+				action.execute(self)
+				self.matcher.process(matcher_tokens)
 			else:
 				self.rollback_stack.appendleft(action)
 				action.execute(self)
-				self.matcher.process(self.compile_to_matcher_tokens(action))
+				matcher_tokens = self.compile_to_matcher_tokens(action)
+				self.matcher.process(matcher_tokens)
 		return self
 
 	def rollback(self):
@@ -62,17 +68,18 @@ class SimulationState:
 	def compile_to_matcher_tokens(self,action):
 		action_name = action.__class__.__name__
 		#d = {'AddNode':'add','RemoveNode':'remove','AddEdge':'add','RemoveEdge':'remove'}
+		# NOTE: WE"RE ATTACHING ACTUAL NODES HERE, NOT IDS, FIX action.idx,idx1,idx2 later
 		if action_name in ['AddNode','RemoveNode']:
-			return [make_node_token(action._class, action.idx, action_name)]
+			return [make_node_token(action._class, self.resolve(action.idx), action_name)]
 		if action_name in ['SetAttr']:
 			_class = self.resolve(action.idx).__class__
-			return [make_attr_token(_class, action.idx, action.attr, action.value, action_name)]
+			return [make_attr_token(_class, self.resolve(action.idx), action.attr, action.value, action_name)]
 		if action_name in ['AddEdge','RemoveEdge']:
 			i1,a1,i2,a2 = [getattr(action,x) for x in ['source_idx','source_attr','target_idx','target_attr']]
 			c1,c2 = [self.resolve(x).__class__ for x in [i1,i2]]
 			return [
-				make_edge_token(c1,i1,a1,i2,a2,action_name),
-				make_edge_token(c2,i2,a2,i1,a1,action_name)
+				make_edge_token(c1,self.resolve(i1),a1,self.resolve(i2),a2,action_name),
+				make_edge_token(c2,self.resolve(i2),a2,self.resolve(i1),a1,action_name)
 			]
 		return []
 				

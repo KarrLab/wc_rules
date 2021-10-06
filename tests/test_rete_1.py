@@ -37,7 +37,7 @@ class TestRete(unittest.TestCase):
 		# gnode collects true matches X('')
 		# collector collects all tokens coming out of gnode
 		self.assertEqual(len(gnode.state.cache),1)
-		self.assertEqual(gnode.state.cache[0]['a'],'x1')
+		self.assertEqual(gnode.state.cache[0]['a'].id,'x1')
 		self.assertEqual(len(collector.state.cache),1)
 
 		# Command to remove an instance X('x1')

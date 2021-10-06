@@ -206,8 +206,8 @@ class BaseClass(core.Model,ActionMixin):
         return self
 
     def __repr__(self):
-        return 'Object of {0} with id \'{1}\''.format(self.__class__,self.id)
-
+        #return 'Object of {0} with id \'{1}\''.format(self.__class__,self.id)
+        return f'<{self.__class__.__name__}: {self.id}>'
 
     def pprint(self):
         s = [f'<{self.__class__.__name__}: {self.id}>']

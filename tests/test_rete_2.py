@@ -70,7 +70,7 @@ class TestRete(unittest.TestCase):
 			self.assertEqual(len(x.state.cache),math.factorial(n))
 		
 		# check if filtering through alias works
-		fil = net.filter_cache(p,{'z1':'z1'})
+		fil = net.filter_cache(p,{'z1':ss.resolve('z1')})
 		self.assertEqual(len(fil),math.factorial(n))
 		
 		# # # remove z1-y1 edge
@@ -113,5 +113,5 @@ class TestRete(unittest.TestCase):
 
 
 		self.assertEqual(len(collector.state.cache),math.factorial(n))
-		self.assertEqual(len(net.filter_cache(q,{'z1':'z1'})), math.factorial(n))
+		self.assertEqual(len(net.filter_cache(q,{'z1':ss.resolve('z1')})), math.factorial(n))
 

@@ -1,7 +1,8 @@
 from frozendict import frozendict
-from collections import deque,Counter
+from collections import deque, Counter, ChainMap
 #from ..utils.collections import merge_lists,triple_split, subdict, merge_dicts, no_overlaps, tuplify_dict
 from ..utils.collections import merge_dicts_strictly, is_one_to_one
+from copy import deepcopy
 
 def function_node_start(net,node,elem):
 	node.state.outgoing.append(elem)
@@ -20,20 +21,55 @@ def function_node_canonical_label(net,node,elem):
 	clabel = node.core
 	entry, action = [elem[x] for x in ['entry','action']]
 	
-	if elem['action'] == 'AddEntry':
+	if action == 'AddEntry':
 		assert net.filter_cache(clabel,entry) == []
 		net.insert_into_cache(clabel,entry)
-	if elem['action'] == 'RemoveEntry':
+	if action == 'RemoveEntry':
 		assert net.filter_cache(clabel,entry) != []
 		net.remove_from_cache(clabel,entry)
 	node.state.outgoing.append({'entry':entry,'action':action})
 	return net
 
+def run_match_through_constraints(match,helpers,constraints):
+	extended_match = ChainMap(match,helpers)
+	terminate_early = False
+	for c in constraints:
+		value = c.exec(match)
+		if c.deps.declared_variable is not None:
+			extended_match[c.deps.declared_variable] = value
+		elif not value:
+			return None
+	return match
+		
 def function_node_pattern(net,node,elem):
 	if node.data.get('alias',False):
 		node.state.outgoing.append(elem)
-	else:
-		assert False, "Not Yet!"
+		return net
+	entry, action= [elem[x] for x in ['entry','action']]
+	outgoing_entries = []
+	if action == 'AddEntry':
+		match = {k:v for k,v in entry.items()}
+		match = run_match_through_constraints(match, node.data.helpers, node.data.constraints)
+		if match is not None:
+			net.insert_into_cache(node.core,match)
+			node.state.outgoing.append({'entry':match,'action':action})
+	if action == 'RemoveEntry':
+		elems = net.filter_cache(node.core,entry)
+		net.remove_from_cache(node.core,entry)
+		for e in elems:
+			node.state.outgoing.append({'entry':e,'action':action})
+	if action == 'UpdateEntry':
+		# update entry is resolved to AddEntry or RemoveEntry and inserted back into incoming queue
+		# ReteNet.sync(node) runs until incoming is empty
+		match = {k:v for k,v in entry.items()}
+		existing_elems = net.filter_cache(node.core,entry)
+		match = run_match_through_constraints(match,node.data.helpers,node.data.constraints)
+		if match is None and len(existing_elems)>0:
+			for e in existing_elems:
+				node.state.incoming.append({'entry':e,'action':'RemoveEntry'})
+		if match is not None and len(existing_elems)==0:
+			for e in existing_elems:
+				node.state.incoming.append({'entry':e,'action':'AddEntry'})
 	return net
 
 def function_channel_pass(net,channel,elem):
@@ -85,6 +121,33 @@ def function_channel_alias(net,channel,elem):
 	outd['entry'] = channel.data.mapping.transform(elem['entry'])
 	node = net.get_node(core=channel.target)
 	node.state.incoming.append(outd)
+	return net
+
+def function_channel_parent(net,channel,elem):
+	action = elem['action']
+	if action in ['AddEntry', 'RemoveEntry']:
+		node = net.get_node(core=channel.target)
+		entry = channel.data.mapping.transform(elem['entry'])
+		node.state.incoming.append({'entry':entry,'action':action})
+	return net
+
+def function_channel_update(net,channel,elem):
+	action = elem['action']
+	if action == 'SetAttr':
+		# it asks for parent of the target
+		# then filters the parent cache to get candidate entries for target
+		# then asks target to do 'UpdateEntry' on all candidates
+		attr = elem['attr']
+		node = net.get_node(core=channel.target)
+		entry = channel.data.mapping.transform(elem)
+		parent_channel = net.get_channel(target=channel.target,type='parent')
+		parent = parent_channel.source
+		parent_mapping = parent_channel.data.mapping
+		filterelem = parent_mapping.reverse().transform(entry)
+		elems = [parent_mapping.transform(x) for x in net.filter_cache(parent,filterelem)]
+		for e in elems:
+			node.state.incoming.append({'entry':e,'action':'UpdateEntry','attr':attr})
+
 	return net
 
 default_functionalization_methods = [method for name,method in globals().items() if name.startswith('function_')]
