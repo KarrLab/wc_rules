@@ -1,5 +1,5 @@
 from wc_rules.schema.entity import Entity
-from wc_rules.schema.attributes import BooleanAttribute, ManyToOneAttribute
+from wc_rules.schema.attributes import *
 from wc_rules.schema.actions import AddNode,RemoveNode,AddEdge,RemoveEdge, SetAttr
 from wc_rules.modeling.pattern import GraphContainer, Pattern
 from wc_rules.simulator.simulator import SimulationState
@@ -11,6 +11,10 @@ import unittest
 
 class X(Entity):
 	a = BooleanAttribute()
+
+	@computation
+	def somefn(a):
+		return str(a)
 	
 
 class Y(X):
@@ -174,3 +178,66 @@ class TestRete(unittest.TestCase):
 		ss.simulate()
 		self.assertEqual(len(pnode.state.cache),2)
 		self.assertEqual(len(collector.state.cache),6)
+
+	def test_pattern_with_attr_updates_computefn(self):
+		net = ReteNet.default_initialization()
+		ss = SimulationState(matcher=net)
+
+		z = Z('z',y=[Y('y')])
+		p = Pattern(
+			parent=GraphContainer(z.get_connected()),
+			constraints = ['y.somefn() == "True"']
+			)
+
+		net.initialize_pattern(p)
+		net.initialize_collector(p,'p')
+		pnode, collector = [net.get_node(core=x) for x in [p,'collector_p']]
+
+		# First push three nodes Z, Y1(true), Y2(tree)
+		# pattern and collector should be empty
+		ss.push_to_stack([
+			AddNode.make(Z,'z1'),
+			AddNode.make(Y,'y1',{'a':True}),
+			AddNode.make(Y,'y2',{'a':True})
+			])
+		ss.simulate()
+		self.assertEqual(len(pnode.state.cache),0)
+		self.assertEqual(len(collector.state.cache),0)
+
+		# Now add edges Z-Y1, Z-Y2
+		# pattern and collector should have two entries
+		ss.push_to_stack([
+			AddEdge('z1','y','y1','z'),
+			AddEdge('z1','y','y2','z')
+			])
+		ss.simulate()
+		self.assertEqual(len(pnode.state.cache),2)
+		self.assertEqual(len(collector.state.cache),2)
+
+		# Set Y2(true) to false
+		# pattern should have 1, collector should have 3
+		ss.push_to_stack([SetAttr('y2','a',False,True)])
+		ss.simulate()
+		self.assertEqual(len(pnode.state.cache),1)
+		self.assertEqual(len(collector.state.cache),3)
+
+		# Remove edge Z-Y1
+		# pattern should have 0, collector should have 4
+		ss.push_to_stack([
+			RemoveEdge('y1','z','z1','y'),
+			])
+		ss.simulate()
+		self.assertEqual(len(pnode.state.cache),0)
+		self.assertEqual(len(collector.state.cache),4)
+
+		# Add them back in
+		# pattern should have 2, collector should have 6
+		ss.push_to_stack([
+			SetAttr('y2','a',True,False),
+			AddEdge('y1','z','z1','y'),
+			])
+		ss.simulate()
+		self.assertEqual(len(pnode.state.cache),2)
+		self.assertEqual(len(collector.state.cache),6)
+
+
