@@ -139,8 +139,7 @@ def initialize_pattern(net,pattern):
 
 		
 		helper_channels = set([(net.get_node(core=pattern),mapping) for _,pattern,mapping in constraint_pattern_relationships])
-		attr_channels = set([(var,attr) for _,var,attr in constraint_attr_relationships])
-			
+		attr_channels = set([(var,attr) for _,var,attr in constraint_attr_relationships])	
 
 		# print(constraint_pattern_relationships)
 		# print(constraint_attr_relationships)
@@ -151,11 +150,14 @@ def initialize_pattern(net,pattern):
 
 		for pname, mapping in helper_channels:
 			net.add_channel(type='update',source=pname,target=pattern,mapping=mapping)
+
 		for var,attr in attr_channels:
 			varclass = pattern.namespace[var]
-			mapping = Mapping.create(['idx'],[var])
+			literal_attrs = varclass().get_literal_attributes(ignore_id=True,ignore_None=False)
+			txt = 'idx' if attr in literal_attrs else 'idx1'
+			mapping = Mapping.create([txt],[var])
 			net.initialize_class(varclass)
-			net.add_channel(type='update',source=varclass,target=pattern,mapping=mapping)
+			net.add_channel(type='update',source=varclass,target=pattern,mapping=mapping,attr=attr)
 
 	return net
 

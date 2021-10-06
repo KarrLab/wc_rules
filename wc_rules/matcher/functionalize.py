@@ -64,12 +64,12 @@ def function_node_pattern(net,node,elem):
 		match = {k:v for k,v in entry.items()}
 		existing_elems = net.filter_cache(node.core,entry)
 		match = run_match_through_constraints(match,node.data.helpers,node.data.constraints)
+
 		if match is None and len(existing_elems)>0:
 			for e in existing_elems:
 				node.state.incoming.append({'entry':e,'action':'RemoveEntry'})
 		if match is not None and len(existing_elems)==0:
-			for e in existing_elems:
-				node.state.incoming.append({'entry':e,'action':'AddEntry'})
+			node.state.incoming.append({'entry':match,'action':'AddEntry'})
 	return net
 
 def function_channel_pass(net,channel,elem):
@@ -133,21 +133,25 @@ def function_channel_parent(net,channel,elem):
 
 def function_channel_update(net,channel,elem):
 	action = elem['action']
-	if action == 'SetAttr':
+	
+	if action in  ['AddEdge','RemoveEdge','SetAttr']:
 		# it asks for parent of the target
 		# then filters the parent cache to get candidate entries for target
 		# then asks target to do 'UpdateEntry' on all candidates
-		attr = elem['attr']
-		node = net.get_node(core=channel.target)
-		entry = channel.data.mapping.transform(elem)
-		parent_channel = net.get_channel(target=channel.target,type='parent')
-		parent = parent_channel.source
-		parent_mapping = parent_channel.data.mapping
-		filterelem = parent_mapping.reverse().transform(entry)
-		elems = [parent_mapping.transform(x) for x in net.filter_cache(parent,filterelem)]
-		for e in elems:
-			node.state.incoming.append({'entry':e,'action':'UpdateEntry','attr':attr})
+		attr = elem['attr'] if action == 'SetAttr' else elem['attr1']
 
+		if attr == channel.data.get('attr',None):
+			
+			node = net.get_node(core=channel.target)
+			entry = channel.data.mapping.transform(elem)
+			parent_channel = net.get_channel(target=channel.target,type='parent')
+			parent = parent_channel.source
+			parent_mapping = parent_channel.data.mapping
+			filterelem = parent_mapping.reverse().transform(entry)
+			elems = [parent_mapping.transform(x) for x in net.filter_cache(parent,filterelem)]
+			for e in elems:
+				node.state.incoming.append({'entry':e,'action':'UpdateEntry','attr':attr})
+		
 	return net
 
 default_functionalization_methods = [method for name,method in globals().items() if name.startswith('function_')]

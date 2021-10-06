@@ -30,6 +30,16 @@ class ReteNodeState:
 		d['cache'] = [x for x in self.cache] if self.cache is not None else None
 		return Record.print(d,nsep=2)
 
+	def contains(self,**elem):
+		return len(self.filter(**elem)) > 0
+
+	def filter(self,**elem):
+		return Record.retrieve(self.cache,elem)
+
+	def insert(self,**elem):
+		Record.insert(self.cache,elem)
+		return self
+
 
 class ReteNet:
 
