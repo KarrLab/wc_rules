@@ -34,7 +34,7 @@ def run_match_through_constraints(match,helpers,constraints):
 	extended_match = ChainMap(match,helpers)
 	terminate_early = False
 	for c in constraints:
-		value = c.exec(match)
+		value = c.exec(extended_match)
 		if c.deps.declared_variable is not None:
 			extended_match[c.deps.declared_variable] = value
 		elif not value:
@@ -58,18 +58,22 @@ def function_node_pattern(net,node,elem):
 		net.remove_from_cache(node.core,entry)
 		for e in elems:
 			node.state.outgoing.append({'entry':e,'action':action})
+		
 	if action == 'UpdateEntry':
 		# update entry is resolved to AddEntry or RemoveEntry and inserted back into incoming queue
 		# ReteNet.sync(node) runs until incoming is empty
+		
 		match = {k:v for k,v in entry.items()}
 		existing_elems = net.filter_cache(node.core,entry)
 		match = run_match_through_constraints(match,node.data.helpers,node.data.constraints)
+		if match is None:
+			if len(existing_elems) > 0:
+				for e in existing_elems:
+					node.state.incoming.append({'entry':e,'action':'RemoveEntry'})
+		elif match is not None:
+			if len(existing_elems) == 0:
+				node.state.incoming.append({'entry':match,'action':'AddEntry'})
 
-		if match is None and len(existing_elems)>0:
-			for e in existing_elems:
-				node.state.incoming.append({'entry':e,'action':'RemoveEntry'})
-		if match is not None and len(existing_elems)==0:
-			node.state.incoming.append({'entry':match,'action':'AddEntry'})
 	return net
 
 def function_channel_pass(net,channel,elem):
@@ -134,23 +138,26 @@ def function_channel_parent(net,channel,elem):
 def function_channel_update(net,channel,elem):
 	action = elem['action']
 	
-	if action in  ['AddEdge','RemoveEdge','SetAttr']:
+	if action in  ['AddEdge','RemoveEdge','SetAttr','AddEntry','RemoveEntry']:
 		# it asks for parent of the target
 		# then filters the parent cache to get candidate entries for target
 		# then asks target to do 'UpdateEntry' on all candidates
-		attr = elem['attr'] if action == 'SetAttr' else elem['attr1']
-
-		if attr == channel.data.get('attr',None):
+		if action in ['AddEdge','RemoveEdge']:
+			attr = elem['attr1']
+		elif action == 'SetAttr':
+			attr = elem['attr']
+		else:
+			attr = None
 			
-			node = net.get_node(core=channel.target)
-			entry = channel.data.mapping.transform(elem)
-			parent_channel = net.get_channel(target=channel.target,type='parent')
-			parent = parent_channel.source
-			parent_mapping = parent_channel.data.mapping
-			filterelem = parent_mapping.reverse().transform(entry)
-			elems = [parent_mapping.transform(x) for x in net.filter_cache(parent,filterelem)]
-			for e in elems:
-				node.state.incoming.append({'entry':e,'action':'UpdateEntry','attr':attr})
+		node = net.get_node(core=channel.target)
+		entry = channel.data.mapping.transform(elem)
+		parent_channel = net.get_channel(target=channel.target,type='parent')
+		parent = parent_channel.source
+		parent_mapping = parent_channel.data.mapping
+		filterelem = parent_mapping.reverse().transform(entry)
+		elems = [parent_mapping.transform(x) for x in net.filter_cache(parent,filterelem)]
+		for e in elems:
+			node.state.incoming.append({'entry':e,'action':'UpdateEntry','attr':attr})
 		
 	return net
 

@@ -138,18 +138,19 @@ def initialize_pattern(net,pattern):
 						constraint_attr_relationships.add((x,var,attr,))
 
 		
-		helper_channels = set([(net.get_node(core=pattern),mapping) for _,pattern,mapping in constraint_pattern_relationships])
+		helper_channels = set([(pname,mapping) for _,pname,mapping in constraint_pattern_relationships])
 		attr_channels = set([(var,attr) for _,var,attr in constraint_attr_relationships])	
 
 		# print(constraint_pattern_relationships)
 		# print(constraint_attr_relationships)
-		net.add_node(type='pattern',core=pattern,symmetry_group=symmetry_group,exprgraph=graph,helpers=helpers,constraints=constraint_objects)
+		resolved_helpers = {h:net.get_node(core=helpers[h]).state for h in helpers}
+		net.add_node(type='pattern',core=pattern,symmetry_group=symmetry_group,exprgraph=graph,helpers=resolved_helpers,constraints=constraint_objects)
 		names = [x for x in pattern.namespace if isinstance(pattern.namespace[x],type) and issubclass(pattern.namespace[x],BaseClass)]
 		net.initialize_cache(pattern,names)
 		net.add_channel(type='parent',source=pdict.parent,target=pattern,mapping=pdict.mapping)
 
 		for pname, mapping in helper_channels:
-			net.add_channel(type='update',source=pname,target=pattern,mapping=mapping)
+			net.add_channel(type='update',source=helpers[pname],target=pattern,mapping=mapping)
 
 		for var,attr in attr_channels:
 			varclass = pattern.namespace[var]

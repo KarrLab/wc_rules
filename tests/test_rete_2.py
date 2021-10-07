@@ -241,3 +241,76 @@ class TestRete(unittest.TestCase):
 		self.assertEqual(len(collector.state.cache),6)
 
 
+	def test_pattern_with_helper(self):
+		net = ReteNet.default_initialization()
+		ss = SimulationState(matcher=net)
+
+		p1 = Pattern(parent=GraphContainer([Y('n',a=True)]))
+		z = Z('z',y=[Y('y')])
+		p2 = Pattern(
+			parent=GraphContainer(z.get_connected()),
+			helpers = {'ypos':p1},
+			constraints = ['ypos.contains(n=y) == True']
+			)
+
+		net.initialize_pattern(p2)
+		# check retenet structure
+		self.assertTrue(net.get_channel(source=p1,target=p2,type='update'))
+
+
+		net.initialize_collector(p1,'p1')
+		net.initialize_collector(p2,'p2')
+		node1, node2, collector1, collector2 = [net.get_node(core=x) for x in [p1,p2,'collector_p1','collector_p2']]
+		rete_nodes = [node1, collector1, node2, collector2]
+
+		# First push two nodes Z, Y1(true), 
+		# p1 must be non-empty, p2 must be empty
+		ss.push_to_stack([
+			AddNode.make(Z,'z1'),
+			AddNode.make(Y,'y1',{'a':True}),
+			])
+		ss.simulate()
+
+		for x,y in zip(rete_nodes,[1,1,0,0]):
+			self.assertEqual(len(x.state.cache),y)
+
+		# now add edge y1-z1
+		# both p1 and p2 must be non-empty
+		ss.push_to_stack([
+			AddEdge('z1','y','y1','z'),
+			])
+		ss.simulate()
+
+		for x,y in zip(rete_nodes,[1,1,1,1]):
+			self.assertEqual(len(x.state.cache),y)
+
+		# now set y1(false)
+		# p1 and p2 must be empty, 
+		# collectors must have 1 add and 1 remove entry each 
+		ss.push_to_stack([
+			SetAttr('y1','a',False,True)
+			])
+		ss.simulate()
+
+		for x,y in zip(rete_nodes,[0,2,0,2]):
+			self.assertEqual(len(x.state.cache),y)
+
+		# set y1(true) and p1 and p2 must go back to 1 each
+		# collectors increment by 1
+		ss.push_to_stack([
+			SetAttr('y1','a',True,False)
+			])
+		ss.simulate()
+
+		for x,y in zip(rete_nodes,[1,3,1,3]):
+			self.assertEqual(len(x.state.cache),y)
+
+		# remove edge and p2 must go back to zero
+		# collector_p2 increment by 1
+		ss.push_to_stack([
+			RemoveEdge('y1','z','z1','y'),
+			])
+		ss.simulate()
+
+		for x,y in zip(rete_nodes,[1,3,0,4]):
+			self.assertEqual(len(x.state.cache),y)
