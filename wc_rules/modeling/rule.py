@@ -86,6 +86,9 @@ class Rule:
 	def get_rate_law(self):
 		return self.rate_prefix
 
+	def get_rate_law_executable(self):
+		return initialize_from_string(self.get_rate_law(),(RateLaw,))
+
 class InstanceRateRule(Rule):
 
 	def get_rate_law(self):

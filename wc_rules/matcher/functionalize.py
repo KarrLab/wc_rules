@@ -30,8 +30,8 @@ def function_node_canonical_label(net,node,elem):
 	node.state.outgoing.append({'entry':entry,'action':action})
 	return net
 
-def run_match_through_constraints(match,helpers,constraints):
-	extended_match = ChainMap(match,helpers)
+def run_match_through_constraints(match,helpers,parameters,constraints):
+	extended_match = ChainMap(match,helpers,parameters)
 	terminate_early = False
 	for c in constraints:
 		value = c.exec(extended_match)
@@ -49,7 +49,7 @@ def function_node_pattern(net,node,elem):
 	outgoing_entries = []
 	if action == 'AddEntry':
 		match = {k:v for k,v in entry.items()}
-		match = run_match_through_constraints(match, node.data.helpers, node.data.constraints)
+		match = run_match_through_constraints(match, node.data.helpers, node.data.parameters, node.data.constraints)
 		if match is not None:
 			net.insert_into_cache(node.core,match)
 			node.state.outgoing.append({'entry':match,'action':action})
@@ -65,7 +65,7 @@ def function_node_pattern(net,node,elem):
 		
 		match = {k:v for k,v in entry.items()}
 		existing_elems = net.filter_cache(node.core,entry)
-		match = run_match_through_constraints(match,node.data.helpers,node.data.constraints)
+		match = run_match_through_constraints(match,node.data.helpers,node.data.parameters,node.data.constraints)
 		if match is None:
 			if len(existing_elems) > 0:
 				for e in existing_elems:
@@ -74,6 +74,15 @@ def function_node_pattern(net,node,elem):
 			if len(existing_elems) == 0:
 				node.state.incoming.append({'entry':match,'action':'AddEntry'})
 
+	return net
+
+def function_node_rule(net,node,elem):
+	if elem['action']=='UpdateLocal':
+		if elem['source'] in node.data.affects_propensity:
+			old = node.state.cache
+			node.state.cache = new = node.data.propensity.exec(node.data.informers,node.data.parameters)
+			if old != new:
+				node.state.outgoing.append({'source':node.core,'entry':{'old':old,'new':new},'action':'UpdateLocal'})
 	return net
 
 def function_channel_pass(net,channel,elem):
@@ -157,8 +166,14 @@ def function_channel_update(net,channel,elem):
 		filterelem = parent_mapping.reverse().transform(entry)
 		elems = [parent_mapping.transform(x) for x in net.filter_cache(parent,filterelem)]
 		for e in elems:
-			node.state.incoming.append({'entry':e,'action':'UpdateEntry','attr':attr})
-		
+			node.state.incoming.append({'entry':e,'action':'UpdateEntry','attr':attr})		
 	return net
+
+def function_channel_inform(net,channel,elem):
+	if action in ['AddEntry','RemoveEntry']:
+		node = net.get_node(channel.target)
+		node.incoming.append({'action':'UpdateLocal','source':channel.source})
+	return net
+
 
 default_functionalization_methods = [method for name,method in globals().items() if name.startswith('function_')]

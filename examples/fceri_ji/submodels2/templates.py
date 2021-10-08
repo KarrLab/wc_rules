@@ -1,5 +1,5 @@
 from wc_rules.modeling.pattern import Pattern
-from wc_rules.modeling.rule import Rule
+from wc_rules.modeling.rule import InstanceRateRule as Rule
 from wc_rules.modeling.model import RuleBasedModel
 
 class BindingModel(RuleBasedModel):

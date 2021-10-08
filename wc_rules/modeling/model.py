@@ -50,10 +50,17 @@ class RuleBasedModel:
 	def collect_rules(self):
 		return [rule.name for rule in self.rules]
 
+	def get_rule(self,name):
+		if isinstance(name,str):
+			return [x for x in self.rules if x.name == name][0]
+		assert isinstance(name,(tuple,list)) and isinstance(name[0],str)
+		return self.get_rule(name[0])
+
+
 class AggregateModel:
 
 	defaults = None
-	
+
 	def __init__(self,name,models):
 		validate_keywords([name],'Model name')
 		self.name = name
@@ -63,7 +70,6 @@ class AggregateModel:
 		validate_set(model_names,'Model names in an aggregate model')
 		self.models = models
 		self._dict = {x.name:x for x in self.models}
-
 
 	def verify(self,data):
 		for model in self.models:
@@ -93,4 +99,11 @@ class AggregateModel:
 	def collect_rules(self):
 		return {model.name: model.collect_rules() for model in self.models}
 
+	def get_model(self,name):
+		return [x for x in self.models if x.name==name][0]
+
+	def get_rule(self,path):
+		if isinstance(path,str):
+			path = path.split('.')
+		return self.get_model(path[0]).get_rule(path[1:])
 		

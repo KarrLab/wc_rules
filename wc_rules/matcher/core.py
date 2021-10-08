@@ -40,6 +40,9 @@ class ReteNodeState:
 		Record.insert(self.cache,elem)
 		return self
 
+	def count(self,**elem):
+		return len(self.filter(**elem))
+
 
 class ReteNet:
 
