@@ -77,12 +77,11 @@ def function_node_pattern(net,node,elem):
 	return net
 
 def function_node_rule(net,node,elem):
-	if elem['action']=='UpdateLocal':
-		if elem['source'] in node.data.affects_propensity:
-			old = node.state.cache
-			node.state.cache = new = node.data.propensity.exec(node.data.informers,node.data.parameters)
-			if old != new:
-				node.state.outgoing.append({'source':node.core,'entry':{'old':old,'new':new},'action':'UpdateLocal'})
+	if elem['action']=='UpdateRule':
+		old = node.state.cache
+		node.state.cache = new = node.data.propensity.exec(node.data.reactants,node.data.helpers,node.data.parameters)
+		if old != new:
+			node.state.outgoing.append({'source':node.core,'propensity':node.state.cache,'action':'UpdateQueue'})
 	return net
 
 def function_channel_pass(net,channel,elem):
@@ -144,7 +143,7 @@ def function_channel_parent(net,channel,elem):
 		node.state.incoming.append({'entry':entry,'action':action})
 	return net
 
-def function_channel_update(net,channel,elem):
+def function_channel_update_pattern(net,channel,elem):
 	action = elem['action']
 	
 	if action in  ['AddEdge','RemoveEdge','SetAttr','AddEntry','RemoveEntry']:
@@ -169,10 +168,11 @@ def function_channel_update(net,channel,elem):
 			node.state.incoming.append({'entry':e,'action':'UpdateEntry','attr':attr})		
 	return net
 
-def function_channel_inform(net,channel,elem):
-	if action in ['AddEntry','RemoveEntry']:
-		node = net.get_node(channel.target)
-		node.incoming.append({'action':'UpdateLocal','source':channel.source})
+def function_channel_update_rule(net,channel,elem):
+	# TODO: A generic update_rule that accounts for using helper patterns
+	if elem['action'] in ['AddEntry','RemoveEntry']:
+		node = net.get_node(core=channel.target)
+		node.state.incoming.append({'action':'UpdateRule','source':channel.source})
 	return net
 
 

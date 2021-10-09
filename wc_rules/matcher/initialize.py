@@ -1,7 +1,7 @@
 from ..schema.base import BaseClass
 from ..utils.random import generate_id
-from ..utils.collections import Mapping, quoted, unzip, invert_dict
-from ..expressions.exprgraph import PatternReference
+from ..utils.collections import Mapping, quoted, unzip, invert_dict, subdict
+from ..expressions.exprgraph import PatternReference, ParameterReference
 from ..graph.graph_partitioning import partition_canonical_form
 from ..graph.canonical_labeling import canonical_label
 from ..graph.collections import GraphContainer
@@ -99,6 +99,8 @@ def initialize_pattern(net,pattern,parameters = dict()):
 		
 		for var,p in helpers.items():
 			graph.add(PatternReference(id=var,pattern_id=id(p)))
+		for param in parameters:
+			graph.add(ParameterReference(id=param,parameter_name=param))
 		for c in constraints:
 			x = pattern.make_executable_constraint(c)
 			exprgraph = GraphContainer(x.build_exprgraph().get_connected())
@@ -150,7 +152,7 @@ def initialize_pattern(net,pattern,parameters = dict()):
 		net.add_channel(type='parent',source=pdict.parent,target=pattern,mapping=pdict.mapping)
 
 		for pname, mapping in helper_channels:
-			net.add_channel(type='update',source=helpers[pname],target=pattern,mapping=mapping)
+			net.add_channel(type='update_pattern',source=helpers[pname],target=pattern,mapping=mapping)
 
 		for var,attr in attr_channels:
 			varclass = pattern.namespace[var]
@@ -158,7 +160,7 @@ def initialize_pattern(net,pattern,parameters = dict()):
 			txt = 'idx' if attr in literal_attrs else 'idx1'
 			mapping = Mapping.create([txt],[var])
 			net.initialize_class(varclass)
-			net.add_channel(type='update',source=varclass,target=pattern,mapping=mapping,attr=attr)
+			net.add_channel(type='update_pattern',source=varclass,target=pattern,mapping=mapping,attr=attr)
 
 	return net
 
@@ -166,23 +168,23 @@ def initialize_rule(net,rule,name,parameters=dict()):
 	if net.get_node(core=name) is not None:
 		return net
 
-	for var,p in ChainMap(rule.reactants,rule.helpers).items():
-		net.initialize_pattern(p)
-	reactants = {var:net.get_node(core=p) for var,p in rule.reactants.items()}
-	helpers = {var:net.get_node(core=p) for var,p in rule.helpers.items()}
 	propensity = rule.get_rate_law_executable()	
+	affects_propensity = []
 
-	assert all([x for x in parameters.keys() if x in rule.parameters])
-	affects_propensity = set(ChainMap(rule.helpers,rule.reactants)[x] for x in set(propensity.keywords)-set(parameters.keys()))
+	for var,p in ChainMap(rule.reactants,rule.helpers).items():
+		net.initialize_pattern(p, parameters = subdict(parameters,p.parameters))
+		if var in propensity.keywords:
+			affects_propensity.append(p)
 
-	net.add_node(core=name,type='rule',reactants=reactants,helpers=helpers,propensity=propensity,affects_propensity=affects_propensity,parameters=dict())
-	net.get_node(core=name,type='rule').state.cache = 0
+	reactants = {var:net.get_node(core=p).state for var,p in rule.reactants.items()}
+	helpers = {var:net.get_node(core=p).state for var,p in rule.helpers.items()}
+	
+	net.add_node(type='rule',core=name,reactants=reactants,helpers=helpers,propensity=propensity,parameters=parameters)
+	for p in affects_propensity:
+		net.add_channel(type='update_rule',source=p,target=name)
 
-	informers = set(rule.reactants.items()) | set(rule.helpers.items())
-	for p in informers:
-		net.add_channel(source=p,target=name,type='inform')
 	return net
-
+	
 
 	
 def print_merge_form(names,m1,m2):

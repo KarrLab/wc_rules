@@ -2,6 +2,7 @@ from wc_rules.schema.entity import Entity
 from wc_rules.schema.attributes import *
 from wc_rules.schema.actions import AddNode,RemoveNode,AddEdge,RemoveEdge, SetAttr
 from wc_rules.modeling.pattern import GraphContainer, Pattern
+from wc_rules.modeling.rule import InstanceRateRule as Rule
 from wc_rules.simulator.simulator import SimulationState
 from wc_rules.matcher.core import ReteNet
 from wc_rules.graph.canonical_labeling import canonical_label
@@ -255,7 +256,7 @@ class TestRete(unittest.TestCase):
 
 		net.initialize_pattern(p2)
 		# check retenet structure
-		self.assertTrue(net.get_channel(source=p1,target=p2,type='update'))
+		self.assertTrue(net.get_channel(source=p1,target=p2,type='update_pattern'))
 
 
 		net.initialize_collector(p1,'p1')
@@ -314,3 +315,52 @@ class TestRete(unittest.TestCase):
 
 		for x,y in zip(rete_nodes,[1,3,0,4]):
 			self.assertEqual(len(x.state.cache),y)
+
+
+	def test_rule(self):
+		net = ReteNet.default_initialization()
+		ss = SimulationState(matcher=net)
+
+		p1 = Pattern(GraphContainer([Y('y')]), constraints=['len(y.z)==0'])
+		p2 = Pattern(GraphContainer([Z('z')]), constraints=['len(z.y) < max_y'], parameters=['max_y'])
+
+		yz_rule = Rule(
+			name = 'yz_rule',
+			reactants = {'rY':p1,'rZ':p2},
+			parameters = ['k','max_y'],
+			rate_prefix = 'k',
+			actions = ['rY.y.add_z(rZ.z)']
+			)
+
+		net.initialize_rule(name='yz_rule',parameters = {'k':1,'max_y':3},rule=yz_rule)
+		net.initialize_collector('yz_rule','yz_rule')
+
+		# push 4 Ys
+		ss.push_to_stack([AddNode(Y,f'y{i}',{}) for i in range(1,5)])
+		ss.simulate()
+
+		# counts p1=4,p2=0, propensity=0, rule collector = 1 
+		self.assertEqual(net.get_node(core=p1).state.count(),4)
+		self.assertEqual(net.get_node(core=p2).state.count(),0)
+		self.assertEqual(net.get_node(core='yz_rule').state.cache,0)
+		self.assertEqual(len(net.get_node(core='collector_yz_rule').state.cache),1)
+
+		# push 1 Z
+		ss.push_to_stack([AddNode(Z,'z1',{})])
+		ss.simulate()
+		# counts p1=4,p2=1, propensity=4, rule collector = 2 
+		self.assertEqual(net.get_node(core=p1).state.count(),4)
+		self.assertEqual(net.get_node(core=p2).state.count(),1)
+		self.assertEqual(net.get_node(core='yz_rule').state.cache,4)
+		self.assertEqual(len(net.get_node(core='collector_yz_rule').state.cache),2)
+		
+
+		# Add edges from z1 to y1, y2, y3. Propensity should drop from 4 to 3 to 2 to 0
+		ss.push_to_stack([AddEdge(f'y{i}','z','z1','y') for i in range(1,4)])
+		ss.simulate()
+
+		# counts p1=1,p2=0, propensity =0, collector=5
+		self.assertEqual(net.get_node(core=p1).state.count(),1)
+		self.assertEqual(net.get_node(core=p2).state.count(),0)
+		self.assertEqual(net.get_node(core='yz_rule').state.cache,0)
+		self.assertEqual(len(net.get_node(core='collector_yz_rule')),5)

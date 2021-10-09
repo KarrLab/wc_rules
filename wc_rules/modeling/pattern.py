@@ -7,15 +7,15 @@ from ..expressions.executable import Constraint, Computation, initialize_from_st
 
 class Pattern:
 
-	def __init__(self, parent=GraphContainer(), helpers=dict(), constraints = [], params= []):
+	def __init__(self, parent=GraphContainer(), helpers=dict(), constraints = [], parameters= []):
 		self.validate_parent(parent)
 		self.parent = parent
 
 		self.validate_helpers(helpers)
 		self.helpers = helpers
 
-		self.validate_params(params)
-		self.params = params
+		self.validate_parameters(parameters)
+		self.parameters = parameters
 		
 		self.assigned_variables = self.validate_constraints(constraints)
 		self.constraints = constraints
@@ -30,7 +30,7 @@ class Pattern:
 		d.update(self.parent.namespace)
 		for h in self.helpers:
 			d[h] = "Helper Pattern"
-		for p in self.params:
+		for p in self.parameters:
 			d[p] = "Parameter"
 		for v  in self.assigned_variables:
 			d[v] = "Assigned Variable"
@@ -61,16 +61,16 @@ class Pattern:
 		validate_unique(self.parent.variables,helpers.keys(),'Helper')
 		validate_dict(helpers,Pattern,'Helper')
 		
-	def validate_params(self,params):
-		validate_class(params,list,'Parameters')
-		validate_keywords(params,'Parameter')
-		validate_unique(self.parent.variables + list(self.helpers.keys()), params, 'Parameter')
+	def validate_parameters(self,parameters):
+		validate_class(parameters,list,'Parameters')
+		validate_keywords(parameters,'Parameter')
+		validate_unique(self.parent.variables + list(self.helpers.keys()), parameters, 'Parameter')
 		
 	def validate_constraints(self,constraints):
 		validate_class(constraints,list,'Constraints')
 		validate_list(constraints,str,'Constraint')
 
-		namespace = self.parent.variables + list(self.helpers.keys()) + self.params
+		namespace = self.parent.variables + list(self.helpers.keys()) + self.parameters
 		newvars, kwdeps, executables = [] , {}, []
 
 		for s in constraints:

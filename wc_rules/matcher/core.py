@@ -27,7 +27,10 @@ class ReteNodeState:
 		
 	def pprint(self,nsep=2):
 		d = dict(incoming=self.incoming,outgoing=self.outgoing)
-		d['cache'] = [x for x in self.cache] if self.cache is not None else None
+		try:
+			d['cache'] = [x for x in self.cache] if self.cache is not None else None
+		except:
+			d['cache'] =self.cache
 		return Record.print(d,nsep=2)
 
 	def contains(self,**elem):
@@ -42,6 +45,7 @@ class ReteNodeState:
 
 	def count(self,**elem):
 		return len(self.filter(**elem))
+
 
 
 class ReteNet:

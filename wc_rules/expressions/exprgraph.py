@@ -26,6 +26,9 @@ class Expr(ExprBase):
 class PatternReference(Expr):
 	pattern_id = StringAttribute()
 
+class ParameterReference(Expr):
+	parameter_name = StringAttribute()
+
 class FunctionReference(Expr):
 
 	variable = StringAttribute()
