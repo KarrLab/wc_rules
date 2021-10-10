@@ -183,18 +183,16 @@ def initialize_rule(net,rule,name,parameters=dict()):
 
 	reactants = {var:net.get_node(core=p).state for var,p in rule.reactants.items()}
 	helpers = {var:net.get_node(core=p).state for var,p in rule.helpers.items()}
+
+	actions = rule.get_action_executables()
 	
-	net.add_node(type='rule',core=name,reactants=reactants,helpers=helpers,propensity=propensity,parameters=parameters)
+	net.add_node(type='rule',core=name,reactants=reactants,helpers=helpers,propensity=propensity,parameters=parameters,actions=actions)
 	for p in affects_propensity:
 		net.add_channel(type='update_rule',source=p,target=name)
 
 	net.add_channel(type='pass',source=name,target='end')
 	return net
 	
-
-def initialize_rule_heap(net):
-	pass
-
 	
 def print_merge_form(names,m1,m2):
 	s1 = '(' + ','.join(names) + ')'

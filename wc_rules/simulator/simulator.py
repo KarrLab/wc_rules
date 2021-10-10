@@ -12,7 +12,10 @@ class SimulationState:
 		self.action_stack = deque()
 		self.rollback_stack = deque()
 		self.matcher = kwargs.get('matcher',ReteNet.default_initialization())
-		self.sampler = NextReactionMethod()
+		
+		self.start_time = kwargs.get('start_time',0.0)
+		self.end_time = kwargs.get('end_time',0.0)
+		self.sampler = NextReactionMethod(time=self.start_time)
 
 	# These are elementary methods, used as 
 	# the final step in adding/removing a node
@@ -93,10 +96,24 @@ class SimulationState:
 		return []
 
 	def update_sampler(self,tokens):
-		print(tokens)
 		for token in tokens:
-
 			self.sampler.update_propensity(reaction=token['source'],propensity=token['propensity'])
+		return self
+
+	def sample_next_event(self):
+		rule,time = self.sampler.next_event()
+		if time == float('inf'):
+			print('Null event!')
+			return self
+		sample = self.matcher.function_sample_rule(rule)
+		rule_node = self.matcher.get_node(core=rule,type='rule')
+		for act in rule_node.data.actions:
+			if act.deps.declared_variable is not None:
+				sample[act.deps.declared_variable] = act.exec(sample,rule_node.data.helpers)
+			else:
+				self.push_to_stack(act.exec(sample,rule_node.data.helpers))
+		self.sampler.update_time(time)
+		self.simulate()
 		return self			
 
 

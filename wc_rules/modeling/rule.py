@@ -89,6 +89,10 @@ class Rule:
 	def get_rate_law_executable(self):
 		return initialize_from_string(self.get_rate_law(),(RateLaw,))
 
+	def get_action_executables(self):
+		classes = (Constraint,Computation,ActionCaller)
+		return [initialize_from_string(s,classes) for s in self.actions]
+
 class InstanceRateRule(Rule):
 
 	def get_rate_law(self):

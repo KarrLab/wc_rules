@@ -23,9 +23,7 @@ class NextReactionMethod:
 			self.propensities[reaction] = propensity
 			tau = - log(rand()) / propensity
 			self.next_reaction_times[reaction] = self.absolute_time + tau
-		print('Updating',reaction,propensity)
-		print(self.propensities)
-		print(self.next_reaction_times)
+
 		return self			
 
 	def next_event(self):

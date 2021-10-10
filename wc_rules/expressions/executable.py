@@ -1,7 +1,7 @@
 from .parse import process_expression_string, serialize
 from .dependency import DependencyCollector
 from ..utils.collections import subdict
-from ..schema.actions import RollbackAction, TerminateAction
+from ..schema.actions import RollbackAction, TerminateAction, PrimaryAction, CompositeAction, SimulatorAction
 from .builtins import ordered_builtins, global_builtins
 from .exprgraph import dfs_make
 from collections import ChainMap
@@ -141,9 +141,10 @@ class ActionCaller(ExecutableExpression):
     start = 'function_call'
     builtins = ChainMap(global_builtins,dict(rollback=rollback,terminate=terminate))
     allowed_forms = ['<actioncall> ( <boolexpr> )', '<pattern>.<var>.<actioncall> (<params>)', '<pattern>.<actioncall> (<params>)']
+    allowed_returns = None
 
     def exec(self,matches,helpers):
-        v = super().exec(matches,helper)
+        v = super().exec(matches,helpers)
         #err = 'An element in the following nested list is not a recognized Action: {0}'
         #assert verify_list(v,(SimulatorAction,PrimaryAction,CompositeAction)), err.format(list(v))
         # verifying that every element of a nested list is an action is slow AF

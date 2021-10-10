@@ -3,6 +3,7 @@ from collections import deque, Counter, ChainMap
 #from ..utils.collections import merge_lists,triple_split, subdict, merge_dicts, no_overlaps, tuplify_dict
 from ..utils.collections import merge_dicts_strictly, is_one_to_one
 from copy import deepcopy
+from attrdict import AttrDict
 
 def function_node_start(net,node,elem):
 	node.state.outgoing.append(elem)
@@ -179,5 +180,12 @@ def function_channel_update_rule(net,channel,elem):
 		node.state.incoming.append({'action':'UpdateRule','source':channel.source})
 	return net
 
+def function_sample_rule(net,rname):
+	rule = net.get_node(core=rname,type='rule')
+	sample = dict()
+	for var, pstate in rule.data.reactants.items():
+		sample[var] = AttrDict(pstate.sample_cache())
+	return sample
+	
 
 default_functionalization_methods = [method for name,method in globals().items() if name.startswith('function_')]

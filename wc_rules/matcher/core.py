@@ -4,6 +4,7 @@ from .dbase import initialize_database, Record, SEP
 from .actions import *
 from attrdict import AttrDict
 from collections import deque
+import random
 import logging
 import os
 
@@ -46,7 +47,10 @@ class ReteNodeState:
 	def count(self,**elem):
 		return len(self.filter(**elem))
 
+	def sample_cache(self):
+		return dict(Record.itemize(random.choice(self.filter())))
 
+		
 
 class ReteNet:
 
