@@ -12,4 +12,5 @@ backports.cached_property
 jinja2
 pydblite
 frozendict
+pqdict
 parameterized

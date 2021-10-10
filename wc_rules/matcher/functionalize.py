@@ -8,6 +8,10 @@ def function_node_start(net,node,elem):
 	node.state.outgoing.append(elem)
 	return net
 
+def function_node_end(net,node,elem):
+	node.state.cache.append(elem)
+	return
+
 def function_node_class(net,node,elem):
 	if issubclass(elem['_class'],node.core):
 		node.state.outgoing.append(elem)
@@ -81,7 +85,7 @@ def function_node_rule(net,node,elem):
 		old = node.state.cache
 		node.state.cache = new = node.data.propensity.exec(node.data.reactants,node.data.helpers,node.data.parameters)
 		if old != new:
-			node.state.outgoing.append({'source':node.core,'propensity':node.state.cache,'action':'UpdateQueue'})
+			node.state.outgoing.append({'source':node.core,'propensity':node.state.cache,'action':'NotifyUpdatedRule'})
 	return net
 
 def function_channel_pass(net,channel,elem):

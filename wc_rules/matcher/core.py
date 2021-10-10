@@ -51,8 +51,13 @@ class ReteNodeState:
 class ReteNet:
 
 	@classmethod
-	def default_initialization(cls):
-		return ReteNetConfiguration().configure(cls()).initialize_start()
+	def default_initialization(cls,start=True,end=True):
+		net = ReteNetConfiguration().configure(cls())
+		if start:
+			net.initialize_start()
+		if end:
+			net.initialize_end()
+		return net
 
 	def __init__(self):
 		self.nodes = initialize_database(['type','core','data','state','num'])
@@ -159,5 +164,11 @@ class ReteNet:
 		for token in tokens:
 			start.state.incoming.append(token)
 			self.sync(start)
-		return
+
+		endnode = self.get_node(core='end')
+		outtokens = []
+		while endnode.state.cache:
+			outtokens.append(endnode.state.cache.popleft())
+			
+		return outtokens
 

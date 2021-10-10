@@ -1,29 +1,34 @@
 from collections import deque 
+from ..utils.collections import DictLike
 from ..matcher.core import ReteNet
 from ..matcher.actions import make_node_token, make_edge_token, make_attr_token
+from .sampler import NextReactionMethod
 
 class SimulationState:
 	def __init__(self,nodes=[],**kwargs):
-		self.state = {x.id:x for x in nodes}
+		self.cache = DictLike(nodes)
 		# for both stacks, use LIFO semantics using appendleft and popleft
+		self.rollback = kwargs.get('rollback',False)
 		self.action_stack = deque()
 		self.rollback_stack = deque()
 		self.matcher = kwargs.get('matcher',ReteNet.default_initialization())
+		self.sampler = NextReactionMethod()
 
+	# These are elementary methods, used as 
+	# the final step in adding/removing a node
 	def resolve(self,idx):
-		return self.state[idx]
+		return self.cache.get(idx)
 
 	def update(self,node):
-		self.state[node.id] = node
+		self.cache.add(node)
 		return self
 
 	def remove(self,node):
-		del self.state[node.id]
-		del node
+		self.cache.remove(node)
 		return self
 
 	def get_contents(self,ignore_id=True,ignore_None=True,use_id_for_related=True,sort_for_printing=True):
-		d = {x.id:x.get_attrdict(ignore_id=ignore_id,ignore_None=ignore_None,use_id_for_related=use_id_for_related) for k,x in self.state.items()}
+		d = {x.id:x.get_attrdict(ignore_id=ignore_id,ignore_None=ignore_None,use_id_for_related=use_id_for_related) for k,x in self.cache.items()}
 		if sort_for_printing:
 			# sort list attributes
 			for idx,adict in d.items():
@@ -48,15 +53,19 @@ class SimulationState:
 			if hasattr(action,'expand'):
 				self.push_to_stack(action.expand())
 			elif action.__class__.__name__ == 'RemoveNode':
-				self.rollback_stack.appendleft(action)
+				if self.rollback:
+					self.rollback_stack.appendleft(action)
 				matcher_tokens = self.compile_to_matcher_tokens(action)
 				action.execute(self)
-				self.matcher.process(matcher_tokens)
+				outtokens = self.matcher.process(matcher_tokens)
 			else:
-				self.rollback_stack.appendleft(action)
+				if self.rollback:
+					self.rollback_stack.appendleft(action)
 				action.execute(self)
 				matcher_tokens = self.compile_to_matcher_tokens(action)
-				self.matcher.process(matcher_tokens)
+				outtokens = self.matcher.process(matcher_tokens)
+
+		self.update_sampler(outtokens)
 		return self
 
 	def rollback(self):
@@ -82,8 +91,13 @@ class SimulationState:
 				make_edge_token(c2,self.resolve(i2),a2,self.resolve(i1),a1,action_name)
 			]
 		return []
-				
 
+	def update_sampler(self,tokens):
+		print(tokens)
+		for token in tokens:
+
+			self.sampler.update_propensity(reaction=token['source'],propensity=token['propensity'])
+		return self			
 
 
 

@@ -17,6 +17,11 @@ def initialize_start(net):
 	net.add_node(type='start',core=BaseClass)
 	return net
 
+def initialize_end(net):
+	net.add_node(type='end',core='end')
+	net.get_node(type='end').state.cache = deque()
+	return net
+
 def initialize_class(net,_class):
 	if net.get_node(core=_class) is not None:
 		return net
@@ -183,8 +188,12 @@ def initialize_rule(net,rule,name,parameters=dict()):
 	for p in affects_propensity:
 		net.add_channel(type='update_rule',source=p,target=name)
 
+	net.add_channel(type='pass',source=name,target='end')
 	return net
 	
+
+def initialize_rule_heap(net):
+	pass
 
 	
 def print_merge_form(names,m1,m2):

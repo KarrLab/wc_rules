@@ -134,7 +134,7 @@ class DictLike(object):
         for x in iterable:
             self.add(x)
 
-    def get(self,key,value):
+    def get(self,key,value=None):
         if key not in self._dict:
             return value
         return self._dict[key]
