@@ -30,5 +30,7 @@ class NextReactionMethod:
 		reaction, time = self.next_reaction_times.topitem()
 		return reaction, time
 
+def default_sampler(**kwargs):
+	return NextReactionMethod(time=kwargs.get('time',0.0))
 
 		

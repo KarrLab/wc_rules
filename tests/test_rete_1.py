@@ -3,7 +3,7 @@ from wc_rules.schema.attributes import BooleanAttribute, ManyToOneAttribute
 from wc_rules.schema.actions import AddNode,RemoveNode,AddEdge,RemoveEdge
 from wc_rules.modeling.pattern import GraphContainer, Pattern
 from wc_rules.simulator.simulator import SimulationState
-from wc_rules.matcher.core import ReteNet
+from wc_rules.matcher.core import default_rete_net
 from wc_rules.graph.canonical_labeling import canonical_label
 import math
 import unittest
@@ -21,7 +21,7 @@ class Z(X):
 class TestRete(unittest.TestCase):
 
 	def test_single_node_canonical_label(self):
-		net = ReteNet.default_initialization()
+		net = default_rete_net()
 		ss = SimulationState(matcher=net)
 		
 		m,L,G = canonical_label(GraphContainer([X('x')]))
@@ -51,7 +51,7 @@ class TestRete(unittest.TestCase):
 		self.assertEqual(len(collector.state.cache),2)
 
 	def test_single_node_branching_classes(self):
-		net = ReteNet.default_initialization()
+		net = default_rete_net()
 		ss = SimulationState(matcher=net)
 		
 		gnodes = []
@@ -79,7 +79,7 @@ class TestRete(unittest.TestCase):
 		self.assertEqual(cache_sizes,[0,0,0])
 		
 	def test_single_edge_canonical_label(self):
-		net = ReteNet.default_initialization()
+		net = default_rete_net()
 		ss = SimulationState(matcher=net)
 		
 		g = GraphContainer(Y('y',z=Z('z')).get_connected())
@@ -123,7 +123,7 @@ class TestRete(unittest.TestCase):
 		self.assertEqual(len(collector.state.cache),2)
 
 	def test_two_edges_canonical_label(self):
-		net = ReteNet.default_initialization()
+		net = default_rete_net()
 		ss = SimulationState(matcher=net)
 		
 		g = GraphContainer(Z('z',y=[Y('y1'),Y('y2')]).get_connected())
@@ -170,7 +170,7 @@ class TestRete(unittest.TestCase):
 
 
 	def test_n_edges_canonical_label(self):
-		net = ReteNet.default_initialization()
+		net = default_rete_net()
 		ss = SimulationState(matcher=net)
 
 		n=6

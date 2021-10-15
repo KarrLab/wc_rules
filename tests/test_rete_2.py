@@ -4,7 +4,7 @@ from wc_rules.schema.actions import AddNode,RemoveNode,AddEdge,RemoveEdge, SetAt
 from wc_rules.modeling.pattern import GraphContainer, Pattern
 from wc_rules.modeling.rule import InstanceRateRule as Rule
 from wc_rules.simulator.simulator import SimulationState
-from wc_rules.matcher.core import ReteNet
+from wc_rules.matcher.core import default_rete_net
 from wc_rules.graph.canonical_labeling import canonical_label
 from wc_rules.graph.collections import CanonicalForm
 import math
@@ -29,7 +29,7 @@ class TestRete(unittest.TestCase):
 
 	def test_pattern_alias(self):
 		# an alias pattern has a source, a mapping and no constraints
-		net = ReteNet.default_initialization()
+		net = default_rete_net()
 		ss = SimulationState(matcher=net)
 
 		n=4
@@ -94,7 +94,7 @@ class TestRete(unittest.TestCase):
 		self.assertEqual(len(fil),0)
 		
 	def test_double_alias_pattern(self):
-		net = ReteNet.default_initialization()
+		net = default_rete_net()
 		ss = SimulationState(matcher=net)
 
 		n=3
@@ -123,7 +123,7 @@ class TestRete(unittest.TestCase):
 
 
 	def test_pattern_with_attr_updates(self):
-		net = ReteNet.default_initialization()
+		net = default_rete_net()
 		ss = SimulationState(matcher=net)
 
 		z = Z('z',y=[Y('y',a=True)])
@@ -181,7 +181,7 @@ class TestRete(unittest.TestCase):
 		self.assertEqual(len(collector.state.cache),6)
 
 	def test_pattern_with_attr_updates_computefn(self):
-		net = ReteNet.default_initialization()
+		net = default_rete_net()
 		ss = SimulationState(matcher=net)
 
 		z = Z('z',y=[Y('y')])
@@ -243,7 +243,7 @@ class TestRete(unittest.TestCase):
 
 
 	def test_pattern_with_helper(self):
-		net = ReteNet.default_initialization()
+		net = default_rete_net()
 		ss = SimulationState(matcher=net)
 
 		p1 = Pattern(parent=GraphContainer([Y('n',a=True)]))
@@ -318,7 +318,7 @@ class TestRete(unittest.TestCase):
 
 
 	def test_rule(self):
-		net = ReteNet.default_initialization()
+		net = default_rete_net()
 		ss = SimulationState(matcher=net)
 
 		p1 = Pattern(GraphContainer([Y('y')]), constraints=['len(y.z)==0'])

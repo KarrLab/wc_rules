@@ -1,5 +1,5 @@
 
-from .configuration import ReteNetConfiguration
+from .configuration import default_configuration
 from .dbase import initialize_database, Record, SEP
 from .actions import *
 from attrdict import AttrDict
@@ -49,19 +49,9 @@ class ReteNodeState:
 
 	def sample_cache(self):
 		return dict(Record.itemize(random.choice(self.filter())))
-
 		
 
 class ReteNet:
-
-	@classmethod
-	def default_initialization(cls,start=True,end=True):
-		net = ReteNetConfiguration().configure(cls())
-		if start:
-			net.initialize_start()
-		if end:
-			net.initialize_end()
-		return net
 
 	def __init__(self):
 		self.nodes = initialize_database(['type','core','data','state','num'])
@@ -176,3 +166,10 @@ class ReteNet:
 			
 		return outtokens
 
+def default_rete_net(start=True,end=True):
+	net = default_configuration().configure(ReteNet())
+	if start:
+		net.initialize_start()
+	if end:
+		net.initialize_end()
+	return net

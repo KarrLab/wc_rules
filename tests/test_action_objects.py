@@ -2,7 +2,7 @@ from wc_rules.schema.base import BaseClass
 from wc_rules.schema.attributes import *
 from wc_rules.schema.actions import *
 from wc_rules.simulator.simulator import SimulationState
-from wc_rules.matcher.core import ReteNet
+from wc_rules.matcher.core import default_rete_net
 import unittest
 
 
@@ -232,8 +232,8 @@ class TestActionObjects(unittest.TestCase):
 			RemoveNode(Animal,'kitty',{'sound':'meow'}),
 		]
 
-		ss = ReteNet.default_initialization()
-		net = ReteNet.default_initialization()
+		ss = default_rete_net()
+		net = default_rete_net()
 		net.initialize_class(Animal)
 		net.initialize_class(Person)
 		net.initialize_collector(Animal,'Animal')
