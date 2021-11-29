@@ -1,12 +1,13 @@
-
-from .configuration import default_configuration
-from .dbase import initialize_database, Record, SEP
-from .actions import *
 from attrdict import AttrDict
 from collections import deque
 import random
 import logging
 import os
+
+from .dbase import initialize_database, Record, SEP
+from .initialize import default_initialization_methods
+from .functionalize import default_functionalization_methods
+
 
 log = logging.getLogger(__name__)
 FORMAT = '%(message)s'
@@ -173,3 +174,5 @@ def default_rete_net(start=True,end=True):
 	if end:
 		net.initialize_end()
 	return net
+
+default_rete_net_methods =  default_initialization_methods + default_functionalization_methods

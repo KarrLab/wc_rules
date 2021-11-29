@@ -1,77 +1,10 @@
 from collections import deque 
 from ..utils.collections import DictLike, subdict
 from ..matcher.core import default_rete_net
-from ..matcher.actions import make_node_token, make_edge_token, make_attr_token
-from .sampler import default_sampler
+from ..matcher.tokens import make_node_token, make_edge_token, make_attr_token
+from .scheduler import default_sampler
 from attrdict import AttrDict
-
-def make_timekeeper(d):
-	t = AttrDict({'start':0.0,'end':None,'current':0.0,'record_interval':None,'next_record_time':None})
-	if 'start_time' in d:
-		t.start = d['start_time']
-		t.current = d['start_time']
-	if 'end_time' in d:
-		t.end = d['end_time']
-	if 'current_time' in d:
-		t.current = d['current_time']
-	if 'record_interval' in d:
-		t.record_interval = d['record_interval']
-	return t
-
-class Simulator:
-	def __init__(self,model=None,simstate=[],config=dict()):
-		self.cache = DictLike()
-		self.model = model
-
-		self.matcher = config.get('matcher',default_rete_net())
-		self.sampler = config.get('sampler',default_sampler())		
-		
-		self.timekeeper = make_timekeeper(config)
-		
-		self.action_stack = deque()
-		self.rollback_stack = deque()
-
-	def compile_to_matcher_tokens(self,action):
-		action_name = action.__class__.__name__
-		#d = {'AddNode':'add','RemoveNode':'remove','AddEdge':'add','RemoveEdge':'remove'}
-		# NOTE: WE"RE ATTACHING ACTUAL NODES HERE, NOT IDS, FIX action.idx,idx1,idx2 later
-		if action_name in ['AddNode','RemoveNode']:
-			return [make_node_token(action._class, self.resolve(action.idx), action_name)]
-		if action_name in ['SetAttr']:
-			_class = self.resolve(action.idx).__class__
-			return [make_attr_token(_class, self.resolve(action.idx), action.attr, action.value, action_name)]
-		if action_name in ['AddEdge','RemoveEdge']:
-			i1,a1,i2,a2 = [getattr(action,x) for x in ['source_idx','source_attr','target_idx','target_attr']]
-			c1,c2 = [self.resolve(x).__class__ for x in [i1,i2]]
-			return [
-				make_edge_token(c1,self.resolve(i1),a1,self.resolve(i2),a2,action_name),
-				make_edge_token(c2,self.resolve(i2),a2,self.resolve(i1),a1,action_name)
-			]
-		return []
-
-	def load_nodes_into_matcher(self,nodes):
-		for x in nodes:
-			self.matcher.process([make_node_token(x.__class__,x,'AddNode')])
-			for a,y in x.iter_edges():
-				a1 = x.get_related_name(a)
-				self.matcher.process([make_edge_token(x.__class__,x,a,y,a1,'AddEdge')])
-		return self
-
-	def load_state(self,nodes):
-		for x in nodes:
-			self.cache.add(x)
-		if self.matcher is not None:
-			self.load_nodes_into_matcher(self,nodes)
-		return self
-
-	def load_matcher(self,matcher):
-		# ALWAYS ADD STATE TO A PRECONFIGURED MATCHER/SAMPLER
-		# NEVER THE OTHER WAY AROUND
-		assert len(self.cache) == 0
-		self.matcher = matcher
-		return self
-
-
+from ..schema.actions import PrimaryAction, CompositeAction
 
 
 

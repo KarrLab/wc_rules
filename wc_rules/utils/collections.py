@@ -135,18 +135,19 @@ class DictLike(object):
             self.add(x)
 
     def get(self,key,value=None):
+        # get ONLY works with id
         if key not in self._dict:
             return value
         return self._dict[key]
 
     def add(self,item):
-        if item.id in self._dict:
-            assert self._dict[item.id] == item, 'Item {0} could not be added.'.format(item)
-        else:
-            self._dict[item.id] = item
+        # add ONLY works with item, not id
+        assert item.id not in self._dict,   f"Could not add item with id `{item.id}` as another item exists with the same id."
+        self._dict[item.id] = item
         return self
 
     def remove(self,item):
+        # remove ONLY works with item, not id
         self._dict.pop(item.id)
         return self
 
@@ -170,6 +171,10 @@ class DictLike(object):
 
     def __add__(self,other):
         return self.__class__([*self.values(),*other.values()])
+
+    def pop(self,idx):
+        item = self._dict.pop(idx)
+        return item
 
 
 ############ functional programming
@@ -228,6 +233,9 @@ def remap_values(d,oldvalues,newvalue):
     return d
 
 ###### Methods ######
+def get_values(d,keys):
+    return [d[k] for k in keys]
+    
 def iter_to_string(iterable):
     return '\n'.join([str(x) for x in list(iterable)])
 

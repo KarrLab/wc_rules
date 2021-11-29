@@ -11,9 +11,14 @@ class SimulatorAction(ABC):
     pass
 
 class PrimaryAction(ABC):
+
+    # Primary actions record idx of objects as strings
+    # This makes the primary action as a record that can be used to 
+    # rollback or output, among other things
+
     @classmethod
     @abstractmethod
-    def make(cls,*args,**kwargs):
+    def make(self,*args,**kwargs):
         pass
 
     @abstractmethod
@@ -49,70 +54,58 @@ class NodeAction(PrimaryAction):
     attrs: dict
 
     def add_node(self,sim):
-        #c,i,attrs = self._class,self.idx,self.attrs
         x = self._class(id=self.idx)
-
         for attr, value in self.attrs.items():
             x.safely_set_attr(attr,value)
+        sim.add(x)
+        return [dict(_class=x.__class__, idx=x, action='AddNode')]
 
-        sim.update(x)
-        return self
+    def remove_node(self,sim, register=True):
+        x = sim.pop(self.idx)
+        return [dict(_class=x.__class__, idx=x, action='RemoveNode')]
 
-    def remove_node(self,sim):
-        sim.remove(sim.resolve(self.idx))
-        return self
-
-class AddNode(NodeAction):    
+class AddNode(NodeAction):
 
     @classmethod
-    def make(cls,_class,idx,attrs=dict()):
+    def make(cls,_class,idx,attrs={}):
         return cls(_class=_class,idx=idx,attrs=attrs)
-    
+
     def execute(self,sim):
-        self.add_node(sim)
-        return self
+        return self.add_node(sim)
 
     def rollback(self,sim):
-        self.remove_node(sim)
-        return self
+        return self.remove_node(sim)
 
 class RemoveNode(NodeAction):
 
     @classmethod
     def make(cls,node):
-        return cls(_class=node.__class__,
-            idx=node.id,attrs=node.get_literal_attrdict())
+        return cls(_class=None,idx=node.id,attrs=node.get_literal_attrdict())
 
     def execute(self,sim):
-        self.remove_node(sim)
-        return self
-
+        return self.remove_node(sim,register=True)
+        
     def rollback(self,sim):
-        self.add_node(sim)
-        return self
+        return self.add_node(sim)
 
 @dataclass
 class SetAttr(PrimaryAction):
     idx: str
     attr: str
     value: 'typing.Any'
-    old_value: 'typing.Any'
+    old_value: 'typing.Any' = None
 
     @classmethod
     def make(cls,node,attr,value):
-        return cls(idx=node.id,
-            attr = attr,
-            value = value,
-            old_value = node.get(attr)
-            )
+        return cls(idx=node.idx,attr=attr,value=value,old_value=node.get(attr))
 
     def execute(self,sim):
-        node = sim.resolve(self.idx)
+        node = sim[self.idx]
         node.safely_set_attr(self.attr,self.value)
-        return self
+        return [dict(_class=node.__class__,idx=self.idx,attr=self.attr,action='SetAttr')]
 
     def rollback(self,sim):
-        node = sim.resolve(self.idx)
+        node = sim[self.idx]
         node.safely_set_attr(self.attr,self.old_value)
         return self
 
@@ -131,34 +124,40 @@ class EdgeAction(PrimaryAction):
             target_idx = target.id,
             target_attr = source.get_related_name(attr)
             )
-
-    def add_edge(self,sim):
-        source,target = sim.resolve(self.source_idx), sim.resolve(self.target_idx)
+    
+    def add_edge(self,sim,register=True):
+        source,target = sim[self.source_idx], sim[self.target_idx]
         source.safely_add_edge(self.source_attr,target)
-        return self
+        _class1, idx1, attr1 = source.__class__, source.id, self.source_attr
+        _class2, idx2, attr2 = target.__class__, target.id, self.target_attr 
+        d1 = dict(_class=_class1,idx1=idx1,attr1=attr1,idx2=idx2,attr2=attr2,action='AddEdge')
+        d2 = dict(_class=_class2,idx1=idx2,attr1=attr2,idx2=idx1,attr2=attr1,action='AddEdge')
+        return [d1, d2]
 
     def remove_edge(self,sim):
-        source,target = sim.resolve(self.source_idx), sim.resolve(self.target_idx)
+        source,target = sim[self.source_idx], sim[self.target_idx]
         source.safely_remove_edge(self.source_attr,target)
-        return self
+        _class1, idx1, attr1 = source.__class__, source.id, self.source_attr
+        _class2, idx2, attr2 = target.__class__, target.id, self.target_attr 
+        d1 = dict(_class=_class1,idx1=idx1,attr1=attr1,idx2=idx2,attr2=attr2,action='RemoveEdge')
+        d2 = dict(_class=_class2,idx1=idx2,attr1=attr2,idx2=idx1,attr2=attr1,action='RemoveEdge')
+        return [d1, d2]
 
 class AddEdge(EdgeAction):
+    
     def execute(self,sim):
-        self.add_edge(sim)
-        return self
-
+        return self.add_edge(sim)
+        
     def rollback(self,sim):
-        self.remove_edge(sim)
-        return self
+        return self.remove_edge(sim)
 
 class RemoveEdge(EdgeAction):
+
     def execute(self,sim):
-        self.remove_edge(sim)
-        return self
+        return self.remove_edge(sim)
 
     def rollback(self,sim):
-        self.add_edge(sim)
-        return self
+        return self.add_edge(sim)
 
 ############## Literal Attr Actions ###########
 @dataclass
@@ -335,3 +334,4 @@ class ActionMixin:
         self.attach_method('remove_all_edges',remove_edges_fn)
         self.attach_method('remove',removefn)
         return self
+

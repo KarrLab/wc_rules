@@ -1,4 +1,4 @@
-#from frozendict import frozendict
+# A token is something you pass TO the ReteNet
 
 def make_node_token(_class,idx,action):
 	return dict(_class=_class,idx=idx,action=action)

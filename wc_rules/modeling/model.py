@@ -107,3 +107,11 @@ class AggregateModel:
 			path = path.split('.')
 		return self.get_model(path[0]).get_rule(path[1:])
 		
+	def iter_models(self):
+		for m in self.models:
+			yield m.name, m
+			if hasattr(m,'iter_models'):
+				for n1,m1 in m.iter_models():
+					yield n1,m1
+
+
