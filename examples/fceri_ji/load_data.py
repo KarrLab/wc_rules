@@ -8,7 +8,7 @@ from pathlib import Path
 extensions = ['yaml','json','plist','csv']
 prefix = Path(__file__).resolve().parent
 
-def load_hierarchical_data():
+def load_hierarchical_data(extensions=extensions):
 	dutil  = DataFileUtil(prefix / 'data' / 'hierarchical')
 	return [dutil.read_file(f'params.{ext}') for ext in extensions]
 

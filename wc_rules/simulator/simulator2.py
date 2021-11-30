@@ -14,7 +14,7 @@ class Simulator:
 	default_matcher_methods = default_rete_net_methods
 	default_scheduler = NextReactionMethod
 
-	def __init__(self,matcher=None,scheduler=None,timer_args={},writer=None):
+	def __init__(self,model,data,matcher=None,scheduler=None,timer_args={},writer=None):
 
 		self.state = SimulationState()
 		self.matcher = ReteNet() if matcher is None else matcher
@@ -23,6 +23,9 @@ class Simulator:
 		self.writer = writer if writer is not None else Writer()
 
 		self.configure_matcher()
+		self.load_model(model,data)
+		self.model = model
+		self.data = data
 		
 	def configure_matcher(self,methods=None,overwrite=True):
 		methods = self.default_matcher_methods if methods is None else methods
@@ -31,6 +34,14 @@ class Simulator:
 			assert overwrite or method.__name__ not in dir(self.matcher)
 			setattr(self.matcher,method.__name__,m)	
 		return self
+
+	def load_model(self,model,data):
+		for rname,rule in model.iter_rules():
+			datapath = rname.split('.')[:-1]
+			self.matcher.initialize_rule(rule, rname, data.get(datapath))
+		return self
+				
+
 
 	def show_matcher_configuration(self):
 		return [x[0] for x in inspect.getmembers(self.matcher, predicate=inspect.ismethod)]

@@ -3,6 +3,11 @@ from ..utils.validate import *
 from ..utils.collections import DictLike,merge_lists
 from collections.abc import Sequence
 
+def add_prefix(prefix,name):
+	if prefix:
+		return f'{prefix}.{name}'
+	return name
+
 class RuleBasedModel:
 
 	defaults = None
@@ -56,6 +61,10 @@ class RuleBasedModel:
 		assert isinstance(name,(tuple,list)) and isinstance(name[0],str)
 		return self.get_rule(name[0])
 
+	def iter_rules(self,prefix=''):
+		for rule in self.rules:
+			yield add_prefix(prefix,rule.name), rule
+
 
 class AggregateModel:
 
@@ -107,11 +116,18 @@ class AggregateModel:
 			path = path.split('.')
 		return self.get_model(path[0]).get_rule(path[1:])
 		
-	def iter_models(self):
+	def iter_models(self,prefix=''):
 		for m in self.models:
-			yield m.name, m
+			n = add_prefix(prefix,m.name) 
+			yield n,m 
 			if hasattr(m,'iter_models'):
-				for n1,m1 in m.iter_models():
+				for n1,m1 in m.iter_models(prefix=n):
 					yield n1,m1
+
+	def iter_rules(self,prefix=''):
+		for n,m in self.iter_models(prefix):
+			if hasattr(m,'rules'):
+				for n1,r1 in m.iter_rules(prefix=n):
+					yield n1,r1
 
 
