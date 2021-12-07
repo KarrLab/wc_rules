@@ -190,8 +190,10 @@ def initialize_rule(net,rule,name,parameters=dict()):
 	for p in affects_propensity:
 		net.add_channel(type='update_rule',source=p,target=name)
 
-	net.add_channel(type='pass',source=name,target='end')
+	fn = lambda rule_node: rule_node.state.cache
+	net.add_channel(type='update_variable',source=name,target='end',name=name,fn=fn,vartype='rule_propensity')
 	return net
+
 	
 	
 def print_merge_form(names,m1,m2):

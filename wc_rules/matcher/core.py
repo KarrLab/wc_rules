@@ -3,6 +3,7 @@ from collections import deque
 import random
 import logging
 import os
+from types import MethodType
 
 from .dbase import initialize_database, Record, SEP
 from .initialize import default_initialization_methods
@@ -59,6 +60,12 @@ class ReteNet:
 		self.channels = initialize_database(['type','source','target','data','num'])
 		self.nodemax = 0
 		self.channelmax = 0
+
+	def configure(self,method,overwrite=False):
+		m = MethodType(method, self)
+		assert overwrite or method.__name__ not in dir(self)
+		setattr(self,method.__name__,m)
+		return self
 
 	def add_node(self,**kwargs):
 		record = {k:kwargs.pop(k) for k in ['type','core']}

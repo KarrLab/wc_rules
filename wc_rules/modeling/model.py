@@ -1,4 +1,5 @@
 from .rule import Rule
+from .observable import Observable
 from ..utils.validate import *
 from ..utils.collections import DictLike,merge_lists
 from collections.abc import Sequence
@@ -12,7 +13,7 @@ class RuleBasedModel:
 
 	defaults = None
 
-	def __init__(self,name,rules):
+	def __init__(self,name,rules,observables=[]):
 		validate_keywords([name],'Model name')
 		self.name = name
 
@@ -20,6 +21,8 @@ class RuleBasedModel:
 		rule_names = [x.name for x in rules]
 		validate_set(rule_names,'Rule names in a model')
 		self.rules = rules
+		validate_list(observables,Observable,'Observable')
+		self.observables = observables
 		self._dict = {x.name:x for x in self.rules}
 
 	def verify(self,data):
@@ -65,12 +68,18 @@ class RuleBasedModel:
 		for rule in self.rules:
 			yield add_prefix(prefix,rule.name), rule
 
+	def iter_observables(self,prefix=''):
+		for observable in self.observables:
+			yield add_prefix(prefix,observable.name), observable
+
+			
+
 
 class AggregateModel:
 
 	defaults = None
 
-	def __init__(self,name,models):
+	def __init__(self,name,models,observables=[]):
 		validate_keywords([name],'Model name')
 		self.name = name
 
@@ -78,6 +87,8 @@ class AggregateModel:
 		model_names =  [x.name for x in models]
 		validate_set(model_names,'Model names in an aggregate model')
 		self.models = models
+		validate_list(observables,Observable,'Observable')
+		self.observables = observables
 		self._dict = {x.name:x for x in self.models}
 
 	def verify(self,data):
@@ -129,5 +140,11 @@ class AggregateModel:
 			if hasattr(m,'rules'):
 				for n1,r1 in m.iter_rules(prefix=n):
 					yield n1,r1
+
+	def iter_observables(self,prefix=''):
+		for observable in self.observables:
+			yield add_prefix(prefix,observable.name), observable
+		for n,m in self.iter_models(prefix):
+			yield from m.iter_observables()
 
 

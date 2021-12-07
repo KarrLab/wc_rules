@@ -5,44 +5,45 @@ from .scheduler import NextReactionMethod
 
 from attrdict import AttrDict
 from collections import ChainMap, deque
-from types import MethodType
-import inspect
 
+import inspect
+from ..utils.data import NestedDict
+from .utils import VariableDictionary
 
 class Simulator:
 
 	default_matcher_methods = default_rete_net_methods
 	default_scheduler = NextReactionMethod
 
-	def __init__(self,model,data,matcher=None,scheduler=None,timer_args={},writer=None):
+	def __init__(self,model,data,timer_args={},writer=None):
 
 		self.state = SimulationState()
-		self.matcher = ReteNet() if matcher is None else matcher
+		self.variables = VariableDictionary()
+		self.matcher = self.default_matcher()
 		self.timer = Timer(**timer_args)
-		self.scheduler = scheduler if scheduler is not None else NextReactionMethod()
+		self.scheduler = self.default_scheduler()
 		self.writer = writer if writer is not None else Writer()
 
-		self.configure_matcher()
 		self.load_model(model,data)
 		self.model = model
 		self.data = data
-		
-	def configure_matcher(self,methods=None,overwrite=True):
-		methods = self.default_matcher_methods if methods is None else methods
+
+	def default_matcher(self,methods=None):
+		if methods is None:
+			methods = self.default_matcher_methods
+		net = ReteNet()
 		for method in methods:
-			m = MethodType(method, self.matcher)
-			assert overwrite or method.__name__ not in dir(self.matcher)
-			setattr(self.matcher,method.__name__,m)	
-		return self
+			net.configure(method)
+		return net
 
 	def load_model(self,model,data):
+		self.matcher.initialize_start()
+		self.matcher.initialize_end()
 		for rname,rule in model.iter_rules():
-			datapath = rname.split('.')[:-1]
-			self.matcher.initialize_rule(rule, rname, data.get(datapath))
+			d = NestedDict.get(data,rname.split('.')[:-1])
+			self.matcher.initialize_rule(rule, rname, d)
 		return self
 				
-
-
 	def show_matcher_configuration(self):
 		return [x[0] for x in inspect.getmembers(self.matcher, predicate=inspect.ismethod)]
 

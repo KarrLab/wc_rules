@@ -86,7 +86,7 @@ def function_node_rule(net,node,elem):
 		old = node.state.cache
 		node.state.cache = new = node.data.propensity.exec(node.data.reactants,node.data.helpers,node.data.parameters)
 		if old != new:
-			node.state.outgoing.append({'source':node.core,'propensity':node.state.cache,'action':'NotifyUpdatedRule'})
+			node.state.outgoing.append({'source':node.core,'action':'NotifyUpdatedRule'})
 	return net
 
 def function_channel_pass(net,channel,elem):
@@ -186,6 +186,16 @@ def function_sample_rule(net,rname):
 	for var, pstate in rule.data.reactants.items():
 		sample[var] = AttrDict(pstate.sample_cache())
 	return sample
+
+def function_channel_update_variable(net,channel,elem):
+	source = net.get_node(core=channel.source)
+	target = net.get_node(core=channel.target)
+	value = channel.data.fn(source)
+	name = channel.data.name
+	vartype = channel.data.vartype
+	target.state.incoming.append({'action':'UpdateVariable','name':name,'value':value,'vartype':vartype})
+	return net
+
 	
 
 default_functionalization_methods = [method for name,method in globals().items() if name.startswith('function_')]

@@ -4,6 +4,30 @@ from collections import deque
 class SimulationState(DictLike):
 	pass
 
+class VariableDictionary:
+
+	def __init__(self):
+		self._dict = dict()
+		self.updated = set()
+		self.vartypes = dict()
+
+	def update(self,variable,vartype,value=None):
+		# do not use None as a legal value
+		# it is to be used only for manually updating self.updated
+		if variable not in self._dict:
+			self.vartypes[variable] = vartype
+		if value is not None:
+			self._dict[variable] = value
+		self.updated.add(variable)
+		return self
+
+	def retrieve(self,variable,vartype):
+		return self._dict[variable]
+
+	def flush(self):
+		self.updated = set()
+		return self
+
 class Timer:
 
 	def __init__(self,start=0.0,end=float('inf'),current=None):
