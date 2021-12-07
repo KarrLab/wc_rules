@@ -94,12 +94,3 @@ class Pattern:
 	def make_executable_constraint(self,s):
 		return initialize_from_string(s,(Constraint,Computation))
 
-
-			
-class SynthesisPattern:
-
-	def __init__(self,prototype):
-		err = "FactoryPattern must be initialized from a GraphContainer with a connected graph."
-		assert isinstance(prototype,GraphContainer) and prototype.validate_connected(), err
-		self.prototype = prototype
-

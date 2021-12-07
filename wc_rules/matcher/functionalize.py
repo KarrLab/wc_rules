@@ -84,8 +84,10 @@ def function_node_pattern(net,node,elem):
 def function_node_rule(net,node,elem):
 	if elem['action']=='UpdateRule':
 		old = node.state.cache
+		print(node.data.propensity.code)
 		node.state.cache = new = node.data.propensity.exec(node.data.reactants,node.data.helpers,node.data.parameters)
 		if old != new:
+			print(new)
 			node.state.outgoing.append({'source':node.core,'action':'NotifyUpdatedRule'})
 	return net
 

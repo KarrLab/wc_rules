@@ -47,16 +47,28 @@ class ReteNodeState:
 		return self
 
 	def count(self,**elem):
+		print(f'elem:{elem}')
 		return len(self.filter(**elem))
 
 	def sample_cache(self):
 		return dict(Record.itemize(random.choice(self.filter())))
 		
+class ReteNodeStateWrapper:
+
+	def __init__(self,target,mapping=None):
+		self.target = target
+		self.mapping = mapping
+
+	def __getattr__(self,name):
+		def fn():
+			return getattr(self.target,name)()
+		return fn
+
 
 class ReteNet:
 
 	def __init__(self):
-		self.nodes = initialize_database(['type','core','data','state','num'])
+		self.nodes = initialize_database(['type','core','data','state','wrapper','num'])
 		self.channels = initialize_database(['type','source','target','data','num'])
 		self.nodemax = 0
 		self.channelmax = 0
@@ -71,8 +83,15 @@ class ReteNet:
 		record = {k:kwargs.pop(k) for k in ['type','core']}
 		record.update(dict(data=kwargs,state=ReteNodeState()))
 		record['num'] = self.nodemax
+		record['wrapper'] = ReteNodeStateWrapper(record['state'])
 		Record.insert(self.nodes,record)
 		self.nodemax += 1
+		return self
+
+	def wrap_to_alias(self,core,target,mapping):
+		node = self.get_node(core=core)
+		wrapper = ReteNodeStateWrapper(self.get_node(core=target).wrapper,mapping)
+		node['wrapper'] = wrapper
 		return self
 
 	def get_node(self,**kwargs):
@@ -134,8 +153,7 @@ class ReteNet:
 			s += [f"Node {node.get('num')}\n{printfn(node)}"]
 			if state:
 				s1 = node['state'].pprint()
-				if s1:
-					s[-1] += f'\n{SEP}state:\n{s1}'
+				s[-1] += f'\n{SEP}state:\n{s1}'
 
 		for channel in self.channels:
 			s += [f"Channel {channel.get('num')}\n{Record.print(channel,ignore_keys=['num'])}"]

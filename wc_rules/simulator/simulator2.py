@@ -10,6 +10,8 @@ import inspect
 from ..utils.data import NestedDict
 from .utils import VariableDictionary
 
+from ..utils.random import RandomIDXGenerator
+
 class Simulator:
 
 	default_matcher_methods = default_rete_net_methods
@@ -43,7 +45,19 @@ class Simulator:
 			d = NestedDict.get(data,rname.split('.')[:-1])
 			self.matcher.initialize_rule(rule, rname, d)
 		return self
-				
+
+	def load_state(self,counts,seed=0):
+		gen = RandomIDXGenerator(seed)
+		for factory_pattern,num in counts.items():
+			for action in factory_pattern.generate_actions(generator=gen,count=num):
+				self.execute_primary_action(action)
+		return self
+
+	def execute_primary_action(self,action):
+		tokens = action.execute(self.state)
+		self.matcher.process(tokens)
+		return self
+
 	def show_matcher_configuration(self):
 		return [x[0] for x in inspect.getmembers(self.matcher, predicate=inspect.ismethod)]
 

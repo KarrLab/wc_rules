@@ -7,3 +7,15 @@ idgen.seed(0)
 
 def generate_id():
     return str(uuid.UUID(int=idgen.getrandbits(128)))
+
+
+class RandomIDXGenerator:
+
+    def __init__(self,seed=0):
+        self.seed = seed
+        self.idgen = random.Random()
+        self.idgen.seed(0)
+
+    def generate_id(self):
+        return str(uuid.UUID(int=self.idgen.getrandbits(128)))
+

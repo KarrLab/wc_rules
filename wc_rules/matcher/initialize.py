@@ -99,6 +99,7 @@ def initialize_pattern(net,pattern,parameters = dict()):
 		# is an alias for its parent
 		net.add_node(type='pattern',core=pattern,symmetry_group=pdict.symmetry_group,exprgraph = graph,alias=True)
 		net.add_channel(type='alias',source=pdict.parent,target=pattern,mapping=pdict.mapping)
+		net.wrap_to_alias(core=pattern,target=pdict.parent,mapping=pdict.mapping)
 
 	if len(constraints) > 0:
 		
@@ -150,7 +151,7 @@ def initialize_pattern(net,pattern,parameters = dict()):
 
 		# print(constraint_pattern_relationships)
 		# print(constraint_attr_relationships)
-		resolved_helpers = {h:net.get_node(core=helpers[h]).state for h in helpers}
+		resolved_helpers = {h:net.get_node(core=helpers[h]).wrapper for h in helpers}
 		net.add_node(type='pattern',core=pattern,symmetry_group=symmetry_group,exprgraph=graph,helpers=resolved_helpers,constraints=constraint_objects,parameters=parameters)
 		names = [x for x in pattern.namespace if isinstance(pattern.namespace[x],type) and issubclass(pattern.namespace[x],BaseClass)]
 		net.initialize_cache(pattern,names)
@@ -181,8 +182,8 @@ def initialize_rule(net,rule,name,parameters=dict()):
 		if var in propensity.keywords:
 			affects_propensity.append(p)
 
-	reactants = {var:net.get_node(core=p).state for var,p in rule.reactants.items()}
-	helpers = {var:net.get_node(core=p).state for var,p in rule.helpers.items()}
+	reactants = {var:net.get_node(core=p).wrapper for var,p in rule.reactants.items()}
+	helpers = {var:net.get_node(core=p).wrapper for var,p in rule.helpers.items()}
 
 	actions = rule.get_action_executables()
 	
