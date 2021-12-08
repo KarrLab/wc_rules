@@ -47,7 +47,7 @@ class ReteNodeState:
 		return self
 
 	def count(self,**elem):
-		print(f'elem:{elem}')
+		#print(len(self.filter(**elem)))
 		return len(self.filter(**elem))
 
 	def sample_cache(self):
@@ -64,7 +64,11 @@ class ReteNodeStateWrapper:
 			return getattr(self.target,name)()
 		return fn
 
-
+	def set(self,target,mapping=None):
+		self.target = target
+		self.mapping = mapping
+		return self
+		
 class ReteNet:
 
 	def __init__(self):
@@ -86,12 +90,6 @@ class ReteNet:
 		record['wrapper'] = ReteNodeStateWrapper(record['state'])
 		Record.insert(self.nodes,record)
 		self.nodemax += 1
-		return self
-
-	def wrap_to_alias(self,core,target,mapping):
-		node = self.get_node(core=core)
-		wrapper = ReteNodeStateWrapper(self.get_node(core=target).wrapper,mapping)
-		node['wrapper'] = wrapper
 		return self
 
 	def get_node(self,**kwargs):

@@ -99,8 +99,10 @@ def initialize_pattern(net,pattern,parameters = dict()):
 		# is an alias for its parent
 		net.add_node(type='pattern',core=pattern,symmetry_group=pdict.symmetry_group,exprgraph = graph,alias=True)
 		net.add_channel(type='alias',source=pdict.parent,target=pattern,mapping=pdict.mapping)
-		net.wrap_to_alias(core=pattern,target=pdict.parent,mapping=pdict.mapping)
-
+		parent_wrapper = net.get_node(core=pdict.parent).wrapper
+		child_wrapper = net.get_node(core=pattern).wrapper
+		child_wrapper.set(target=parent_wrapper,mapping=pdict.mapping)
+		
 	if len(constraints) > 0:
 		
 		for var,p in helpers.items():

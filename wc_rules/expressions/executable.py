@@ -5,6 +5,7 @@ from ..schema.actions import RollbackAction, TerminateAction, PrimaryAction, Com
 from .builtins import ordered_builtins, global_builtins
 from .exprgraph import dfs_make
 from collections import ChainMap
+import inspect
 
 def register_builtin(name,fn,ordered_arguments=True):
 	global ordered_builtins
@@ -18,7 +19,7 @@ def register_builtin(name,fn,ordered_arguments=True):
 class ExecutableExpression:
 	# is a fancy lambda function that can be executed
 	start = None
-	builtins = {}
+	builtins = global_builtins
 
 	def __init__(self,keywords,builtins,fn,code,deps):
 		self.keywords = keywords
@@ -46,11 +47,12 @@ class ExecutableExpression:
 			keywords = list(deps.variables)
 
 			# this step figures what builtins to use, picks them from the global_builtins list
-			builtins = subdict(cls.builtins, ['__builtins__'] + list(deps.builtins))
+			#builtins = subdict(cls.builtins, ['__builtins__'] + list(deps.builtins))
+			#builtins = subdict(global_builtins,['__builtins__'] + list(deps.builtins))
 			code2 = 'lambda {vars}: {code}'.format(vars=','.join(keywords),code=code)
 			try:
-				fn = eval(code2,builtins,{})
-				x = cls(keywords=keywords,builtins=builtins,fn=fn,code=code,deps=deps)
+				fn = eval(code2,global_builtins)
+				x = cls(keywords=keywords,builtins=global_builtins,fn=fn,code=code,deps=deps)
 			except:
 				x = None
 		except:

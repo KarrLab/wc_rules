@@ -4,6 +4,7 @@ from collections import deque, Counter, ChainMap
 from ..utils.collections import merge_dicts_strictly, is_one_to_one
 from copy import deepcopy
 from attrdict import AttrDict
+from ..expressions.builtins import global_builtins
 
 def function_node_start(net,node,elem):
 	node.state.outgoing.append(elem)
@@ -84,10 +85,10 @@ def function_node_pattern(net,node,elem):
 def function_node_rule(net,node,elem):
 	if elem['action']=='UpdateRule':
 		old = node.state.cache
-		print(node.data.propensity.code)
+		#print(node.data.reactants['rAB'].target.pprint())
 		node.state.cache = new = node.data.propensity.exec(node.data.reactants,node.data.helpers,node.data.parameters)
+
 		if old != new:
-			print(new)
 			node.state.outgoing.append({'source':node.core,'action':'NotifyUpdatedRule'})
 	return net
 

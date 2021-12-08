@@ -47,9 +47,9 @@ class Simulator:
 		return self
 
 	def load_state(self,counts,seed=0):
-		gen = RandomIDXGenerator(seed)
-		for factory_pattern,num in counts.items():
-			for action in factory_pattern.generate_actions(generator=gen,count=num):
+		idxgen = RandomIDXGenerator(seed)
+		for graph,num in counts:
+			for action in graph.generate_actions(generator=idxgen,count=num):
 				self.execute_primary_action(action)
 		return self
 
