@@ -38,6 +38,7 @@ class Simulator:
 			net.configure(method)
 		return net
 
+
 	def load_model(self,model,data):
 		self.matcher.initialize_start()
 		self.matcher.initialize_end()

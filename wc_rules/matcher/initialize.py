@@ -151,8 +151,8 @@ def initialize_pattern(net,pattern,parameters = dict()):
 		helper_channels = set([(pname,mapping) for _,pname,mapping in constraint_pattern_relationships])
 		attr_channels = set([(var,attr) for _,var,attr in constraint_attr_relationships])	
 
-		# print(constraint_pattern_relationships)
-		# print(constraint_attr_relationships)
+		#print(constraint_pattern_relationships)
+		#print(constraint_attr_relationships)
 		resolved_helpers = {h:net.get_node(core=helpers[h]).wrapper for h in helpers}
 		net.add_node(type='pattern',core=pattern,symmetry_group=symmetry_group,exprgraph=graph,helpers=resolved_helpers,constraints=constraint_objects,parameters=parameters)
 		names = [x for x in pattern.namespace if isinstance(pattern.namespace[x],type) and issubclass(pattern.namespace[x],BaseClass)]

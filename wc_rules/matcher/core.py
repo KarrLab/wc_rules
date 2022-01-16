@@ -54,6 +54,11 @@ class ReteNodeState:
 		return dict(Record.itemize(random.choice(self.filter())))
 		
 class ReteNodeStateWrapper:
+	# wrapper is useful to manage aliases
+	# typically a node's wrapper maps to the node's state with 
+	# an identity mapping
+	# if an alias, then the wrapper points to the parent's state
+	# and the mapping is used to convert in both directions
 
 	def __init__(self,target,mapping=None):
 		self.target = target
@@ -71,9 +76,12 @@ class ReteNodeStateWrapper:
 		
 class ReteNet:
 
+	# tracer is used for capturing output of specific nodes
+
 	def __init__(self):
 		self.nodes = initialize_database(['type','core','data','state','wrapper','num'])
 		self.channels = initialize_database(['type','source','target','data','num'])
+		self.tracer = False
 		self.nodemax = 0
 		self.channelmax = 0
 
@@ -81,6 +89,10 @@ class ReteNet:
 		m = MethodType(method, self)
 		assert overwrite or method.__name__ not in dir(self)
 		setattr(self,method.__name__,m)
+		return self
+
+	def configure_tracer(self,nodes=[],channels=[]):
+		self.tracer = AttrDict(nodes=nodes,channels=channels)
 		return self
 
 	def add_node(self,**kwargs):
@@ -141,31 +153,56 @@ class ReteNet:
 		includes = Record.retrieve_minus(self.channels,include_kwargs,exclude_kwargs) if exclude_kwargs is not None else Record.retrieve(self.channels,include_kwargs)
 		return [AttrDict(ch) for ch in includes]
 
+	def pprint_node(self,num,state=False):
+		s = []
+		node = self.get_node(num=num)
+		desc = Record.print(node,ignore_keys=['state','num'])
+		s += [f"Node {num}\n{desc}"]
+		if state:
+			s1 = node['state'].pprint()
+			s[-1] += f'\n{SEP}state:\n{s1}'
+		return '\n'.join(s)
+
+	def trace_node(self,num):
+		return self.tracer and num in self.tracer.nodes
+	
+	def trace_channel(self,num):
+		return self.tracer and num in self.tracer.channels
+			
+	def trace_elem(self,elem):
+		if self.tracer:
+			print
+
+	def pprint_channel(self,num):
+		channel = self.get_channel(num=num)
+		desc = Record.print(channel,ignore_keys=['num'])
+		return f"Channel {num}\n{desc}"
+
 	def pprint(self,state=False):
 		s = []
-
-		def printfn(x):
-			return Record.print(node,ignore_keys=['state','num'])
-
 		for node in self.nodes:
-			s += [f"Node {node.get('num')}\n{printfn(node)}"]
-			if state:
-				s1 = node['state'].pprint()
-				s[-1] += f'\n{SEP}state:\n{s1}'
-
+			s.append(self.pprint_node(node.get('num'),state=state))
 		for channel in self.channels:
-			s += [f"Channel {channel.get('num')}\n{Record.print(channel,ignore_keys=['num'])}"]
+			s.append(self.pprint_channel(channel.get('num')))
 		return '\n'.join(s)
 
 	def sync(self,node):
-		log.debug(f'Syncing node {node.core}')
+		num = node.get('num')
+		trace = self.trace_node(num)
 		if node.state.outgoing:
+			if trace:
+				print(self.pprint_node(num,state=True))
 			log.debug(f'{SEP}Outgoing: {node.state.outgoing}')
 			elem = node.state.outgoing.popleft()
+			if trace:
+				print(f'Popping elem {elem}')
 			channels = self.get_outgoing_channels(node.core)
 			for channel in channels:
+				chnum = channel.get('num')
 				log.debug(f'{SEP}Channel: {channel}')
 				method = getattr(self,f'function_channel_{channel.type}')
+				if self.trace_channel(chnum):
+					print(self.pprint_channel(chnum))
 				method(channel,elem)
 				self.sync(self.get_node(core=channel.target))
 			self.sync(node)
@@ -175,6 +212,7 @@ class ReteNet:
 			method = getattr(self,f'function_node_{node.type}')
 			method(node,elem)
 			self.sync(node)
+
 		return self
 
 	def process(self,tokens):

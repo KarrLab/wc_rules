@@ -5,36 +5,92 @@ from ..utils.collections import merge_dicts_strictly, is_one_to_one
 from copy import deepcopy
 from attrdict import AttrDict
 from ..expressions.builtins import global_builtins
+from abc import ABC, abstractmethod
 
-def function_node_start(net,node,elem):
-	node.state.outgoing.append(elem)
-	return net
+class Behavior(ABC):
 
-def function_node_end(net,node,elem):
-	node.state.cache.append(elem)
-	return
+	# an object to indicate a callable behavior on the rete-net
+	callsign = ''
 
-def function_node_class(net,node,elem):
-	if issubclass(elem['_class'],node.core):
+	@abstractmethod
+	def __call__(self,net,node_or_channel,elem):
+		return net
+
+class NodeBehavior(Behavior):
+	@abstractmethod
+	def __call__(self,net,node,elem):
+		return net
+
+class StartNode(NodeBehavior):
+	callsign = 'start'
+
+	def __call__(self,net,node,elem):
 		node.state.outgoing.append(elem)
-	return net
+		return net
 
-def function_node_collector(net,node,elem):
-	node.state.cache.append(elem)
-	return net
+class EndNode(NodeBehavior):
+	callsign = 'end'
+	def __call__(self,net,node,elem):
+		node.state.cache.append(elem)
+		return
 
-def function_node_canonical_label(net,node,elem):
-	clabel = node.core
-	entry, action = [elem[x] for x in ['entry','action']]
-	
-	if action == 'AddEntry':
+class ClassNode(NodeBehavior):
+	callsign = 'class'
+	def __call__(self,net,node,elem):
+		if issubclass(elem['_class'],node.core):
+			node.state.outgoing.append(elem)
+		return net
+
+class CollectorNode(NodeBehavior):
+	callsign = 'collector'
+	def __call__(self,net,node,elem):
+		node.state.cache.append(elem)
+		return net	
+
+class NodeBehaviorByAction(NodeBehavior):
+	callsign = None
+	actions = set()
+	# each behavior_{action} method must return 	
+	# either an empty list
+	# or a list of entries to be appended to node.state.outgoing
+	def __call__(self,net,node,elem):
+		action = elem.get('action',None)
+		if action in self.actions:
+			beh = getattr(self,f'behavior_{action}',None)
+			incoming,outgoing = beh(net,node,elem['entry'])
+			node.state.incoming.extend(incoming)
+			node.state.outgoing.extend(outgoing)
+		return net
+
+class CanonicalLabelNode(NodeBehaviorByAction):
+	callsign = 'canonical_label'
+	actions = set(['AddEntry','RemoveEntry'])
+
+	def behavior_AddEntry(self,net,node,entry):
+		clabel = node.core
 		assert net.filter_cache(clabel,entry) == []
 		net.insert_into_cache(clabel,entry)
-	if action == 'RemoveEntry':
-		assert net.filter_cache(clabel,entry) != []
-		net.remove_from_cache(clabel,entry)
-	node.state.outgoing.append({'entry':entry,'action':action})
-	return net
+		return [],[{'entry':entry,action:'AddEntry'}]
+
+	def behavior_RemoveEntry(self,net,node,entry):
+		clabel = node.core
+		assert net.filter_cache(clabel,entry) == []
+		net.insert_into_cache(clabel,entry)
+		return [], [{'entry':entry,action:'RemoveEntry'}]
+
+
+# def function_node_canonical_label(net,node,elem):
+# 	clabel = node.core
+# 	entry, action = [elem[x] for x in ['entry','action']]
+	
+# 	if action == 'AddEntry':
+# 		assert net.filter_cache(clabel,entry) == []
+# 		net.insert_into_cache(clabel,entry)
+# 	if action == 'RemoveEntry':
+# 		assert net.filter_cache(clabel,entry) != []
+# 		net.remove_from_cache(clabel,entry)
+# 	node.state.outgoing.append({'entry':entry,'action':action})
+# 	return net
 
 def run_match_through_constraints(match,helpers,parameters,constraints):
 	extended_match = ChainMap(match,helpers,parameters)
@@ -46,41 +102,82 @@ def run_match_through_constraints(match,helpers,parameters,constraints):
 		elif not value:
 			return None
 	return match
-		
-def function_node_pattern(net,node,elem):
-	if node.data.get('alias',False):
-		node.state.outgoing.append(elem)
+
+class PatternNode(NodeBehavior):
+	callsign = 'pattern'
+	actions = set(['AddEntry','RemoveEntry','UpdateEntry'])
+
+	def __call__(self,net,node,elem):
+		if node.data.get('alias',False):
+			node.state.outgoing.append(elem)
+		else:
+			super().__call__(net,node,elem)
 		return net
-	entry, action= [elem[x] for x in ['entry','action']]
-	outgoing_entries = []
-	if action == 'AddEntry':
+
+	def behavior_AddEntry(self,net,node,entry):
 		match = {k:v for k,v in entry.items()}
 		match = run_match_through_constraints(match, node.data.helpers, node.data.parameters, node.data.constraints)
 		if match is not None:
 			net.insert_into_cache(node.core,match)
-			node.state.outgoing.append({'entry':match,'action':action})
-	if action == 'RemoveEntry':
+			return [],[{'entry':match,'action':action}]
+		return [],[]
+
+	def behavior_RemoveEntry(self,net,node,entry):
 		elems = net.filter_cache(node.core,entry)
 		net.remove_from_cache(node.core,entry)
-		for e in elems:
-			node.state.outgoing.append({'entry':e,'action':action})
-		
-	if action == 'UpdateEntry':
+		return [],[{'entry':e,'action':action} for e in elems]
+
+	def behavior_UpdateEntry(self,net,node,entry):
 		# update entry is resolved to AddEntry or RemoveEntry and inserted back into incoming queue
 		# ReteNet.sync(node) runs until incoming is empty
-		
 		match = {k:v for k,v in entry.items()}
 		existing_elems = net.filter_cache(node.core,entry)
 		match = run_match_through_constraints(match,node.data.helpers,node.data.parameters,node.data.constraints)
+		# do this!!!!!
+		# update_entry shd typically be from attr nodes
+		# as well as edge nodes
+		incoming = []
 		if match is None:
-			if len(existing_elems) > 0:
-				for e in existing_elems:
-					node.state.incoming.append({'entry':e,'action':'RemoveEntry'})
-		elif match is not None:
+			incoming = [{'entry':e,'action':'RemoveEntry'} for e in elems]
+		else:
 			if len(existing_elems) == 0:
-				node.state.incoming.append({'entry':match,'action':'AddEntry'})
+				incoming = [{'entry':match,'action':'AddEntry'}]
+		return incoming,[]
 
-	return net
+		
+# def function_node_pattern(net,node,elem):
+# 	if node.data.get('alias',False):
+# 		node.state.outgoing.append(elem)
+# 		return net
+# 	entry, action= [elem[x] for x in ['entry','action']]
+# 	outgoing_entries = []
+# 	if action == 'AddEntry':
+# 		match = {k:v for k,v in entry.items()}
+# 		match = run_match_through_constraints(match, node.data.helpers, node.data.parameters, node.data.constraints)
+# 		if match is not None:
+# 			net.insert_into_cache(node.core,match)
+# 			node.state.outgoing.append({'entry':match,'action':action})
+# 	if action == 'RemoveEntry':
+# 		elems = net.filter_cache(node.core,entry)
+# 		net.remove_from_cache(node.core,entry)
+# 		for e in elems:
+# 			node.state.outgoing.append({'entry':e,'action':action})
+		
+# 	if action == 'UpdateEntry':
+# 		# update entry is resolved to AddEntry or RemoveEntry and inserted back into incoming queue
+# 		# ReteNet.sync(node) runs until incoming is empty
+		
+# 		match = {k:v for k,v in entry.items()}
+# 		existing_elems = net.filter_cache(node.core,entry)
+# 		match = run_match_through_constraints(match,node.data.helpers,node.data.parameters,node.data.constraints)
+# 		if match is None:
+# 			if len(existing_elems) > 0:
+# 				for e in existing_elems:
+# 					node.state.incoming.append({'entry':e,'action':'RemoveEntry'})
+# 		elif match is not None:
+# 			if len(existing_elems) == 0:
+# 				node.state.incoming.append({'entry':match,'action':'AddEntry'})
+# 	return net
 
 def function_node_rule(net,node,elem):
 	if elem['action']=='UpdateRule':
@@ -153,7 +250,6 @@ def function_channel_parent(net,channel,elem):
 
 def function_channel_update_pattern(net,channel,elem):
 	action = elem['action']
-	
 	if action in  ['AddEdge','RemoveEdge','SetAttr','AddEntry','RemoveEntry']:
 		# it asks for parent of the target
 		# then filters the parent cache to get candidate entries for target
@@ -201,4 +297,17 @@ def function_channel_update_variable(net,channel,elem):
 
 	
 
-default_functionalization_methods = [method for name,method in globals().items() if name.startswith('function_')]
+#default_functionalization_methods = [method for name,method in globals().items() if name.startswith('function_')]
+def subclass_iter(_class):
+	subs = _class.__subclasses__()
+	for sub in subs:
+		yield sub
+		for x in subclass_iter(sub):
+			yield x
+
+default_functionalization_methods = []
+for sub in subclass_iter(NodeBehavior):
+	if sub.callsign is not None:
+		fnobj = sub()
+		fnobj.__name__ = f'function_node_{sub.callsign}'
+		default_functionalization_methods.append(fnobj)
