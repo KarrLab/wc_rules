@@ -27,7 +27,22 @@ class ReteNodeState:
 		self.cache = None
 		self.incoming = deque()
 		self.outgoing = deque()
-		
+
+	def flush_incoming(self):
+		self.incoming = deque()
+		return self
+	
+	def flush_outgoing(self):
+		self.outgoing = deque()
+		return self
+
+	def length_characteristics(self):
+		if self.cache is None:
+			lencache = None
+		else:
+			lencache = len(self.cache)
+		return [len(self.incoming),len(self.outgoing), lencache]
+	
 	def pprint(self,nsep=2):
 		d = dict(incoming=self.incoming,outgoing=self.outgoing)
 		try:
@@ -76,12 +91,9 @@ class ReteNodeStateWrapper:
 		
 class ReteNet:
 
-	# tracer is used for capturing output of specific nodes
-
 	def __init__(self):
 		self.nodes = initialize_database(['type','core','data','state','wrapper','num'])
 		self.channels = initialize_database(['type','source','target','data','num'])
-		self.tracer = False
 		self.nodemax = 0
 		self.channelmax = 0
 
@@ -89,10 +101,6 @@ class ReteNet:
 		m = MethodType(method, self)
 		assert overwrite or method.__name__ not in dir(self)
 		setattr(self,method.__name__,m)
-		return self
-
-	def configure_tracer(self,nodes=[],channels=[]):
-		self.tracer = AttrDict(nodes=nodes,channels=channels)
 		return self
 
 	def add_node(self,**kwargs):
@@ -104,10 +112,20 @@ class ReteNet:
 		self.nodemax += 1
 		return self
 
+	def add_behavior(self,method,name,overwrite=True):
+		method.__name__ = name
+		m = MethodType(method, self)
+		assert overwrite or name not in dir(self)
+		setattr(self,name,m)
+		return self
+
 	def get_node(self,**kwargs):
 		node = Record.retrieve_exactly(self.nodes,kwargs)
 		return AttrDict(node) if node else None
 
+	def list_behaviors(self):
+		return {x:getattr(self,x) for x in dir(self) if x.startswith('function_')}
+		
 	def initialize_cache(self,core,variables=None):
 		node = self.get_node(core=core)
 		if variables is not None:
@@ -162,16 +180,6 @@ class ReteNet:
 			s1 = node['state'].pprint()
 			s[-1] += f'\n{SEP}state:\n{s1}'
 		return '\n'.join(s)
-
-	def trace_node(self,num):
-		return self.tracer and num in self.tracer.nodes
-	
-	def trace_channel(self,num):
-		return self.tracer and num in self.tracer.channels
-			
-	def trace_elem(self,elem):
-		if self.tracer:
-			print
 
 	def pprint_channel(self,num):
 		channel = self.get_channel(num=num)

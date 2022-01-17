@@ -7,45 +7,46 @@ from attrdict import AttrDict
 from ..expressions.builtins import global_builtins
 from abc import ABC, abstractmethod
 
+class ActionSuperSet:
+
+	def __contains__(self,x):
+		return True
+
 class Behavior(ABC):
 
 	# an object to indicate a callable behavior on the rete-net
 	callsign = ''
+	actions = None
 
-	@abstractmethod
 	def __call__(self,net,node_or_channel,elem):
+		if elem['action'] in actions:
+			return self.do(net,node_or_channel,elem)
 		return net
+
+	def entry_check(self,elem):
+		return self.actions is None or elem['action'] in self.actions
 
 class NodeBehavior(Behavior):
-	@abstractmethod
-	def __call__(self,net,node,elem):
-		return net
+	
+	pass
 
 class StartNode(NodeBehavior):
 	callsign = 'start'
 
-	def __call__(self,net,node,elem):
+	def do(self,net,node,elem):
 		node.state.outgoing.append(elem)
 		return net
 
-class EndNode(NodeBehavior):
-	callsign = 'end'
-	def __call__(self,net,node,elem):
-		node.state.cache.append(elem)
-		return
-
 class ClassNode(NodeBehavior):
 	callsign = 'class'
-	def __call__(self,net,node,elem):
+
+	def entry_check(self,node,elem):
+		return super().entry_check(elem) and issubclass(elem['_class'],node.core)
+	
+	def do(self,net,node,elem):
 		if issubclass(elem['_class'],node.core):
 			node.state.outgoing.append(elem)
 		return net
-
-class CollectorNode(NodeBehavior):
-	callsign = 'collector'
-	def __call__(self,net,node,elem):
-		node.state.cache.append(elem)
-		return net	
 
 class NodeBehaviorByAction(NodeBehavior):
 	callsign = None
@@ -62,6 +63,12 @@ class NodeBehaviorByAction(NodeBehavior):
 			node.state.outgoing.extend(outgoing)
 		return net
 
+	def add_entries(self,entries):
+		return [{'entry':e,'action':'AddEntry'} for e in entries]
+
+	def remove_entries(self,entries):
+		return [{'entry':e,'action':'RemoveEntry'} for e in entries]
+
 class CanonicalLabelNode(NodeBehaviorByAction):
 	callsign = 'canonical_label'
 	actions = set(['AddEntry','RemoveEntry'])
@@ -70,13 +77,13 @@ class CanonicalLabelNode(NodeBehaviorByAction):
 		clabel = node.core
 		assert net.filter_cache(clabel,entry) == []
 		net.insert_into_cache(clabel,entry)
-		return [],[{'entry':entry,action:'AddEntry'}]
+		return [],self.add_entries([entry])
 
 	def behavior_RemoveEntry(self,net,node,entry):
 		clabel = node.core
 		assert net.filter_cache(clabel,entry) == []
 		net.insert_into_cache(clabel,entry)
-		return [], [{'entry':entry,action:'RemoveEntry'}]
+		return [], self.remove_entries([entry])
 
 
 # def function_node_canonical_label(net,node,elem):
@@ -119,13 +126,13 @@ class PatternNode(NodeBehavior):
 		match = run_match_through_constraints(match, node.data.helpers, node.data.parameters, node.data.constraints)
 		if match is not None:
 			net.insert_into_cache(node.core,match)
-			return [],[{'entry':match,'action':action}]
+			return [],self.add_entries([match])
 		return [],[]
 
 	def behavior_RemoveEntry(self,net,node,entry):
 		elems = net.filter_cache(node.core,entry)
 		net.remove_from_cache(node.core,entry)
-		return [],[{'entry':e,'action':action} for e in elems]
+		return [],self.remove_entries(elems)
 
 	def behavior_UpdateEntry(self,net,node,entry):
 		# update entry is resolved to AddEntry or RemoveEntry and inserted back into incoming queue
@@ -136,12 +143,12 @@ class PatternNode(NodeBehavior):
 		# do this!!!!!
 		# update_entry shd typically be from attr nodes
 		# as well as edge nodes
-		incoming = []
 		if match is None:
-			incoming = [{'entry':e,'action':'RemoveEntry'} for e in elems]
+			incoming = self.remove_entries(elems)
+		elif len(existing_elems) == 0:
+			incoming = self.add_entries([match])
 		else:
-			if len(existing_elems) == 0:
-				incoming = [{'entry':match,'action':'AddEntry'}]
+			incoming = []
 		return incoming,[]
 
 		
@@ -189,10 +196,27 @@ def function_node_rule(net,node,elem):
 			node.state.outgoing.append({'source':node.core,'action':'NotifyUpdatedRule'})
 	return net
 
-def function_channel_pass(net,channel,elem):
-	target = net.get_node(core=channel.target)
-	target.state.incoming.append(elem)
-	return net
+
+class ChannelBehavior(Behavior):
+	@abstractmethod
+	def __call__(self,net,channel,elem):
+		return net
+
+	def resolve_source(self,net,channel):
+		return net.get_node(core=channel.source)
+	
+	def resolve_target(self,net,channel):
+		return net.get_node(core=channel.target)
+		
+
+class PassChannel(ChannelBehavior):
+	callsign = 'pass'
+
+	def __call__(self,net,channel,elem):
+		target = self.resolve_target(net,channel)
+		target.state.incoming.append(elem)
+		return net
+
 
 def function_channel_transform_node_token(net,channel,elem):
 	if elem['action'] in ['AddNode','RemoveNode']:
@@ -310,4 +334,9 @@ for sub in subclass_iter(NodeBehavior):
 	if sub.callsign is not None:
 		fnobj = sub()
 		fnobj.__name__ = f'function_node_{sub.callsign}'
+		default_functionalization_methods.append(fnobj)
+for sub in subclass_iter(ChannelBehavior):
+	if sub.callsign is not None:
+		fnobj = sub()
+		fnobj.__name__ = f'function_channel_{sub.callsign}'
 		default_functionalization_methods.append(fnobj)
