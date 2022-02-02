@@ -171,7 +171,6 @@ class PatternNode(NodeBehavior):
 # 			node.state.outgoing.append({'entry':e,'action':action})
 		
 # 	if action == 'UpdateEntry':
-# 		# update entry is resolved to AddEntry or RemoveEntry and inserted back into incoming queue
 # 		# ReteNet.sync(node) runs until incoming is empty
 		
 # 		match = {k:v for k,v in entry.items()}

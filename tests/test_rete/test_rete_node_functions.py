@@ -71,6 +71,7 @@ class TestReteNodeFunctions(unittest.TestCase):
 		self.assertTrue(len(net.filter_cache(clabel,{'a':g['x']})) == 0)
 		
 	def test_canonical_label_single_asymmetrical_edge(self):
+		# equivalent to testing CacheNode
 		g,nsyms = single_edge_asymmetric()
 		mapping, clabel, group = canonical_label(g)
 		net = ReteNet()
@@ -93,4 +94,25 @@ class TestReteNodeFunctions(unittest.TestCase):
 		self.assertEqual(node.state.length_characteristics(), [0,1,0])
 		self.assertTrue(len(net.filter_cache(clabel,{'a':g['x']})) == 0)
 
-	
+	def test_canonical_label_single_symmetrical_edge(self):
+		g,nsyms = single_edge_symmetric()
+		mapping, clabel, group = canonical_label(g)
+		net = ReteNet()
+		net.add_node(type='canonical_label',core=clabel,symmetry_group=group)
+		net.initialize_cache(clabel,clabel.names)
+		net.add_behavior(CanonicalLabelNode(),'function_node_canonical_label')
+		self.assertTrue('function_node_canonical_label' in net.list_behaviors())
+		
+		node = net.get_node(core=clabel)
+		self.assertEqual(node.state.length_characteristics(), [0,0,0])
+		
+		token = make_token({'a':g['e1'],'b':g['e2']},'AddEntry')
+		net.function_node_canonical_label(node,token)
+		self.assertEqual(node.state.length_characteristics(), [0,1,1])
+		self.assertTrue(len(net.filter_cache(clabel,{'a':g['e1']})) > 0)
+
+		node.state.flush_outgoing()
+		token = make_token({'a':g['e1']},'RemoveEntry')
+		net.function_node_canonical_label(node,token)
+		self.assertEqual(node.state.length_characteristics(), [0,1,0])
+		self.assertTrue(len(net.filter_cache(clabel,{'a':g['e1']})) == 0)

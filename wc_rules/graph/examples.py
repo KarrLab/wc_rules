@@ -34,7 +34,13 @@ def single_edge_asymmetric():
 	x = X('x',y=[Y('y')])
 	seed_node, nsyms = x, 1
 	g = GraphContainer(seed_node.get_connected())
-	return g,nsyms	
+	return g,nsyms
+
+def single_edge_symmetric():
+	x = E('e1',e=E('e2'))
+	seed_node, nsyms = x, 2
+	g = GraphContainer(seed_node.get_connected())
+	return g,nsyms
 
 def directed_square():
 	k = [K(x) for x in 'abcd']

@@ -5,7 +5,7 @@ import logging
 import os
 from types import MethodType
 
-from .dbase import initialize_database, Record, SEP
+from .dbase import initialize_database, Record, SEP, Database
 from .initialize import default_initialization_methods
 from .functionalize import default_functionalization_methods
 
@@ -92,7 +92,7 @@ class ReteNodeStateWrapper:
 class ReteNet:
 
 	def __init__(self):
-		self.nodes = initialize_database(['type','core','data','state','wrapper','num'])
+		self.nodes = Database(['type','core','data','state','wrapper','num'])
 		self.channels = initialize_database(['type','source','target','data','num'])
 		self.nodemax = 0
 		self.channelmax = 0
@@ -108,7 +108,7 @@ class ReteNet:
 		record.update(dict(data=kwargs,state=ReteNodeState()))
 		record['num'] = self.nodemax
 		record['wrapper'] = ReteNodeStateWrapper(record['state'])
-		Record.insert(self.nodes,record)
+		self.nodes.insert(record)
 		self.nodemax += 1
 		return self
 
@@ -120,8 +120,9 @@ class ReteNet:
 		return self
 
 	def get_node(self,**kwargs):
-		node = Record.retrieve_exactly(self.nodes,kwargs)
-		return AttrDict(node) if node else None
+		#node = Record.retrieve_exactly(self.nodes,kwargs)
+		return AttrDict(self.nodes.get(kwargs))
+		
 
 	def list_behaviors(self):
 		return {x:getattr(self,x) for x in dir(self) if x.startswith('function_')}

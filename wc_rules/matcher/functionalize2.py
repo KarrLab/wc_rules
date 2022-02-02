@@ -58,8 +58,7 @@ class ClassNode(NodeBehavior):
 	def do(self,net,node,elem):
 		return [], [elem]
 
-class CanonicalLabelNode(NodeBehavior):
-	callsign = 'canonical_label'
+class CacheNode(NodeBehavior):
 	actions = set(['AddEntry','RemoveEntry'])
 
 	def do_AddEntry(self,net,node,elem):
@@ -74,4 +73,11 @@ class CanonicalLabelNode(NodeBehavior):
 		net.remove_from_cache(clabel,entry)
 		return [], [elem]
 				
+class CanonicalLabelNode(CacheNode):
+	callsign = 'canonical_label'
 
+class PatternNode(CacheNode):
+	callsign = 'pattern'
+
+class RuleNode(CacheNode):
+	callsign = 'rule'

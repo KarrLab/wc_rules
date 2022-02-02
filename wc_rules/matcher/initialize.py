@@ -31,13 +31,6 @@ def initialize_class(net,_class):
 	net.add_channel(type='pass',source=parent,target=_class)
 	return net
 
-def initialize_collector(net,source,label):
-	idx = f'collector_{label}'
-	net.add_node(type='collector',core=idx)
-	net.get_node(type='collector',core=idx).state.cache = deque()
-	net.add_channel(type='pass',source=source,target=idx)
-	return net
-
 def initialize_canonical_label(net,clabel,symmetry_group):
 
 	if net.get_node(core=clabel) is not None:
