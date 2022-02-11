@@ -43,6 +43,16 @@ class NodeBehavior(Behavior):
 			node.state.outgoing.extend(outgoing)
 		return net
 
+class ChannelBehavior(Behavior):
+
+	def __call__(self,net,channel,elem):
+		if self.entry_check(channel,elem):
+			if isinstance(self.actions,SuperSet):
+				fn = getattr(self,'do')
+			else:	
+				fn = getattr(self,f"do_{elem['action']}")
+		return net
+
 class StartNode(NodeBehavior):
 	callsign = 'start'
 
