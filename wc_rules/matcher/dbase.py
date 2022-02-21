@@ -23,7 +23,7 @@ class Database:
 		self._db.insert(**record)
 		return self
 
-	def filter(self,include_kwargs,exclude_kwargs={},transform={}):
+	def filter(self,include_kwargs={},exclude_kwargs={},transform={}):
 		records = self._db(**include_kwargs)
 		if exclude_kwargs:	
 			records = [x for x in records if dict_overlap(x,exclude_kwargs)]
@@ -31,10 +31,11 @@ class Database:
 			records = {transform[k]:v for k,v in records.items()}			
 		return [clean_record(x) for x in records]
 
-	def get(self,include_kwargs):
+	def filter_one(self,include_kwargs):
 		records = self.filter(include_kwargs)
-		assert len(records)==1
-		return records[0]
+		if len(records)==1:
+			return records[0]
+		return None
 
 
 class Record:

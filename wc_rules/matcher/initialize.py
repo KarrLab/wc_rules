@@ -25,9 +25,9 @@ def initialize_end(net):
 def initialize_class(net,_class):
 	if net.get_node(core=_class) is not None:
 		return net
-	net.add_node(type='class',core=_class)
 	parent = _class.__mro__[1]
-	net.initialize_class(parent)
+	net.initialize_class(parent)	
+	net.add_node(type='class',core=_class)
 	net.add_channel(type='pass',source=parent,target=_class)
 	return net
 

@@ -114,6 +114,7 @@ class ReteNet:
 
 	def add_behavior(self,method,name,overwrite=True):
 		method.__name__ = name
+		method._is_behavior = True
 		m = MethodType(method, self)
 		assert overwrite or name not in dir(self)
 		setattr(self,name,m)
@@ -121,11 +122,14 @@ class ReteNet:
 
 	def get_node(self,**kwargs):
 		#node = Record.retrieve_exactly(self.nodes,kwargs)
-		return AttrDict(self.nodes.get(kwargs))
+		node = self.nodes.filter_one(kwargs)
+		if node is not None:
+			node = AttrDict(node)
+		return node
 		
 
 	def list_behaviors(self):
-		return {x:getattr(self,x) for x in dir(self) if x.startswith('function_')}
+		return {x:getattr(self,x) for x in dir(self) if getattr(method,'_is_behavior',False)}
 		
 	def initialize_cache(self,core,variables=None):
 		node = self.get_node(core=core)
