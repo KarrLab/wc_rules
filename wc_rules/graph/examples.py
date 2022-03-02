@@ -1,6 +1,8 @@
 from ..schema.attributes import *
 from ..schema.entity import Entity
 from .collections import GraphContainer
+from .canonical_labeling import canonical_label
+
 import random,math
 
 class X(Entity): 
@@ -127,9 +129,7 @@ def bowtie():
 	return g,nsyms
 
 
-def gen_all_graphs():
-
-	graphs = [
+graphs = [
 		single_node,
 		spoke,
 		directed_square,
@@ -140,4 +140,13 @@ def gen_all_graphs():
 		clique,
 		bowtie
 		]
+
+def gen_all_graphs():
 	return {g.__name__:g() for g in graphs}
+
+def get_graph(name):
+	return [f() for f in graphs if f.__name__==name][0][0]
+
+def get_canonical_label(name):
+	mapping, labeling, symmetry_group = canonical_label(get_graph(name))
+	return mapping,labeling,symmetry_group

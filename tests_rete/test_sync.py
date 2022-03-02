@@ -1,14 +1,11 @@
 from wc_rules.schema.base import BaseClass
 from wc_rules.schema.entity import Entity
-from wc_rules.matcher2.core import build_rete_net_class
-from wc_rules.matcher2.tokens import make_node_token
+from wc_rules.matcher.core import build_rete_net_class
+from wc_rules.matcher.token import make_node_token
 import unittest
 
 
 ReteNet = build_rete_net_class()
-
-class WrongEntity(BaseClass):
-	pass
 
 class TestSync(unittest.TestCase):
 
@@ -35,7 +32,7 @@ class TestSync(unittest.TestCase):
 		self.assertEqual(len(rn.nodes.filter()),3)
 		self.assertEqual(len(rn.channels.filter()),2)
 
-		token = make_node_token(Entity,'ent01','AddNode')
+		token = make_node_token(Entity,Entity('ent01'),'AddNode')
 		start.state.incoming.append(token)
 		self.assertEqual(start.state.length_characteristics(),[1,0,None])
 		self.assertEqual(receiver.state.length_characteristics(),[0,0,0])
@@ -50,7 +47,8 @@ class TestSync(unittest.TestCase):
 		rn.sync(start)
 		self.assertEqual(start.state.length_characteristics(),[0,0,None])
 		self.assertEqual(receiver.state.length_characteristics(),[0,0,1])
-		self.assertEqual(receiver.state.cache[0],token)
+		cached_token = receiver.state.cache[0]
+		self.assertEqual(cached_token,token.copy(cached_token.channel))
 
 
 

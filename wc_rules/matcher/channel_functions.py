@@ -1,6 +1,6 @@
 # see tokens.py for the different types of tokens
 
-class FunctionalizeChannels:
+class ChannelFunctions:
 
 	def function_channel_pass(self,channel,token):
 		node = self.get_node(core=channel.target)

@@ -1,7 +1,7 @@
 from wc_rules.schema.chem import Molecule
 from wc_rules.schema.base import BaseClass
 from wc_rules.schema.entity import Entity
-from wc_rules.matcher2.core import build_rete_net_class
+from wc_rules.matcher.core import build_rete_net_class
 import unittest
 
 ReteNet = build_rete_net_class()

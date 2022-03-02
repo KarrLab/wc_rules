@@ -1,13 +1,13 @@
 # see tokens.py for the different types of tokens
 
-class FunctionalizeNodes:
+class NodeFunctions:
 
 	def function_node_start(self,node,token):
 		self.function_node_class(node,token)
 		return self
 		
 	def function_node_class(self,node,token):
-		if issubclass(token['_class'],node.core):
+		if issubclass(token.classref,node.core):
 			node.state.outgoing.append(token)
 		return self
 

@@ -10,6 +10,7 @@ from typing import Tuple, Dict
 from backports.cached_property import cached_property
 from collections import defaultdict
 
+
 @dataclass(order=True,frozen=True)
 class Mapping:
     # Note: this is intended to replace BiMap
@@ -337,3 +338,17 @@ def quoted(x):
 
 def unzip(zipped):
     return list(zip(*zipped))
+
+class UniversalSet:
+
+    def __contains__(self,x):
+        return True
+
+class ExclusionSet:
+
+    def __init__(self,elems):
+        self._exclude = set(elems)
+
+    def __contains__(self,x):
+        return x not in self._exclude
+

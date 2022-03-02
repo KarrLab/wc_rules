@@ -1,0 +1,10 @@
+Node Types:
+
+Start (BaseClass) - Root of the Rete Net
+Class - Discriminates based on class 
+Receiver - Stores any tokens it receives.
+
+Channel Types:
+
+Pass - Passes any token through
+Transform - Convert to Cache Token
