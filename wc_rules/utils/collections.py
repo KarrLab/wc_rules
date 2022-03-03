@@ -10,7 +10,6 @@ from typing import Tuple, Dict
 from backports.cached_property import cached_property
 from collections import defaultdict
 
-
 @dataclass(order=True,frozen=True)
 class Mapping:
     # Note: this is intended to replace BiMap

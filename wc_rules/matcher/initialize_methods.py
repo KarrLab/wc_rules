@@ -1,5 +1,6 @@
 from ..schema.base import BaseClass
-from ..utils.collections import Mapping, UniversalSet
+from ..utils.collections import UniversalSet
+from .token import TokenTransformer
 
 class InitializationMethods:
 
@@ -18,11 +19,7 @@ class InitializationMethods:
 	# ...return self
 
 	def initialize_start(self):
-		self.add_node(type='start',core=BaseClass)
-		return self
-
-	def add_channel_pass(self,source,target):
-		self.add_channel(type='pass',source=source,target=target,allowed_token_actions=UniversalSet())		
+		self.add_node_start()
 		return self
 
 	def initialize_class(self,_class):
@@ -31,7 +28,7 @@ class InitializationMethods:
 
 		parent = _class.__mro__[1]
 		self.initialize_class(parent)
-		self.add_node(type='class',core=_class)
+		self.add_node_class(_class)
 		self.add_channel_pass(source=parent,target=_class)
 		return self
 
@@ -42,9 +39,8 @@ class InitializationMethods:
 		if self.node_exists(core=receiver_name):
 			return self
 
-		self.add_node(type='receiver',core=receiver_name,cachetype='deque')
-		self.add_channel_pass(source=node.core,target=receiver_name)
-
+		self.add_node_receiver(node.core,receiver_name)
+		self.add_channel_pass(node.core,receiver_name)
 		return self
 
 	def initialize_canonical_label(self,clabel,symmetry_group):
@@ -56,21 +52,10 @@ class InitializationMethods:
 
 	def initialize_canonical_label_single_node(self,clabel,symmetry_group):
 		self.initialize_class(clabel.classes[0])
-		node_args = dict(
-			type = 'canonical_label',
-			core = clabel,
-			symmetry_group=symmetry_group,
-			cachetype='database',
-			fields = clabel.names
-			)
-		self.add_node(**node_args)
-		channel_args = dict(
-			type = 'pass',
-			source = clabel.classes[0],
-			target = clabel
-			)
-		self.add_channel(**channel_args)
-		
+		self.add_node_canonical_label(clabel,symmetry_group)
+		datamap = {'ref':'a'}
+		actionmap = {'AddNode':'AddEntry','RemoveNode':'RemoveEntry'}
+		self.add_channel_transform(clabel.classes[0],clabel,datamap,actionmap)
 		return self
 
 

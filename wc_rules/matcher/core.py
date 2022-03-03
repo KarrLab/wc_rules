@@ -2,13 +2,14 @@ from types import MethodType
 from attrdict import AttrDict
 
 from .dbase import Database
+from .add_methods import AddMethods
 from .initialize_methods import InitializationMethods
 from .state import ReteNodeState
 from .node_functions import NodeFunctions
 from .channel_functions import ChannelFunctions
 from ..utils.collections import UniversalSet
 
-bases = [InitializationMethods, NodeFunctions, ChannelFunctions]
+bases = [AddMethods, InitializationMethods, NodeFunctions, ChannelFunctions]
 
 class ReteNetBase:
 
@@ -50,12 +51,12 @@ class ReteNetBase:
 		return self
 
 	def sync_outgoing(self,node):
-		elem = node.state.outgoing.popleft()
+		token = node.state.outgoing.popleft()
 		channels = self.get_channels(source=node.core)
 		for channel in channels:
-			if elem.action in channel.data.allowed_token_actions:
+			if token.action in channel.data.allowed_token_actions:
 				method = getattr(self,f'function_channel_{channel.type}')
-				method(channel,elem.copy(channel=channel.num))
+				method(channel,token)
 				self.sync(self.get_node(core=channel.target))
 		return self
 
@@ -73,7 +74,6 @@ class ReteNetBase:
 			self.sync_incoming(node)
 			self.sync(node)
 		return self
-
 
 
 

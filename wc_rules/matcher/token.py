@@ -3,18 +3,30 @@ from ..schema.base import BaseClass
 from typing import Dict, Tuple, Any
 
 # A token is something you pass TO the ReteNet
-@dataclass(eq=True)
-class Token:
+@dataclass(eq=True,frozen=True)
+class BasicToken:
 	classref: type
 	action: str
 	data: Dict
-	channel: int = -1
 
-	def copy(self,channel):
-		return replace(self,channel=channel)
+@dataclass(eq=True)
+class CacheToken:
+	action: str
+	data: Dict
+	channel: int=-1
 
-def make_node_token(_class,ref,action,channel=-1):
-	return Token(classref=_class,data={'ref':ref},action=action,channel=channel)
+class TokenTransformer:
+	def __init__(self,datamap,actionmap):
+		self.datamap = datamap
+		self.actionmap = actionmap
+
+	def transform(self,token,channel=-1):
+		data = {self.datamap[k]:v for k,v in token.data.items()}
+		action = self.actionmap[token.action]
+		return CacheToken(data=data,action=action,channel=channel)
+
+def make_node_token(_class,ref,action):
+	return BasicToken(classref=_class,data={'ref':ref},action=action)
 
 # def make_node_token(_class,ref,action):
 # 	return dict(_class=_class,ref=ref,action=action)

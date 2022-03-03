@@ -48,7 +48,8 @@ class TestSync(unittest.TestCase):
 		self.assertEqual(start.state.length_characteristics(),[0,0,None])
 		self.assertEqual(receiver.state.length_characteristics(),[0,0,1])
 		cached_token = receiver.state.cache[0]
-		self.assertEqual(cached_token,token.copy(cached_token.channel))
+		self.assertEqual(cached_token,token)
+		
 
 
 
