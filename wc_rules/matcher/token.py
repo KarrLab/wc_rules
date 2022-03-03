@@ -28,6 +28,10 @@ class TokenTransformer:
 def make_node_token(_class,ref,action):
 	return BasicToken(classref=_class,data={'ref':ref},action=action)
 
+def make_edge_token(_class1,ref1,attr1,_class2,ref2,attr2,action):
+	data = {'ref1':ref1,'attr1':attr1,'ref2':ref2,'attr2':attr2}
+	return BasicToken(classref=_class1,data=data,action=action)
+
 # def make_node_token(_class,ref,action):
 # 	return dict(_class=_class,ref=ref,action=action)
 
