@@ -20,16 +20,24 @@ class Database:
 		self._db.insert(**record)
 		return self
 
-	def filter(self,include_kwargs={},exclude_kwargs={},transform={}):
+	def filter(self,include_kwargs={},exclude_kwargs={}):
 		records = self._db(**include_kwargs)
 		if exclude_kwargs:	
 			records = [x for x in records if dict_overlap(x,exclude_kwargs)]
-		if transform:
-			records = {transform[k]:v for k,v in records.items()}			
 		return [clean_record(x) for x in records]
 
+	def delete(self,include_kwargs={},exclude_kwargs={}):
+		records = self._db(**include_kwargs)
+		if exclude_kwargs:	
+			records = [x for x in records if dict_overlap(x,exclude_kwargs)]
+		self._db.delete(records)
+		return [clean_record(x) for x in records]
+		
 	def filter_one(self,include_kwargs):
 		records = self.filter(include_kwargs)
 		if len(records)==1:
 			return records[0]
 		return None
+
+	def __len__(self):
+		return len(self._db)
