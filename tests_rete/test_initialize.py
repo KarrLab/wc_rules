@@ -54,4 +54,18 @@ class TestInitialize(unittest.TestCase):
 		self.assertEqual(channel.data.allowed_token_actions,set(['AddNode','RemoveNode']))
 		self.assertEqual(channel.data.transformer.datamap,{'ref':'a'})
 		self.assertEqual(channel.data.transformer.actionmap,{'AddNode':'AddEntry','RemoveNode':'RemoveEntry'})
+
+	def test_canonical_label_single_edge(self):
+		rn = ReteNet().initialize_start()
+		mapping,clabel,symmetry_group = get_canonical_label('single_edge_asymmetric')
+		rn.initialize_canonical_label(clabel,symmetry_group)
+
+		clabel_node = rn.get_node(core=clabel)
+		self.assertEqual(clabel_node.core,clabel)
+		channel = rn.get_channel(target=clabel)
+		self.assertEqual(channel.source,clabel.classes[0])
+		self.assertEqual(channel.type,'transform')
+		self.assertEqual(channel.data.allowed_token_actions,set(['AddEdge','RemoveEdge']))
+		self.assertEqual(channel.data.transformer.datamap,{'ref1':'a','ref2':'b','attr1':'attr1','attr2':'attr2'})
+		self.assertEqual(channel.data.transformer.actionmap,{'AddEdge':'AddEntry','RemoveEdge':'RemoveEntry'})
 		

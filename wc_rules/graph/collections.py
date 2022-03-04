@@ -34,6 +34,9 @@ class Edge:
     def nodes(self):
         return (self.ports[0].node,self.ports[1].node)
 
+    def attrs(self):
+        return (self.ports[0].attr,self.ports[1].attr)
+
     def remap(self,d):
         n1,e1,n2,e2 = self.unpack()
         return self.__class__.create(d[n1],e1,d[n2],e2)

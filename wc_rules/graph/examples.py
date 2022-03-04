@@ -131,6 +131,7 @@ def bowtie():
 
 graphs = [
 		single_node,
+		single_edge_asymmetric,
 		spoke,
 		directed_square,
 		directed_wheel,

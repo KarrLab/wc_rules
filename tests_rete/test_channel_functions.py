@@ -16,9 +16,9 @@ class TestChannelFunctions(unittest.TestCase):
 		token = {'foo':'baz'}
 		rn.function_channel_pass(channel,token)
 		self.assertTrue(token in receiver.state.incoming)
-
 	
 	def test_function_channel_transform(self):
+		# overlaps a lot with test_function_node_canonical_label_single_node
 		rn = ReteNet().initialize_start()
 		m,L,G = get_canonical_label('single_node')
 		rn.initialize_canonical_label(L,G)

@@ -50,6 +50,9 @@ class InitializationMethods:
 		if len(clabel.names)==1:
 			self.initialize_canonical_label_single_node(clabel,symmetry_group)
 
+		if len(clabel.names)==2:
+			self.initialize_canonical_label_single_edge(clabel,symmetry_group)
+
 	def initialize_canonical_label_single_node(self,clabel,symmetry_group):
 		self.initialize_class(clabel.classes[0])
 		self.add_node_canonical_label(clabel,symmetry_group)
@@ -57,6 +60,16 @@ class InitializationMethods:
 		actionmap = {'AddNode':'AddEntry','RemoveNode':'RemoveEntry'}
 		self.add_channel_transform(clabel.classes[0],clabel,datamap,actionmap)
 		return self
+
+	def initialize_canonical_label_single_edge(self,clabel,symmetry_group):
+		self.initialize_class(clabel.classes[0])
+		self.add_node_canonical_label(clabel,symmetry_group)
+		datamap = {'ref1':'a','ref2':'b','attr1':'attr1','attr2':'attr2'}
+		actionmap = {'AddEdge':'AddEntry','RemoveEdge':'RemoveEntry'}
+		self.add_channel_transform(clabel.classes[0],clabel,datamap,actionmap)
+		return self
+
+
 
 
 

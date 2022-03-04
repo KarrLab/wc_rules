@@ -76,3 +76,45 @@ class TestInitialize(unittest.TestCase):
 		self.assertEqual(len(node.state.cache),0)
 		self.assertEqual(len(receiver.state.cache),4)
 		
+
+	def test_canonical_label_single_edge(self):
+		rn = ReteNet().initialize_start()
+		start = rn.get_node(type='start')
+
+		m,L,G = get_canonical_label('single_edge_asymmetric')
+		rn.initialize_canonical_label(L,G)
+		rn.initialize_receiver(core=L)
+		node = rn.get_node(core=L)
+		receiver = rn.get_node(type='receiver')
+		C1,C2 = L.classes
+
+		self.assertEqual(len(node.state.cache),0)
+		self.assertEqual(len(receiver.state.cache),0)
+
+		x1,y1 = C1('x1'), C2('y1')
+		x1.safely_add_edge('y',y1)
+		token = make_edge_token(C1,x1,'y',C2,y1,'x','AddEdge')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(node.state.cache),1)
+		self.assertEqual(len(receiver.state.cache),1)
+		
+		x2,y2 = C1('x2'), C2('y2')
+		x2.safely_add_edge('y',y2)
+		token = make_edge_token(C1,x2,'y',C2,y2,'x','AddEdge')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(node.state.cache),2)
+		self.assertEqual(len(receiver.state.cache),2)
+		
+		token = make_edge_token(C1,x1,'y',C2,y1,'x','RemoveEdge')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(node.state.cache),1)
+		self.assertEqual(len(receiver.state.cache),3)
+		
+		token = make_edge_token(C1,x2,'y',C2,y2,'x','RemoveEdge')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(node.state.cache),0)
+		self.assertEqual(len(receiver.state.cache),4)
