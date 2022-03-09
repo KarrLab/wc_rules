@@ -18,15 +18,12 @@ class SimpleMapping(UserDict):
     def __mul__(self,other):
         # convention self * other == f o g
         # takes g's keys and f's values
+        # {x:a,y:b,z:c}*{p:x,q:y,r:z} = {p:a,q:b,r:c}
         return {k:self[v] for k,v in other.items() if v in self}
 
     @cached_property
     def reverse(self):
         return SimpleMapping({v:k for k,v in self.items()})
-
-    def premultiply(self,other):
-        return {k:other[v] for k,v in self.items() if v in other}
-
 
 
 

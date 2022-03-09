@@ -45,17 +45,37 @@ class Database:
 
 class DatabaseAlias:
 
-
 	def __init__(self,target,mapping):
 		
-		# NOTE: mapping has keys=CURRENT variables, values=variables of cache it is aliasing
+
+		'''
+		Example: Parent database with fields a b c
+		Child Alias with fields x y z
+		Mapping stored in child: x->a, y->b, z->c
+		Sending data downstream (foward)
+		{a:1,b:2,c:3}*{x:a,y:b,z:3} = {x:1,y:2,z:3}
+		Sending data request upstream (reverse)
+		{x:1,y:2,z:3}*{x:a,y:b,z:3}^-1 = {a:1,b:2,c:3}
+		'''
+		
 		if isinstance(target,DatabaseAlias):
 			target, mapping = target.target, target.mapping*mapping
 
-		#assert isinstance(target,Database) and set(mapping.values())==target.fields
-
 		self.target = target
 		self.mapping = SimpleMapping(mapping)
-		
+
+	def forward_transform(self,match):
+		return SimpleMapping(match)*self.mapping
+
+	def reverse_transform(self,match):
+		return SimpleMapping(match)*self.mapping.reverse
+
+	def filter(self,include_kwargs={},exclude_kwargs={}):
+		includes = self.reverse_transform(include_kwargs)
+		excludes = self.reverse_transform(exclude_kwargs)
+		records = self.target.filter(includes,excludes)
+		rotated = [self.forward_transform(x) for x in records]
+		return rotated
+
 
 	
