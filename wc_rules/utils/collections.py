@@ -8,7 +8,27 @@ import math, itertools, functools, collections, operator, pprint
 from dataclasses import dataclass, field
 from typing import Tuple, Dict
 from backports.cached_property import cached_property
-from collections import defaultdict
+from collections import defaultdict, UserDict
+
+class SimpleMapping(UserDict):
+
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+
+    def __mul__(self,other):
+        # convention self * other == f o g
+        # takes g's keys and f's values
+        return {k:self[v] for k,v in other.items() if v in self}
+
+    @cached_property
+    def reverse(self):
+        return SimpleMapping({v:k for k,v in self.items()})
+
+    def premultiply(self,other):
+        return {k:other[v] for k,v in self.items() if v in other}
+
+
+
 
 @dataclass(order=True,frozen=True)
 class Mapping:
@@ -233,6 +253,16 @@ def remap_values(d,oldvalues,newvalue):
     return d
 
 ###### Methods ######
+def compose_mapping(m1,m2):
+    # mappings are simple dict
+    # downgrade Mapping above????
+    # m1: ad,be,cf
+    # m2: dg,eh,fi
+    # produces: ag,bh,ci
+    # equivalent to m2 o m1
+    return {k:m2[v] for k in m1 if v in m2}
+
+
 def get_values(d,keys):
     return [d[k] for k in keys]
     

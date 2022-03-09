@@ -1,4 +1,5 @@
 from pydblite import Base
+from ..utils.collections import SimpleMapping
 
 def dict_overlap(d1,d2):
 	return len(set(d1.items()) & set(d2.items())) > 0
@@ -41,3 +42,20 @@ class Database:
 
 	def __len__(self):
 		return len(self._db)
+
+class DatabaseAlias:
+
+
+	def __init__(self,target,mapping):
+		
+		# NOTE: mapping has keys=CURRENT variables, values=variables of cache it is aliasing
+		if isinstance(target,DatabaseAlias):
+			target, mapping = target.target, target.mapping*mapping
+
+		#assert isinstance(target,Database) and set(mapping.values())==target.fields
+
+		self.target = target
+		self.mapping = SimpleMapping(mapping)
+		
+
+	
