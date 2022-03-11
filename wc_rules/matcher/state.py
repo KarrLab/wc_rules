@@ -12,6 +12,7 @@ class ReteNodeState:
 			self.cache = Database(kwargs.pop('fields'))
 		if cachetype == 'deque':
 			self.cache = deque()
+		
 
 	def cachelen(self):
 		return len(self.cache) if self.cache is not None else None

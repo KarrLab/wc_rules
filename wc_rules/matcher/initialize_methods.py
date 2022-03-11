@@ -1,6 +1,7 @@
 from ..schema.base import BaseClass
 from ..utils.collections import UniversalSet
 from .token import TokenTransformer
+from ..graph.graph_partitioning import partition_canonical_form
 
 class InitializationMethods:
 
@@ -49,9 +50,11 @@ class InitializationMethods:
 
 		if len(clabel.names)==1:
 			self.initialize_canonical_label_single_node(clabel,symmetry_group)
-
-		if len(clabel.names)==2:
+		elif len(clabel.names)==2:
 			self.initialize_canonical_label_single_edge(clabel,symmetry_group)
+		else:
+			self.initialize_canonical_label_general_case(clabel,symmetry_group)
+		return self
 
 	def initialize_canonical_label_single_node(self,clabel,symmetry_group):
 		self.initialize_class(clabel.classes[0])
@@ -69,7 +72,24 @@ class InitializationMethods:
 		self.add_channel_transform(clabel.classes[0],clabel,datamap,actionmap)
 		return self
 
+	def initialize_canonical_label_general_case(self,clabel,symmetry_group):
+		# dummy code, need to reimplement and test
+		(m1,L1,G1), (m2,L2,G2) = partition_canonical_form(clabel,symmetry_group)
+		self.initialize_canonical_label(L1,G1)
+		self.initialize_canonical_label(L2,G2)
+		actionmap = {'AddEntry':'AddPartialEntry', 'RemoveEntry':'RemovePartialEntry'}
+		self.add_node_canonical_label(clabel,symmetry_group)
+		channel_nums = [self.channelmax, self.channelmax+1]
+		self.add_channel_transform(source=L1,target=clabel,datamap=m1._dict,actionmap=actionmap)
+		self.add_channel_transform(source=L2,target=clabel,datamap=m2._dict,actionmap=actionmap)
+		caches = {
+			'lhs': self.generate_cache_reference(L1,m1.reverse()._dict),
+			'rhs': self.generate_cache_reference(L2,m2.reverse()._dict)
+		}
+		channels = dict(zip(channel_nums,['lhs','rhs']))
+		self.update_node_data(clabel,dict(caches=caches,channels=channels))
 
+		return self
 
 
 

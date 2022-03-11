@@ -365,6 +365,9 @@ def quoted(x):
 def unzip(zipped):
     return list(zip(*zipped))
 
+def intersect(iter1,iter2):
+    return set(iter1).intersection(iter2)
+
 class UniversalSet:
 
     def __contains__(self,x):

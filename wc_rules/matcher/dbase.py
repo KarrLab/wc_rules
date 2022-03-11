@@ -33,7 +33,13 @@ class Database:
 			records = [x for x in records if dict_overlap(x,exclude_kwargs)]
 		self._db.delete(records)
 		return [clean_record(x) for x in records]
-		
+
+	def update(self,include_kwargs={},update_kwargs={}):
+		records = self._db(**include_kwargs)
+		for record in records:
+			self._db.update(record,**update_kwargs)
+		return self
+
 	def filter_one(self,include_kwargs):
 		records = self.filter(include_kwargs)
 		if len(records)==1:

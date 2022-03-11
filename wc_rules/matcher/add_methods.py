@@ -1,5 +1,6 @@
-from ..utils.collections import UniversalSet
+from ..utils.collections import UniversalSet, SimpleMapping
 from ..schema.base import BaseClass
+from .dbase import DatabaseAlias
 from .token import TokenTransformer
 
 class AddMethods:
@@ -25,6 +26,20 @@ class AddMethods:
 			fields = clabel.names
 			)
 		return self
+
+	def add_data_property(self,core,variable,value):
+		node = self.get_node(core=core)
+		node.data[variable]=value
+		return self
+
+	def generate_cache_reference(self,target,mapping):
+		target_node = self.get_node(core=target)
+		return DatabaseAlias(target=target_node.state.cache,mapping=SimpleMapping(mapping))
+
+	def update_node_data(self,core,update_dict):
+		data = self.get_node(core=core).data
+		data.update(update_dict)
+		self.nodes.update({'core':core},{'data':data})
 
 	def add_channel_pass(self,source,target,allowed_token_actions=UniversalSet()):
 		self.add_channel(

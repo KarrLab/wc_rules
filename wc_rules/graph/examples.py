@@ -38,6 +38,12 @@ def single_edge_asymmetric():
 	g = GraphContainer(seed_node.get_connected())
 	return g,nsyms
 
+def two_edges():
+	x =  X('x',y=[Y('y1'),Y('y2')])
+	seed_node, nsyms = x, 2
+	g = GraphContainer(seed_node.get_connected())
+	return g,nsyms
+
 def single_edge_symmetric():
 	x = E('e1',e=E('e2'))
 	seed_node, nsyms = x, 2
@@ -132,6 +138,7 @@ def bowtie():
 graphs = [
 		single_node,
 		single_edge_asymmetric,
+		two_edges,
 		spoke,
 		directed_square,
 		directed_wheel,

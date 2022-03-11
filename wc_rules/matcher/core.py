@@ -45,7 +45,7 @@ class ReteNetBase:
 	def add_channel(self,**kwargs):
 		record = {k:kwargs.pop(k) for k in ['type','source','target']}
 		record['data'] =kwargs
-		record['num'] = self.channelmax +1
+		record['num'] = self.channelmax
 		self.channels.insert(record)
 		self.channelmax += 1
 		return self
