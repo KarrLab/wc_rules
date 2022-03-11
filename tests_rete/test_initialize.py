@@ -93,3 +93,6 @@ class TestInitialize(unittest.TestCase):
 		channels = rn.get_channels(target=node2.core)
 		self.assertEqual(set(map(attrgetter('num'),channels)),set(node2.data.channels.keys()))
 
+
+		self.assertTrue('keysep' in node2.data)
+		self.assertEqual(node2.data.keysep,{'lhs':['b'],'common':['a'],'rhs':['c']})

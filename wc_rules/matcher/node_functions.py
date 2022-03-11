@@ -43,6 +43,7 @@ class NodeFunctions:
 		return self
 
 	def function_node_canonical_label_general_case(self,node,token):
+		entries = []
 		if token.action=='AddPartialEntry':
 			channels,caches,keysep = [node.data[x] for x in ['channels','caches','keysep']]
 			chA = channels[token.channel]
