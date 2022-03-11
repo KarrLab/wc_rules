@@ -1,5 +1,5 @@
 from ..schema.base import BaseClass
-from ..utils.collections import UniversalSet
+from ..utils.collections import UniversalSet, triple_split
 from .token import TokenTransformer
 from ..graph.graph_partitioning import partition_canonical_form
 
@@ -73,21 +73,26 @@ class InitializationMethods:
 		return self
 
 	def initialize_canonical_label_general_case(self,clabel,symmetry_group):
-		# dummy code, need to reimplement and test
 		(m1,L1,G1), (m2,L2,G2) = partition_canonical_form(clabel,symmetry_group)
 		self.initialize_canonical_label(L1,G1)
 		self.initialize_canonical_label(L2,G2)
-		actionmap = {'AddEntry':'AddPartialEntry', 'RemoveEntry':'RemovePartialEntry'}
+		
 		self.add_node_canonical_label(clabel,symmetry_group)
+		
 		channel_nums = [self.channelmax, self.channelmax+1]
+		channels = dict(zip(channel_nums,['lhs','rhs']))
+		actionmap = {'AddEntry':'AddPartialEntry', 'RemoveEntry':'RemovePartialEntry'}
 		self.add_channel_transform(source=L1,target=clabel,datamap=m1._dict,actionmap=actionmap)
 		self.add_channel_transform(source=L2,target=clabel,datamap=m2._dict,actionmap=actionmap)
-		caches = {
-			'lhs': self.generate_cache_reference(L1,m1.reverse()._dict),
-			'rhs': self.generate_cache_reference(L2,m2.reverse()._dict)
-		}
-		channels = dict(zip(channel_nums,['lhs','rhs']))
-		self.update_node_data(clabel,dict(caches=caches,channels=channels))
+		
+		lhs_cache = self.generate_cache_reference(L1,m1.reverse()._dict) 
+		rhs_cache = self.generate_cache_reference(L2,m2.reverse()._dict)
+		caches = {'lhs':lhs_cache,'rhs':rhs_cache}
+
+		keysplit = triple_split(lhs_cache.fields,rhs_cache.fields)
+		keysep = dict(zip(['lhs', 'common', 'rhs'],keysplit))
+
+		self.update_node_data(clabel,dict(caches=caches,channels=channels,keysep=keysep))
 
 		return self
 

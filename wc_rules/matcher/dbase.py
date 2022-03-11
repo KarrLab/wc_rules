@@ -70,6 +70,10 @@ class DatabaseAlias:
 		self.target = target
 		self.mapping = SimpleMapping(mapping)
 
+	@property
+	def fields(self):
+		return self.mapping.keys()
+
 	def forward_transform(self,match):
 		return SimpleMapping(match)*self.mapping
 
