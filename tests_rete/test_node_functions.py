@@ -131,20 +131,20 @@ class TestNodeFunctions(unittest.TestCase):
 		self.assertEqual(len(node2.state.cache.filter({'a':x1,'b':y2,'c':y1})), 1)
 		
 
-		x1, y1, y2 = X('x2'), Y('y3'), Y('y4')
-		node1.state.cache.insert({'a':x1,'b':y1})
-		token = ch1.data.transformer.transform(CacheToken(data={'a':x1,'b':y1},action='AddEntry'),channel=ch1.num)
+		x2, y3, y4 = X('x2'), Y('y3'), Y('y4')
+		node1.state.cache.insert({'a':x2,'b':y3})
+		token = ch1.data.transformer.transform(CacheToken(data={'a':x2,'b':y3},action='AddEntry'),channel=ch1.num)
 		rn.function_node_canonical_label(node2,token)
-		token = ch2.data.transformer.transform(CacheToken(data={'a':x1,'b':y1},action='AddEntry'),channel=ch2.num)
+		token = ch2.data.transformer.transform(CacheToken(data={'a':x2,'b':y3},action='AddEntry'),channel=ch2.num)
 		rn.function_node_canonical_label(node2,token)
 
 		self.assertEqual(len(node1.state.cache),3)
 		self.assertEqual(len(node2.state.cache),2)
 		
-		node1.state.cache.insert({'a':x1,'b':y2})
-		token = ch1.data.transformer.transform(CacheToken(data={'a':x1,'b':y2},action='AddEntry'),channel=ch1.num)
+		node1.state.cache.insert({'a':x2,'b':y4})
+		token = ch1.data.transformer.transform(CacheToken(data={'a':x2,'b':y4},action='AddEntry'),channel=ch1.num)
 		rn.function_node_canonical_label(node2,token)
-		token = ch2.data.transformer.transform(CacheToken(data={'a':x1,'b':y2},action='AddEntry'),channel=ch2.num)
+		token = ch2.data.transformer.transform(CacheToken(data={'a':x2,'b':y4},action='AddEntry'),channel=ch2.num)
 		rn.function_node_canonical_label(node2,token)
 		
 		self.assertEqual(len(node1.state.cache),4)
