@@ -32,9 +32,14 @@ class AddMethods:
 		node.data[variable]=value
 		return self
 
-	def generate_cache_reference(self,target,mapping):
+	def generate_cache_reference(self,target,mapping,symmetry_group=None):
 		target_node = self.get_node(core=target)
-		return DatabaseAlias(target=target_node.state.cache,mapping=SimpleMapping(mapping))
+		return DatabaseAlias(
+			target=target_node.state.cache,
+			mapping=SimpleMapping(mapping),
+			symmetry_group=symmetry_group,
+			symmetry_aware=self.SYMMETRY_AWARE
+		)
 
 	def update_node_data(self,core,update_dict):
 		data = self.get_node(core=core).data

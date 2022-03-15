@@ -13,6 +13,8 @@ bases = [AddMethods, InitializationMethods, NodeFunctions, ChannelFunctions]
 
 class ReteNetBase:
 
+	SYMMETRY_AWARE = False
+
 	def __init__(self):
 		self.nodes = Database(['type','core','data','state','num'])
 		self.channels = Database(['type','source','target','data','num'])
@@ -35,7 +37,12 @@ class ReteNetBase:
 		
 	def add_node(self,**kwargs):
 		record = {k:kwargs.pop(k) for k in ['type','core']}
-		record['state'] = ReteNodeState(cachetype = kwargs.pop('cachetype',None),fields =kwargs.pop('fields',None))
+		record['state'] = ReteNodeState(
+			cachetype = kwargs.pop('cachetype',None),
+			fields =kwargs.pop('fields',None),
+			symmetry_group=kwargs.get('symmetry_group',None),
+			symmetry_aware = self.SYMMETRY_AWARE
+		)
 		record['data'] = kwargs
 		record['num'] = self.nodemax
 		self.nodes.insert(record)
@@ -76,7 +83,7 @@ class ReteNetBase:
 		return self
 
 
-
-def build_rete_net_class(bases=bases,name='ReteNet'):
+def build_rete_net_class(bases=bases,name='ReteNet',symmetry_aware=False):
 	ReteNet = type(name,(ReteNetBase,) + tuple(bases),{})
+	ReteNet.SYMMETRY_AWARE = symmetry_aware
 	return ReteNet

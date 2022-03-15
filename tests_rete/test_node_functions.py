@@ -149,4 +149,41 @@ class TestNodeFunctions(unittest.TestCase):
 		
 		self.assertEqual(len(node1.state.cache),4)
 		self.assertEqual(len(node2.state.cache),4)
+
+		node1.state.cache.delete({'a':x2,'b':y4})
+		token = ch1.data.transformer.transform(CacheToken(data={'a':x2,'b':y4},action='RemoveEntry'),channel=ch1.num)
+		rn.function_node_canonical_label(node2,token)
+		token = ch2.data.transformer.transform(CacheToken(data={'a':x2,'b':y4},action='RemoveEntry'),channel=ch2.num)
+		rn.function_node_canonical_label(node2,token)
+		
+		self.assertEqual(len(node1.state.cache),3)
+		self.assertEqual(len(node2.state.cache),2)
+		
+		node1.state.cache.delete({'a':x2,'b':y3})
+		token = ch1.data.transformer.transform(CacheToken(data={'a':x2,'b':y3},action='RemoveEntry'),channel=ch1.num)
+		rn.function_node_canonical_label(node2,token)
+		token = ch2.data.transformer.transform(CacheToken(data={'a':x2,'b':y3},action='RemoveEntry'),channel=ch2.num)
+		rn.function_node_canonical_label(node2,token)
+
+		self.assertEqual(len(node1.state.cache),2)
+		self.assertEqual(len(node2.state.cache),2)
+
+		node1.state.cache.delete({'a':x1,'b':y2})
+		token = ch1.data.transformer.transform(CacheToken(data={'a':x1,'b':y2},action='RemoveEntry'),channel=ch1.num)
+		rn.function_node_canonical_label(node2,token)
+		token = ch2.data.transformer.transform(CacheToken(data={'a':x1,'b':y2},action='RemoveEntry'),channel=ch2.num)
+		rn.function_node_canonical_label(node2,token)
+
+		self.assertEqual(len(node1.state.cache),1)
+		self.assertEqual(len(node2.state.cache),0)
+
+		node1.state.cache.delete({'a':x1,'b':y1})
+		token = ch1.data.transformer.transform(CacheToken(data={'a':x1,'b':y1},action='RemoveEntry'),channel=ch1.num)
+		rn.function_node_canonical_label(node2,token)
+		token = ch2.data.transformer.transform(CacheToken(data={'a':x1,'b':y1},action='RemoveEntry'),channel=ch2.num)
+		rn.function_node_canonical_label(node2,token)
+
+		self.assertEqual(len(node1.state.cache),0)
+		self.assertEqual(len(node2.state.cache),0)
+		
 		
