@@ -118,3 +118,81 @@ class TestInitialize(unittest.TestCase):
 		rn.sync(start)
 		self.assertEqual(len(node.state.cache),0)
 		self.assertEqual(len(receiver.state.cache),4)
+
+
+	def test_canonical_label_two_edges(self):
+		rn = ReteNet().initialize_start()
+		start = rn.get_node(type='start')
+
+		m, L, G = get_canonical_label('two_edges')
+		rn.initialize_canonical_label(L,G)
+
+		node1,node2 = sorted(rn.get_nodes(type='canonical_label'),key=lambda n: len(n.core.names))
+		self.assertEqual(node1.state.cache.fields,['a','b'])
+		self.assertEqual(node2.state.cache.fields,['a','b','c'])
+		X,Y = node1.core.classes
+		x1, y1, y2 = X('x1'), Y('y1'), Y('y2')
+		x2, y3, y4 = X('x1'), Y('y3'), Y('y4')
+		
+		x1.safely_add_edge('y',y1)
+		token = make_edge_token(X,x1,'y',Y,y1,'x','AddEdge')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(node1.state.cache),1)
+		self.assertEqual(len(node2.state.cache),0)
+		
+		x1.safely_add_edge('y',y2)
+		token = make_edge_token(X,x1,'y',Y,y2,'x','AddEdge')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(node1.state.cache),2)
+		self.assertEqual(len(node2.state.cache),2)
+		
+		x2.safely_add_edge('y',y3)
+		token = make_edge_token(X,x2,'y',Y,y3,'x','AddEdge')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(node1.state.cache),3)
+		self.assertEqual(len(node2.state.cache),2)
+		
+		x2.safely_add_edge('y',y4)
+		token = make_edge_token(X,x2,'y',Y,y4,'x','AddEdge')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(node1.state.cache),4)
+		self.assertEqual(len(node2.state.cache),4)
+
+		# start removing edges
+		x1.safely_remove_edge('y',y1)
+		token = make_edge_token(X,x1,'y',Y,y1,'x','RemoveEdge')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(node1.state.cache),3)
+		self.assertEqual(len(node2.state.cache),2)
+		
+		x1.safely_remove_edge('y',y2)
+		token = make_edge_token(X,x1,'y',Y,y2,'x','RemoveEdge')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(node1.state.cache),2)
+		self.assertEqual(len(node2.state.cache),2)
+		
+		x2.safely_remove_edge('y',y3)
+		token = make_edge_token(X,x2,'y',Y,y3,'x','RemoveEdge')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(node1.state.cache),1)
+		self.assertEqual(len(node2.state.cache),0)
+		
+		x2.safely_remove_edge('y',y4)
+		token = make_edge_token(X,x2,'y',Y,y4,'x','RemoveEdge')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(node1.state.cache),0)
+		self.assertEqual(len(node2.state.cache),0)
+
+
+		
+
+
+

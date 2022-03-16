@@ -38,7 +38,6 @@ class AddMethods:
 			target=target_node.state.cache,
 			mapping=SimpleMapping(mapping),
 			symmetry_group=symmetry_group,
-			symmetry_aware=self.SYMMETRY_AWARE
 		)
 
 	def update_node_data(self,core,update_dict):

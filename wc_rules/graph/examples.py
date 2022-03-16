@@ -60,8 +60,8 @@ def directed_square():
 
 def spoke():
 	x = X('a')
-	x.y = [Y(z) for z in random.sample('bcdef',len('bcdef'))]
-	seed_node,nsyms = x, math.factorial(len('bcdef'))
+	x.y = [Y(z) for z in random.sample('bcde',len('bcde'))]
+	seed_node,nsyms = x, math.factorial(len('bcde'))
 
 	g = GraphContainer(seed_node.get_connected())
 	return g,nsyms

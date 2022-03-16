@@ -12,7 +12,6 @@ class ReteNodeState:
 			self.cache = Database(
 				fields=kwargs.pop('fields'),
 				symmetry_group=kwargs.pop('symmetry_group',None),
-				symmetry_aware=kwargs.pop('symmetry_aware',False)
 			)
 		if cachetype == 'deque':
 			self.cache = deque()

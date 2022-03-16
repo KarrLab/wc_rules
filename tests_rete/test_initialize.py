@@ -96,3 +96,15 @@ class TestInitialize(unittest.TestCase):
 
 		self.assertTrue('keysep' in node2.data)
 		self.assertEqual(node2.data.keysep,{'lhs':['b'],'common':['a'],'rhs':['c']})
+
+	def test_canonical_label_spoke4(self):
+		mapping,labeling,symmetry_group = get_canonical_label('spoke')
+		rn = ReteNet().initialize_start()
+		rn.initialize_canonical_label(labeling,symmetry_group)
+
+		canonical_label_nodes = rn.get_nodes(type='canonical_label')
+		self.assertEqual(len(canonical_label_nodes),3)
+		transform_channels = [x for x in rn.get_channels(type='transform') if x.source in [n.core for n in canonical_label_nodes]]
+		self.assertEqual(len(transform_channels),4)
+
+		

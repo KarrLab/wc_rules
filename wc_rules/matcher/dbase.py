@@ -12,9 +12,7 @@ class Database:
 	def __init__(self,fields,**kwargs):
 		self._db = Base(':memory:')
 		self._db.create(*fields)
-		self.symmetry_group = kwargs.pop('symmetry_group',None)
-		self.symmetry_aware = kwargs.pop('symmetry_aware',False)
-
+		
 	@property
 	def fields(self):
 		return self._db.fields
