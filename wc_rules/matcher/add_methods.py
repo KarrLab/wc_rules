@@ -1,6 +1,6 @@
 from ..utils.collections import UniversalSet, SimpleMapping
 from ..schema.base import BaseClass
-from .dbase import Database,DatabaseAlias
+from .dbase import Database, DatabaseAlias, DatabaseSymmetric, DatabaseAliasSymmetric
 from .token import TokenTransformer
 
 from collections import deque
@@ -71,3 +71,8 @@ class AddMethods:
 			transformer = TokenTransformer(datamap,actionmap)
 		)		
 		return self
+
+class AddMethodsSymmetric(AddMethods):
+
+	DATABASE_CLASS = DatabaseSymmetric
+	DATABASE_ALIAS_CLASS = DatabaseAliasSymmetric

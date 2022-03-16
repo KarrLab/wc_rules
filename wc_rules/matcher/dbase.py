@@ -89,4 +89,8 @@ class DatabaseAlias:
 		return rotated
 
 
-	
+class DatabaseSymmetric(Database):
+	pass
+
+class DatabaseAliasSymmetric(DatabaseAlias):
+	pass

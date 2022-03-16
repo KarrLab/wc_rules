@@ -2,7 +2,7 @@ from types import MethodType
 from attrdict import AttrDict
 
 from .dbase import Database
-from .add_methods import AddMethods
+from .add_methods import AddMethods, AddMethodsSymmetric
 from .initialize_methods import InitializationMethods
 from .state import ReteNodeState
 from .node_functions import NodeFunctions
@@ -76,6 +76,9 @@ class ReteNetBase:
 		return self
 
 
-def build_rete_net_class(bases=bases,name='ReteNet'):
-	ReteNet = type(name,(ReteNetBase,) + tuple(bases),{})
+def build_rete_net_class(bases=bases,name='ReteNet',symmetry_aware=False):
+	all_bases = [ReteNetBase,] + bases
+	if symmetry_aware:
+		all_bases[all_bases.index(AddMethods)]= AddMethodsSymmetric
+	ReteNet = type(name,tuple(all_bases),{})
 	return ReteNet
