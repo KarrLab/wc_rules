@@ -1,9 +1,14 @@
 from ..utils.collections import UniversalSet, SimpleMapping
 from ..schema.base import BaseClass
-from .dbase import DatabaseAlias
+from .dbase import Database,DatabaseAlias
 from .token import TokenTransformer
 
+from collections import deque
+
 class AddMethods:
+
+	DATABASE_CLASS = Database
+	DATABASE_ALIAS_CLASS = DatabaseAlias
 
 	def add_node_start(self):
 		self.add_node(type='start',core=BaseClass)
@@ -14,16 +19,18 @@ class AddMethods:
 		return self
 
 	def add_node_receiver(self,core_object,receiver_name):
-		self.add_node(type='receiver',core=receiver_name,cachetype='deque')
+		self.add_node(type='receiver',core=receiver_name,cache=deque())
 		return self
 
 	def add_node_canonical_label(self,clabel,symmetry_group):
+		cache = self.DATABASE_CLASS(
+			fields=clabel.names,
+			symmetry_group=symmetry_group
+		)
 		self.add_node(
 			type = 'canonical_label',
 			core = clabel,
-			symmetry_group=symmetry_group,
-			cachetype='database',
-			fields = clabel.names
+			cache = cache
 			)
 		return self
 
@@ -34,11 +41,12 @@ class AddMethods:
 
 	def generate_cache_reference(self,target,mapping,symmetry_group=None):
 		target_node = self.get_node(core=target)
-		return DatabaseAlias(
+		cache_ref = self.DATABASE_ALIAS_CLASS(
 			target=target_node.state.cache,
 			mapping=SimpleMapping(mapping),
 			symmetry_group=symmetry_group,
 		)
+		return cache_ref
 
 	def update_node_data(self,core,update_dict):
 		data = self.get_node(core=core).data

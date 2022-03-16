@@ -70,7 +70,6 @@ class DatabaseAlias:
 		self.target = target
 		self.mapping = SimpleMapping(mapping)
 		self.symmetry_group = kwargs.pop('symmetry_group',None)
-		self.symmetry_aware = kwargs.pop('symmetry_aware',False)
 
 	@property
 	def fields(self):

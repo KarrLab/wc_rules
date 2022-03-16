@@ -3,19 +3,13 @@ from collections import deque
 
 class ReteNodeState:
 	
-	def __init__(self,cachetype=None,**kwargs):
+	def __init__(self,cache=None):
 		self.incoming = deque()
 		self.outgoing = deque()
-		self.cache = None
+		self.cache = cache
 
-		if cachetype == 'database':
-			self.cache = Database(
-				fields=kwargs.pop('fields'),
-				symmetry_group=kwargs.pop('symmetry_group',None),
-			)
-		if cachetype == 'deque':
-			self.cache = deque()
-		
+		# MANAGE CACHE CREATION OUTSIDE
+		# in add_methods.py
 
 	def cachelen(self):
 		return len(self.cache) if self.cache is not None else None

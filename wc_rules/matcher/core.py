@@ -35,11 +35,7 @@ class ReteNetBase:
 		
 	def add_node(self,**kwargs):
 		record = {k:kwargs.pop(k) for k in ['type','core']}
-		record['state'] = ReteNodeState(
-			cachetype = kwargs.pop('cachetype',None),
-			fields =kwargs.pop('fields',None),
-			symmetry_group=kwargs.get('symmetry_group',None),
-		)
+		record['state'] = ReteNodeState(cache=kwargs.pop('cache',None))
 		record['data'] = kwargs
 		record['num'] = self.nodemax
 		self.nodes.insert(record)
