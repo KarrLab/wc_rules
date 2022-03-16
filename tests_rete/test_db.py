@@ -1,5 +1,7 @@
-from wc_rules.matcher.dbase import Database, DatabaseAlias
+from wc_rules.matcher.dbase import Database, DatabaseAlias, DatabaseSymmetric
 from wc_rules.utils.collections import SimpleMapping
+from wc_rules.graph.permutations import PermutationGroup, Permutation
+from wc_rules.graph.examples import X,Y
 
 import unittest
 
@@ -74,3 +76,24 @@ class TestAlias(unittest.TestCase):
 		self.assertEqual(aliased2,dict(zip('pqr',range(3))))
 		self.assertEqual(aliased3,dict(zip('ijk',range(3))))
 
+class TestDatabaseSymmetric(unittest.TestCase):
+
+	def test_symmetric_insertion(self):
+		p1 = Permutation.create(list('abc'),list('abc'))
+		p2 = Permutation.create(list('abc'),list('acb'))
+		G1 = PermutationGroup.create([p1,p2])
+
+		db = DatabaseSymmetric(fields=list('abc'),symmetry_group=G1)
+		self.assertEqual(db.symmetry_group,G1)
+		self.assertEqual(len(db),0)
+
+		x1,y1,y2 = X('x1'), Y('y1'), Y('y2')
+		
+		match = {'a':x1,'b':y1,'c':y2}
+		db.insert(match)
+		self.assertEqual(len(db),1)
+		
+		# changing order of 'b' and 'c' should prevent insertion
+		match = {'a':x1,'b':y2,'c':y1}
+		db.insert(match)
+		self.assertEqual(len(db),1)

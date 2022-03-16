@@ -15,7 +15,7 @@ def partition_canonical_form(labeling,group):
 	if len(labeling.edges) <= 1:
 		return None,None
 
-	lg_nodes, lg_edges,lg_orbits = line_graph(labeling.names,labeling.edges,group.orbits())
+	lg_nodes, lg_edges,lg_orbits = line_graph(labeling.names,labeling.edges,group.orbits)
 	partition = kernighan_lin(lg_nodes.values(),lg_edges,lg_orbits)
 	g1, g2 = [deinduce(labeling,lg_nodes,x) for x in partition]
 	CL1, CL2 = [canonical_label(x) for x in [g1,g2]]

@@ -1,5 +1,6 @@
 from pydblite import Base
 from ..utils.collections import SimpleMapping
+from ..utils.collections import subdict
 
 def dict_overlap(d1,d2):
 	return len(set(d1.items()) & set(d2.items())) > 0
@@ -90,7 +91,19 @@ class DatabaseAlias:
 
 
 class DatabaseSymmetric(Database):
-	pass
+
+	def __init__(self,**kwargs):
+		super().__init__(**kwargs)
+		self.symmetry_group = kwargs.pop('symmetry_group',None)
+
+	def insert(self,record):
+		if self.symmetry_group.verify_symmetry_breaking(record):
+			super().insert(record)
+		return self
 
 class DatabaseAliasSymmetric(DatabaseAlias):
-	pass
+	
+	def __init__(self,**kwargs):
+		super().__init__(**kwargs)
+		self.symmetry_group = kwargs.pop('symmetry_group',None)
+
