@@ -89,11 +89,18 @@ class TestDatabaseSymmetric(unittest.TestCase):
 
 		x1,y1,y2 = X('x1'), Y('y1'), Y('y2')
 		
-		match = {'a':x1,'b':y1,'c':y2}
-		db.insert(match)
+		match1 = {'a':x1,'b':y1,'c':y2}
+		db.insert(match1)
 		self.assertEqual(len(db),1)
 		
 		# changing order of 'b' and 'c' should prevent insertion
-		match = {'a':x1,'b':y2,'c':y1}
-		db.insert(match)
+		mapping = SimpleMapping(zip('abc','acb'))
+		match2 = SimpleMapping(match1)*mapping
+		self.assertEqual(match2,{'a':x1,'b':y2,'c':y1})
+		db.insert(match2)
+		# nothing happens
 		self.assertEqual(len(db),1)
+
+		# delete using match1 works
+		db.delete(match1)
+		self.assertEqual(len(db),0)
