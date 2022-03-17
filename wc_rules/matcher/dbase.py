@@ -22,27 +22,22 @@ class Database:
 		self._db.insert(**record)
 		return self
 
-	def filter(self,include_kwargs={},exclude_kwargs={}):
-		records = self._db(**include_kwargs)
-		if exclude_kwargs:	
-			records = [x for x in records if dict_overlap(x,exclude_kwargs)]
-		return [clean_record(x) for x in records]
+	def filter(self,kwargs={}):
+		return [clean_record(x) for x in self._db(**kwargs)]
 
-	def delete(self,include_kwargs={},exclude_kwargs={}):
-		records = self._db(**include_kwargs)
-		if exclude_kwargs:	
-			records = [x for x in records if dict_overlap(x,exclude_kwargs)]
+	def delete(self,kwargs={}):
+		records = self._db(**kwargs)
 		self._db.delete(records)
 		return [clean_record(x) for x in records]
 
-	def update(self,include_kwargs={},update_kwargs={}):
-		records = self._db(**include_kwargs)
+	def update(self,kwargs={},update_kwargs={}):
+		records = self._db(**kwargs)
 		for record in records:
 			self._db.update(record,**update_kwargs)
 		return self
 
-	def filter_one(self,include_kwargs):
-		records = self.filter(include_kwargs)
+	def filter_one(self,kwargs):
+		records = self.filter(kwargs)
 		if len(records)==1:
 			return records[0]
 		return None
@@ -82,10 +77,9 @@ class DatabaseAlias:
 	def reverse_transform(self,match):
 		return SimpleMapping(match)*self.mapping.reverse
 
-	def filter(self,include_kwargs={},exclude_kwargs={}):
-		includes = self.reverse_transform(include_kwargs)
-		excludes = self.reverse_transform(exclude_kwargs)
-		records = self.target.filter(includes,excludes)
+	def filter(self,kwargs={}):
+		kwargs1 = self.reverse_transform(kwargs)
+		records = self.target.filter(kwargs1)
 		rotated = [self.forward_transform(x) for x in records]
 		return rotated
 
