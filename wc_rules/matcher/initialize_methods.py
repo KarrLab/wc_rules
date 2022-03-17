@@ -85,8 +85,8 @@ class InitializationMethods:
 		self.add_channel_transform(source=L1,target=clabel,datamap=m1._dict,actionmap=actionmap)
 		self.add_channel_transform(source=L2,target=clabel,datamap=m2._dict,actionmap=actionmap)
 		
-		lhs_cache = self.generate_cache_reference(L1,m1.reverse()._dict,G1) 
-		rhs_cache = self.generate_cache_reference(L2,m2.reverse()._dict,G2)
+		lhs_cache = self.generate_cache_reference(L1,m1.reverse()._dict) 
+		rhs_cache = self.generate_cache_reference(L2,m2.reverse()._dict)
 		caches = {'lhs':lhs_cache,'rhs':rhs_cache}
 
 		keysplit = triple_split(lhs_cache.fields,rhs_cache.fields)
