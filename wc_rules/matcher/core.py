@@ -3,13 +3,14 @@ from attrdict import AttrDict
 
 from .dbase import Database
 from .add_methods import AddMethods, AddMethodsSymmetric
+from .print_methods import PrintMethods
 from .initialize_methods import InitializationMethods
 from .state import ReteNodeState
 from .node_functions import NodeFunctions
 from .channel_functions import ChannelFunctions
 from ..utils.collections import UniversalSet
 
-bases = [AddMethods, InitializationMethods, NodeFunctions, ChannelFunctions]
+bases = [AddMethods, PrintMethods,InitializationMethods, NodeFunctions, ChannelFunctions]
 
 class ReteNetBase:
 

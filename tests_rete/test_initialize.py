@@ -2,7 +2,7 @@ from wc_rules.schema.chem import Molecule
 from wc_rules.schema.base import BaseClass
 from wc_rules.schema.entity import Entity
 from wc_rules.matcher.core import build_rete_net_class
-from wc_rules.graph.examples import get_canonical_label
+from wc_rules.graph.examples import get_canonical_label, get_graph
 from operator import attrgetter
 import unittest
 
@@ -106,5 +106,7 @@ class TestInitialize(unittest.TestCase):
 		self.assertEqual(len(canonical_label_nodes),3)
 		transform_channels = [x for x in rn.get_channels(type='transform') if x.source in [n.core for n in canonical_label_nodes]]
 		self.assertEqual(len(transform_channels),4)
+
+
 
 		

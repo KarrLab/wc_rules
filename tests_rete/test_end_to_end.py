@@ -2,12 +2,13 @@ from wc_rules.schema.entity import Entity
 from wc_rules.schema.chem import Molecule, Site
 from wc_rules.matcher.core import build_rete_net_class
 from wc_rules.matcher.token import *
-from wc_rules.graph.examples import get_canonical_label
+from wc_rules.graph.examples import *
+import random
 import unittest
 
 ReteNet = build_rete_net_class()
 
-class TestInitialize(unittest.TestCase):
+class TestEndToEnd(unittest.TestCase):
 
 	def test_class(self):
 		rn = ReteNet()
@@ -36,7 +37,9 @@ class TestInitialize(unittest.TestCase):
 		self.assertEqual(len(rEnt.state.cache),2)
 		self.assertEqual(len(rMol.state.cache),1)
 
-	def test_canonical_label_single_node(self):
+class TestEndToEndCanonicalLabel(unittest.TestCase):
+
+	def test_single_node(self):
 		rn = ReteNet().initialize_start()
 		start = rn.get_node(type='start')
 
@@ -75,9 +78,9 @@ class TestInitialize(unittest.TestCase):
 		rn.sync(start)
 		self.assertEqual(len(node.state.cache),0)
 		self.assertEqual(len(receiver.state.cache),4)
-		
 
-	def test_canonical_label_single_edge(self):
+
+	def test_single_edge(self):
 		rn = ReteNet().initialize_start()
 		start = rn.get_node(type='start')
 
@@ -120,7 +123,7 @@ class TestInitialize(unittest.TestCase):
 		self.assertEqual(len(receiver.state.cache),4)
 
 
-	def test_canonical_label_two_edges(self):
+	def test_two_edges(self):
 		rn = ReteNet().initialize_start()
 		start = rn.get_node(type='start')
 
@@ -190,6 +193,58 @@ class TestInitialize(unittest.TestCase):
 		rn.sync(start)
 		self.assertEqual(len(node1.state.cache),0)
 		self.assertEqual(len(node2.state.cache),0)
+
+	def test_spoke4(self):
+		rn = ReteNet().initialize_start()
+		start = rn.get_node(type='start')
+
+		mapping,labeling,symmetry_group = get_canonical_label('spoke')
+		rn.initialize_canonical_label(labeling,symmetry_group)
+
+		nodes = rn.get_nodes(type='canonical_label')
+		node1,node2 = nodes[0], nodes[-1]
+		# node1 is a single edge
+		# node2 is n-edges, where n is the number of spokes
+
+		self.assertEqual(len(node1.core.names),2)
+		self.assertEqual(len(node1.state.cache),0)
+		self.assertEqual(len(node2.core.names),5)
+		self.assertEqual(len(node2.state.cache),0)
+
+		g,nsyms = spoke()
+
+		for idx,n in g.iter_nodes():
+			token = make_node_token(n.__class__,n,'AddNode')
+			start.state.incoming.append(token)
+			rn.sync(start)
+		self.assertEqual(len(node1.state.cache),0)
+		self.assertEqual(len(node2.state.cache),0)
+
+		for e in g.iter_edges():
+			n1,a1,n2,a2 = e.unpack()
+			n1,n2 = [g[x] for x in [n1,n2]]
+			c1,c2 = n1.__class__, n2.__class__
+			tokens = [make_edge_token(*x) for x in [ (c1,n1,a1,c2,n2,a2,'AddEdge'), (c2,n2,a2,c1,n1,a1,'AddEdge') ] ]	
+			for token in tokens:
+				start.state.incoming.append(token)
+				rn.sync(start)
+
+		self.assertEqual(len(node1.state.cache),4)
+		self.assertEqual(len(node2.state.cache),24)
+
+		# removing even one edge should empty the cache for the spoke-graph
+		# but the single-edge graph shd have three remaining matches
+		e = random.sample(list(g.iter_edges()),1)[0]
+		n1,a1,n2,a2 = e.unpack()
+		n1,n2 = [g[x] for x in [n1,n2]]
+		tokens = [make_edge_token(*x) for x in [ (c1,n1,a1,c2,n2,a2,'RemoveEdge'), (c2,n2,a2,c1,n1,a1,'RemoveEdge') ] ]	
+		for token in tokens:
+			start.state.incoming.append(token)
+			rn.sync(start)
+
+		self.assertEqual(len(node1.state.cache),3)
+		self.assertEqual(len(node2.state.cache),0)
+
 
 
 		
