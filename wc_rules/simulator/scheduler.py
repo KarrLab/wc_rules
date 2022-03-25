@@ -41,4 +41,6 @@ class NextReactionMethod(Scheduler):
 			self.insert(event,time + tau)
 		return self
 
+		
+
 	

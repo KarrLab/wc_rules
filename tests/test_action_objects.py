@@ -2,7 +2,7 @@ from wc_rules.schema.base import BaseClass
 from wc_rules.schema.attributes import *
 from wc_rules.schema.actions import *
 from wc_rules.simulator.simulator import SimulationState
-from wc_rules.matcher.core import default_rete_net
+#from wc_rules.matcher.core import default_rete_net
 import unittest
 
 
@@ -25,6 +25,7 @@ def string_to_action_object(s,_locals):
 	fn = eval('lambda: ' + s,_locals)
 	return fn()	
 
+@unittest.skip('Add this back after simulator module is ready')
 class TestActionObjects(unittest.TestCase):
 
 	def setUp(self):

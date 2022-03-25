@@ -1,12 +1,12 @@
 from collections import deque 
 from ..utils.collections import DictLike, subdict
-from ..matcher.core import default_rete_net
-from ..matcher.tokens import make_node_token, make_edge_token, make_attr_token
-from .scheduler import default_sampler
+from ..matcher.core import build_rete_net_class
+from ..matcher.token import make_node_token, make_edge_token, make_attr_token
+from .scheduler import NextReactionMethod
 from attrdict import AttrDict
 from ..schema.actions import PrimaryAction, CompositeAction
 
-
+ReteNet = build_rete_net_class()
 
 class SimulationState:
 	def __init__(self,nodes=[],**kwargs):
@@ -15,11 +15,11 @@ class SimulationState:
 		self.rollback = kwargs.get('rollback',False)
 		self.action_stack = deque()
 		self.rollback_stack = deque()
-		self.matcher = kwargs.get('matcher',default_rete_net())
+		self.matcher = ReteNet()
 		
 		self.start_time = kwargs.get('start_time',0.0)
 		self.end_time = kwargs.get('end_time',0.0)
-		self.sampler = kwargs.get('sampler',default_sampler(time=kwargs.get('start_time',0.0)))
+		self.sampler = NextReactionMethod()
 
 	# These are elementary methods, used as 
 	# the final step in adding/removing a node
