@@ -116,7 +116,7 @@ class PermutationGroup:
 		return self.__class__.create(gens)
 
 	def orbit(self,variable):
-		for orb in self.orbits():
+		for orb in self.orbits:
 			if variable in orb:
 				return orb
 

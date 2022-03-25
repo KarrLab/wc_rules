@@ -89,6 +89,9 @@ class TestPermutation(unittest.TestCase):
 		permtargets = [''.join(x.targets) for x in perms]
 		self.assertEqual(permtargets,['abc', 'acb', 'bac', 'bca', 'cab', 'cba'])
 		self.assertEqual(G.orbits,(tuple('abc'),))
+		for x in 'abc':
+			self.assertEqual(G.orbit(x),tuple('abc'))
+
 		gendict = dict(zip(G.generators,range(len(G.generators))))
 		subgroups = [[gendict[g] for g in Gsub.generators] for Gsub in G.iter_subgroups()]
 		self.assertEqual(subgroups,[[0],[0,1],[0,2],[0,1,2]])
@@ -115,6 +118,8 @@ class TestPermutation(unittest.TestCase):
 		permtargets = [''.join(x.targets) for x in perms]
 		self.assertEqual(permtargets,['abcd', 'adcb', 'badc', 'bcda', 'cbad', 'cdab', 'dabc', 'dcba'])
 		self.assertEqual(G.orbits,(tuple('abcd'),))
+		for x in 'abcd':
+			self.assertEqual(G.orbit(x),tuple('abcd'))
 
 		gendict = dict(zip(G.generators,range(len(G.generators))))
 		subgroups = [[gendict[g] for g in Gsub.generators] for Gsub in G.iter_subgroups()]
