@@ -246,6 +246,74 @@ class TestEndToEndCanonicalLabel(unittest.TestCase):
 		self.assertEqual(len(node2.state.cache),0)
 
 
+		# replace the edge and get everything back
+		tokens = [make_edge_token(*x) for x in [ (c1,n1,a1,c2,n2,a2,'AddEdge'), (c2,n2,a2,c1,n1,a1,'AddEdge') ] ]	
+		for token in tokens:
+			start.state.incoming.append(token)
+			rn.sync(start)
+		self.assertEqual(len(node1.state.cache),4)
+		self.assertEqual(len(node2.state.cache),24)
+
+
+	def test_directed_wheel(self):
+		g,nsyms = directed_wheel()
+		mapping,labeling,symmetry_group = get_canonical_label('directed_wheel')
+		
+		rn = ReteNet().initialize_start()
+		start = rn.get_node(type='start')
+
+		rn.initialize_canonical_label(labeling,symmetry_group)
+
+		nodes = rn.get_nodes(type='canonical_label')
+		node1,node2 = nodes[0], nodes[-1]
+		
+		self.assertEqual(len(node1.core.names),2)
+		self.assertEqual(len(node1.state.cache),0)
+		self.assertEqual(len(node2.core.names),len(g))
+		self.assertEqual(len(node2.state.cache),0)
+
+
+		for idx,n in g.iter_nodes():
+			token = make_node_token(n.__class__,n,'AddNode')
+			start.state.incoming.append(token)
+			rn.sync(start)
+		self.assertEqual(len(node1.state.cache),0)
+		self.assertEqual(len(node2.state.cache),0)
+
+		edges = list(g.iter_edges())
+		for e in edges:
+			n1,a1,n2,a2 = e.unpack()
+			n1,n2 = [g[x] for x in [n1,n2]]
+			c1,c2 = n1.__class__, n2.__class__
+			tokens = [make_edge_token(*x) for x in [ (c1,n1,a1,c2,n2,a2,'AddEdge'), (c2,n2,a2,c1,n1,a1,'AddEdge') ] ]	
+			for token in tokens:
+				start.state.incoming.append(token)
+				rn.sync(start)
+
+		self.assertEqual(len(node1.state.cache),len(edges))
+		self.assertEqual(len(node2.state.cache),nsyms)
+
+		e = random.sample(list(edges),1)[0]
+		n1,a1,n2,a2 = e.unpack()
+		n1,n2 = [g[x] for x in [n1,n2]]
+		tokens = [make_edge_token(*x) for x in [ (c1,n1,a1,c2,n2,a2,'RemoveEdge'), (c2,n2,a2,c1,n1,a1,'RemoveEdge') ] ]	
+		for token in tokens:
+			start.state.incoming.append(token)
+			rn.sync(start)
+
+		self.assertEqual(len(node1.state.cache),len(edges)-1)
+		self.assertEqual(len(node2.state.cache),0)
+
+		tokens = [make_edge_token(*x) for x in [ (c1,n1,a1,c2,n2,a2,'AddEdge'), (c2,n2,a2,c1,n1,a1,'AddEdge') ] ]	
+		for token in tokens:
+			start.state.incoming.append(token)
+			rn.sync(start)
+		self.assertEqual(len(node1.state.cache),len(edges))
+		self.assertEqual(len(node2.state.cache),nsyms)
+
+
+
+
 
 		
 
