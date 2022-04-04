@@ -186,6 +186,7 @@ class TestNodeFunctions(unittest.TestCase):
 		self.assertEqual(len(node1.state.cache),0)
 		self.assertEqual(len(node2.state.cache),0)
 
+	
 		
 
 

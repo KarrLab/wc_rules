@@ -67,3 +67,14 @@ class NodeFunctions:
 			deleted = node.state.cache.delete(token.data)
 			node.state.outgoing.append(token)
 		return self
+
+	def function_node_alias(self,node,token):
+		if token.action == 'AddEntry':
+			node.state.outgoing.append(token)
+		if token.action == 'RemoveEntry':
+			node.state.outgoing.append(token)
+		return self
+
+	def function_node_pattern(self,node,token):
+		if node.data.subtype == 'alias':
+			self.function_node_alias(node,token)

@@ -107,6 +107,4 @@ class TestInitialize(unittest.TestCase):
 		transform_channels = [x for x in rn.get_channels(type='transform') if x.source in [n.core for n in canonical_label_nodes]]
 		self.assertEqual(len(transform_channels),4)
 
-
-
-		
+	

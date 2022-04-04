@@ -22,6 +22,10 @@ class AddMethods:
 		self.add_node(type='receiver',core=receiver_name,cache=deque())
 		return self
 
+	def add_node_alias(self,type,core_object,reference_object,mapping):
+		cache_ref = self.generate_cache_reference(core=reference_object,mapping=mapping)
+		self.add_node(type='pattern',core=core_object,)
+
 	def add_node_canonical_label(self,clabel,symmetry_group):
 		cache = self.DATABASE_CLASS(
 			fields=clabel.names,
@@ -33,6 +37,14 @@ class AddMethods:
 			cache = cache
 			)
 		return self
+
+	def add_node_pattern(self,pattern,cache,subtype='default'):
+		self.add_node(
+			type = 'pattern',
+			core = pattern,
+			cache = cache,
+			subtype = subtype
+			)
 
 	def add_data_property(self,core,variable,value):
 		node = self.get_node(core=core)
@@ -47,6 +59,7 @@ class AddMethods:
 			symmetry_group=symmetry_group,
 		)
 		return cache_ref
+	
 
 	def update_node_data(self,core,update_dict):
 		data = self.get_node(core=core).data
@@ -71,6 +84,7 @@ class AddMethods:
 			transformer = TokenTransformer(datamap,actionmap)
 		)		
 		return self
+
 
 class AddMethodsSymmetric(AddMethods):
 

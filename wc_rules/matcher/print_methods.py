@@ -65,4 +65,7 @@ class PrintMethods:
 	def descr_node_canonical_label(self,core_obj):
 		classnames = [x.__name__ for x in core_obj.classes]
 		return arrow_str_lists([core_obj.names,classnames])
+
+	def descr_node_pattern(self,core_obj):
+		return list_to_str(core_obj.cache_variables)
 		

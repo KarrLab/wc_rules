@@ -39,9 +39,8 @@ class Pattern:
 	@property
 	def cache_variables(self):
 		if isinstance(self.parent,GraphContainer):
-			return self.parent.names + self.assigned_variables
+			return self.parent.variables + self.assigned_variables
 		return self.parent.cache_variables + self.assigned_variables
-	
 
 	def asdict(self):
 		return dict(**self.namespace,constraints=self.constraints)
