@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Tuple, Dict
 from backports.cached_property import cached_property
 from collections import defaultdict, UserDict
+from sortedcontainers import SortedSet
 
 class SimpleMapping(UserDict):
 
@@ -382,3 +383,17 @@ class ExclusionSet:
     def __contains__(self,x):
         return x not in self._exclude
 
+class LoggableDict(UserDict):
+
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.modified = SortedSet()
+
+    def set(self,key,value):
+        self.modified.add(key)
+        UserDict.__setitem__(self,key,value)
+        return self
+
+    def flush(self):
+        self.modified = SortedSet()
+    
