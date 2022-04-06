@@ -5,6 +5,7 @@ from .token import TokenTransformer
 from ..graph.graph_partitioning import partition_canonical_form
 from ..graph.canonical_labeling import canonical_label
 from ..graph.permutations import Mapping
+from ..expressions.executable import ExecutableExpressionManager
 
 class InitializationMethods:
 
@@ -101,11 +102,11 @@ class InitializationMethods:
 
 	def initialize_pattern(self,pattern):
 		parent_obj, mapping = self.initialize_parent(pattern.parent)
+		assert len(pattern.helpers)==0, 'Pattern not supported yet.'
 		if len(pattern.constraints) == 0:
 			self.initialize_pattern_alias(pattern,parent_obj,mapping)
-		else:
-			assert False, 'Pattern not supported yet.'
-		
+		elif len(pattern.helpers)==0:
+			self.initialize_pattern_constraints(pattern,parent_obj,mapping)	
 		return self
 
 	def initialize_parent(self,parent):
@@ -129,5 +130,29 @@ class InitializationMethods:
 		datamap = mapping._dict
 		self.add_channel_transform(source=parent,target=pattern,datamap=datamap,actionmap=actionmap)
 		return self
+
+	def initialize_pattern_constraints(self,pattern,parent,mapping):
+		cache = self.generate_cache(pattern.cache_variables)
+		# these are helpers
+		caches = {'parent':self.generate_cache_reference(parent,mapping.reverse()._dict)}
+		manager = ExecutableExpressionManager(pattern.make_executable_constraints())
+
+		self.add_node_pattern(pattern=pattern,cache=cache,subtype='default',executables=manager,caches=caches)
+		actionmap = {'AddEntry':'AddEntry', 'RemoveEntry':'RemoveEntry'}
+		datamap = mapping._dict
+		self.add_channel_transform(source=parent,target=pattern,datamap=datamap,actionmap=actionmap)
+
+		####
+		# process constraints
+		for variable,attr in manager.get_attribute_calls():
+			_class = pattern.namespace[variable]
+			assert issubclass(_class,BaseClass)
+			datamap = {'ref':variable,'attr':'attr'}
+			actionmap = {'SetAttr':'VerifyEntry'}
+			filter_data = lambda data: data['attr'] == attr
+			self.add_channel_transform(source=_class,target=pattern,datamap=datamap,actionmap=actionmap,filter_data=filter_data)
+			
+		return self		
+
 
 	

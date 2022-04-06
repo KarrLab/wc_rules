@@ -4,7 +4,9 @@ from ..utils.collections import subdict
 from ..schema.actions import RollbackAction, TerminateAction, PrimaryAction, CompositeAction, SimulatorAction
 from .builtins import ordered_builtins, global_builtins
 from .exprgraph import dfs_make
-from collections import ChainMap
+from collections import ChainMap, defaultdict
+from sortedcontainers import SortedSet
+
 import inspect
 
 def register_builtin(name,fn,ordered_arguments=True):
@@ -161,3 +163,31 @@ def initialize_from_string(string,classes):
 			return x
 	err = 'Could not create a valid instance of {0} from {1}'
 	assert False, err.format(classes,string)
+
+
+class ExecutableExpressionManager:
+
+	def __init__(self,constraint_execs):
+		self.execs = constraint_execs
+
+	def pprint(self):
+		return '\n'.join([x.code for x in self.execs])
+
+	def get_attribute_calls(self):
+		attrcalls = defaultdict(SortedSet)
+		for c in self.execs:
+			for k,v in c.deps.attribute_calls.items():
+				attrcalls[k].update(v)
+		for k,v in attrcalls.items():
+			for a in v:
+				yield k,a
+
+	def exec(self,match,*dicts):
+		for c in self.execs:
+			if c.deps.declared_variable is not None:
+				match[c.deps.declared_variable] = c.exec(match,*dicts)
+			elif not c.exec(match,*dicts):
+				return None
+		return match
+
+

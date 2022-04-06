@@ -75,6 +75,31 @@ class NodeFunctions:
 			node.state.outgoing.append(token)
 		return self
 
+	def function_node_constraints(self,node,token):
+		executable_manager = node.data.executables
+		caches = node.data.caches
+		if token.action == 'AddEntry':
+			match = executable_manager.exec(token.data,caches)
+			if match is not None:
+				newtoken = CacheToken(data=match,action='AddEntry')
+				self.function_node_cache(node,newtoken)
+		elif token.action == 'RemoveEntry':
+			self.function_node_cache(node,token)
+		elif token.action == 'VerifyEntry':
+			for elem in caches.parent.filter(token.data):
+				current_matching_elem = node.state.cache.filter_one(elem)
+				if current_matching_elem is not None:
+					deltoken = CacheToken(data=current_matching_elem,action='RemoveEntry')
+					self.function_node_constraints(node,deltoken)
+				instoken = CacheToken(data=elem,action='AddEntry')
+				self.function_node_constraints(node,instoken)
+		else:
+			assert False, 'Not supported yet'
+		return self
+
 	def function_node_pattern(self,node,token):
 		if node.data.subtype == 'alias':
 			self.function_node_alias(node,token)
+		else:
+			self.function_node_constraints(node,token)
+		return self

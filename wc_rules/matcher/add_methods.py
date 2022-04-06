@@ -38,12 +38,14 @@ class AddMethods:
 			)
 		return self
 
-	def add_node_pattern(self,pattern,cache,subtype='default'):
+	def add_node_pattern(self,pattern,cache,subtype='default',executables=[],caches={}):
 		self.add_node(
 			type = 'pattern',
 			core = pattern,
 			cache = cache,
-			subtype = subtype
+			subtype = subtype,
+			executables=executables,
+			caches = caches
 			)
 
 	def add_data_property(self,core,variable,value):
@@ -59,6 +61,9 @@ class AddMethods:
 			symmetry_group=symmetry_group,
 		)
 		return cache_ref
+
+	def generate_cache(self,fields,**kwargs):
+		return self.DATABASE_CLASS(fields=fields,**kwargs)
 	
 
 	def update_node_data(self,core,update_dict):
@@ -66,22 +71,24 @@ class AddMethods:
 		data.update(update_dict)
 		self.nodes.update({'core':core},{'data':data})
 
-	def add_channel_pass(self,source,target,allowed_token_actions=UniversalSet()):
+	def add_channel_pass(self,source,target,allowed_token_actions=UniversalSet(),filter_data=lambda data: True):
 		self.add_channel(
 			type='pass',
 			source=source,
 			target=target,
-			allowed_token_actions=allowed_token_actions
+			allowed_token_actions=allowed_token_actions,
+			filter_data = filter_data
 		)
 		return self
 
-	def add_channel_transform(self,source,target,datamap,actionmap):
+	def add_channel_transform(self,source,target,datamap,actionmap,filter_data=lambda data: True):
 		self.add_channel(
 			type='transform',
 			source=source,
 			target=target,
 			allowed_token_actions=actionmap.keys(),
-			transformer = TokenTransformer(datamap,actionmap)
+			transformer = TokenTransformer(datamap,actionmap),
+			filter_data = filter_data
 		)		
 		return self
 
