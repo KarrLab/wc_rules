@@ -4,6 +4,7 @@ from ..utils.collections import UniversalSet, triple_split
 from .token import TokenTransformer
 from ..graph.graph_partitioning import partition_canonical_form
 from ..graph.canonical_labeling import canonical_label
+from ..graph.permutations import Mapping
 
 class InitializationMethods:
 
@@ -99,21 +100,34 @@ class InitializationMethods:
 		return self
 
 	def initialize_pattern(self,pattern):
-		assert isinstance(pattern.parent,GraphContainer) and len(pattern.constraints)==0, "This pattern not supported yet."
-		if isinstance(pattern.parent,GraphContainer):
-			if len(pattern.constraints)==0:
-				self.initialize_pattern_alias(pattern)
+		parent_obj, mapping = self.initialize_parent(pattern.parent)
+		if len(pattern.constraints) == 0:
+			self.initialize_pattern_alias(pattern,parent_obj,mapping)
+		else:
+			assert False, 'Pattern not supported yet.'
+		
 		return self
 
-	def initialize_pattern_alias(self,pattern):
-		mapping,labeling,symmetry_group = canonical_label(pattern.parent)
-		self.initialize_canonical_label(labeling,symmetry_group)
-
-		cache_ref = self.generate_cache_reference(labeling,mapping.reverse()._dict)
+	def initialize_parent(self,parent):
+		# figures out what kind of object parent is
+		# initializes it
+		# returns the "core" object corresponding to parent
+		# and the mapping to child
+		if isinstance(parent,GraphContainer):
+			mapping,labeling,symmetry_group = canonical_label(parent)
+			self.initialize_canonical_label(labeling,symmetry_group)
+			parent_obj, mapping = labeling,mapping
+		elif isinstance(parent,Pattern):
+			self.initialize_pattern(parent)
+			parent_obj, mapping = parent, Mapping.create(parent.cache_variables)
+		return parent_obj, mapping
+			
+	def initialize_pattern_alias(self,pattern,parent,mapping):
+		cache_ref = self.generate_cache_reference(parent,mapping.reverse()._dict)
 		self.add_node_pattern(pattern=pattern,cache=cache_ref,subtype='alias')
-		
 		actionmap = {'AddEntry':'AddEntry', 'RemoveEntry':'RemoveEntry'}
 		datamap = mapping._dict
-		self.add_channel_transform(source=labeling,target=pattern,datamap=datamap,actionmap=actionmap)
+		self.add_channel_transform(source=parent,target=pattern,datamap=datamap,actionmap=actionmap)
 		return self
 
+	

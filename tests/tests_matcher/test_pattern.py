@@ -57,4 +57,31 @@ class TestRetePatternBehavior(unittest.TestCase):
 
 		self.assertEqual(len(rn_px.state.cache.target),0)
 		
+	def test_pattern_double_alias(self):
+
+		rn = ReteNet().initialize_start()
+		start = rn.get_node(type='start')
+		
+		px = Pattern(parent=GraphContainer([X('x')]))
+		pxx = Pattern(parent=px)
+		rn.initialize_pattern(pxx)
+
+		rn_px, rn_pxx = [rn.get_node(core=x) for x in [px,pxx]]
+		
+		self.assertTrue(rn_px is not None)
+		self.assertTrue(rn_pxx is not None)
+		self.assertTrue(rn_pxx.state.cache.target is rn_px.state.cache.target)
+
+		self.assertEqual(rn_pxx.state.cache.filter(),[])
+		
+		x1 = X('x1')
+		token = make_node_token(X,x1,'AddNode')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(rn_pxx.state.cache.filter(),[{'x':x1}])
+		
+		token = make_node_token(X,x1,'RemoveNode')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(rn_pxx.state.cache.filter(),[])
 		
