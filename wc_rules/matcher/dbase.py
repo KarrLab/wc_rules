@@ -8,6 +8,13 @@ def dict_overlap(d1,d2):
 def clean_record(r):
 	return {k:v for k,v in r.items() if k not in ['__id__','__version__']}
 
+class SingleValueDatabase:
+	def __init__(self,field,**kwargs):
+		self.field = field
+		self.value = None
+
+	
+
 class Database:
 
 	def __init__(self,fields,**kwargs):

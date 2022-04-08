@@ -1,3 +1,5 @@
+from wc_rules.schema.entity import Entity
+from wc_rules.schema.attributes import BooleanAttribute, IntegerAttribute, StringAttribute, computation
 from wc_rules.modeling.pattern import Pattern, GraphContainer
 from wc_rules.matcher.core import build_rete_net_class
 from wc_rules.matcher.token import *
@@ -5,8 +7,21 @@ from wc_rules.graph.examples import X,Y
 
 import unittest
 
-ReteNet = build_rete_net_class()
+class BigAttributeClass(Entity):
 
+	x = BooleanAttribute()
+	y = BooleanAttribute()
+	n1 = IntegerAttribute()
+	n2 = IntegerAttribute()
+
+	s1 = StringAttribute()
+	s2 = StringAttribute()
+	
+	@computation
+	def some_function(s1,s2,k=True):
+		return ('A' in s1 or 'A' in s2) and k
+
+ReteNet = build_rete_net_class()
 
 class TestRetePatternInitialization(unittest.TestCase):
 	# test the pattern, its incoming channel
@@ -67,6 +82,30 @@ class TestRetePatternInitialization(unittest.TestCase):
 		self.assertEqual(ch.data.transformer.actionmap,{'SetAttr':'VerifyEntry'})
 		self.assertTrue(ch.data.filter_data({'attr':'x'}))
 		self.assertTrue(ch.data.filter_data({'attr':'boo'}) == False)
+
+
+	def test_pattern_literal_attrs(self):
+		p = Pattern(
+			parent = GraphContainer([BigAttributeClass('elem')]),
+			constraints = [
+				'any(elem.x,elem.y)==True',
+				'elem.n1 + elem.n2 < 4',
+				'elem.some_function(k=True)==True'
+				]
+		)
+		rn = ReteNet().initialize_start()
+		start = rn.get_node(type='start')
+		rn.initialize_pattern(p)
+		rn_p = rn.get_node(core=p)
+		
+		# make sure there are 6 transform channels on rn_p
+		# that originate from a class node
+		# they correspond to attribute checks
+		# the channels differ only in their filter_data method
+		channels = [ch for ch in rn.get_channels(target=p) if isinstance(ch.source,type)]
+		self.assertEqual(len(channels),6)
+		attrs = [attr for ch in channels for attr in ch.data.filter_data.keywords.values()]
+		self.assertEqual(attrs,sorted('x y n1 n2 s1 s2'.split()))
 
 
 class TestRetePatternBehavior(unittest.TestCase):
@@ -156,4 +195,59 @@ class TestRetePatternBehavior(unittest.TestCase):
 		rn.sync(start)
 		self.assertEqual(rn_py.state.cache.filter(),[])
 		
+	def test_pattern_literal_attrs(self):
+		p = Pattern(
+			parent = GraphContainer([BigAttributeClass('elem')]),
+			constraints = [
+				'any(elem.x,elem.y)==True',
+				'elem.n1 + elem.n2 < 4',
+				'elem.some_function(k=True)==True'
+				]
+		)
+		rn = ReteNet().initialize_start()
+		start = rn.get_node(type='start')
+		rn.initialize_pattern(p)
+		rn_p = rn.get_node(core=p)
+		self.assertEqual(len(rn_p.state.cache),0)
 
+		elem1 = BigAttributeClass('elem1',x=True,y=False,n1=1,n2=2,s1='ABC',s2='DEF')
+		token = make_node_token(BigAttributeClass,elem1,'AddNode')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(rn_p.state.cache),1)
+
+		elem1.x = False
+		token = make_attr_token(BigAttributeClass,elem1,'x','SetAttr')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(rn_p.state.cache),0)
+
+		elem1.y = True
+		token = make_attr_token(BigAttributeClass,elem1,'y','SetAttr')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(rn_p.state.cache),1)
+
+		elem1.n1 = 2
+		token = make_attr_token(BigAttributeClass,elem1,'n1','SetAttr')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(rn_p.state.cache),0)
+
+		elem1.n2 = 1
+		token = make_attr_token(BigAttributeClass,elem1,'n2','SetAttr')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(rn_p.state.cache),1)
+
+		elem1.s1 = 'DEF'
+		token = make_attr_token(BigAttributeClass,elem1,'s1','SetAttr')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(rn_p.state.cache),0)
+
+		elem1.s2 = 'ABC'
+		token = make_attr_token(BigAttributeClass,elem1,'s2','SetAttr')
+		start.state.incoming.append(token)
+		rn.sync(start)
+		self.assertEqual(len(rn_p.state.cache),1)

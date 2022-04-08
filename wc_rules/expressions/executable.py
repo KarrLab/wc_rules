@@ -166,9 +166,13 @@ def initialize_from_string(string,classes):
 
 
 class ExecutableExpressionManager:
+	# assume top-level variable are variables of a pattern
+	# e.g., a.x => a is a node on a pattern, x is an attribute
+	# similarly, a.x(), x is a computation
 
-	def __init__(self,constraint_execs):
+	def __init__(self,constraint_execs,namespace):
 		self.execs = constraint_execs
+		self.namespace = namespace
 
 	def pprint(self):
 		return '\n'.join([x.code for x in self.execs])
@@ -178,6 +182,14 @@ class ExecutableExpressionManager:
 		for c in self.execs:
 			for k,v in c.deps.attribute_calls.items():
 				attrcalls[k].update(v)
+			for fnametuple in c.deps.function_calls:
+				if len(fnametuple)==2:
+					var,fname = fnametuple
+					_class = self.namespace[var]
+					fn = getattr(_class,fname)
+					assert fn._is_computation, f'Could not find function {fnametuple}'
+					kws = sorted(set(fn._kws) & set(_class.get_literal_attrs()))
+					attrcalls[var].update(kws)
 		for k,v in attrcalls.items():
 			for a in v:
 				yield k,a
