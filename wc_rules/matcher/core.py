@@ -55,7 +55,7 @@ class ReteNetBase:
 		token = node.state.outgoing.popleft()
 		channels = self.get_channels(source=node.core)
 		for channel in channels:
-			if token.action in channel.data.allowed_token_actions and channel.data.filter_data(token.data):
+			#if token.action in channel.data.allowed_token_actions and channel.data.filter_data(token.data):
 				method = getattr(self,f'function_channel_{channel.type}')
 				method(channel,token)
 				self.sync(self.get_node(core=channel.target))

@@ -8,13 +8,6 @@ def dict_overlap(d1,d2):
 def clean_record(r):
 	return {k:v for k,v in r.items() if k not in ['__id__','__version__']}
 
-class SingleValueDatabase:
-	def __init__(self,field,**kwargs):
-		self.field = field
-		self.value = None
-
-	
-
 class Database:
 
 	def __init__(self,fields,**kwargs):
@@ -43,7 +36,7 @@ class Database:
 			self._db.update(record,**update_kwargs)
 		return self
 
-	def filter_one(self,kwargs):
+	def filter_one(self,kwargs={}):
 		records = self.filter(kwargs)
 		if len(records)==1:
 			return records[0]
@@ -51,6 +44,17 @@ class Database:
 
 	def __len__(self):
 		return len(self._db)
+
+	def count(self):
+		return len(self)
+
+class DatabaseSingleValue:
+
+	def __init__(self,value=None):
+		self.value = value
+
+	def update(self,value):
+		self.value = value
 
 class DatabaseAlias:
 
@@ -89,6 +93,9 @@ class DatabaseAlias:
 		records = self.target.filter(kwargs1)
 		rotated = [self.forward_transform(x) for x in records]
 		return rotated
+
+	def count(self):
+		return len(self.target)
 
 
 class DatabaseSymmetric(Database):

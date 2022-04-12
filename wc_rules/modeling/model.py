@@ -72,6 +72,10 @@ class RuleBasedModel:
 		for observable in self.observables:
 			yield add_prefix(prefix,observable.name), observable
 
+	def iter_parameters(self,prefix=''):
+		for param,value in self.collect_parameters().items():
+			yield add_prefix(prefix,param), value
+
 			
 
 
@@ -146,5 +150,9 @@ class AggregateModel:
 			yield add_prefix(prefix,observable.name), observable
 		for n,m in self.iter_models(prefix):
 			yield from m.iter_observables()
+
+	def iter_parameters(self,prefix=''):
+		for n,m in self.iter_models(prefix):
+			yield from m.iter_parameters(prefix=n)
 
 

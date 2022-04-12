@@ -1,6 +1,6 @@
 # see tokens.py for the different types of tokens
 from ..utils.collections import subdict
-from .token import CacheToken
+from .token import CacheToken, VarToken
 
 def no_common_values(d1,d2):
 	return len(set(d1.values()) & set(d2.values())) == 0
@@ -18,6 +18,10 @@ class NodeFunctions:
 
 	def function_node_receiver(self,node,token):
 		node.state.cache.append(token)
+		return self
+
+	def function_node_end(self,node,token):
+		self.function_node_receiver(node,token)
 		return self
 
 	def function_node_canonical_label(self,node,token):
@@ -102,4 +106,16 @@ class NodeFunctions:
 			self.function_node_alias(node,token)
 		else:
 			self.function_node_constraints(node,token)
+		return self
+
+	def function_node_variable(self,node,token):
+		if node.data.subtype == 'recompute':
+			params = {k:self.get_node(core=c).state.cache.value for k,c in node.data.parameters.items()}
+			value = node.data.executable.exec(params,node.data.caches)
+			if value != node.state.cache.value:
+				node.state.cache.update(value)
+				token = VarToken(variable=node.core)
+				node.state.outgoing.append(token)
+		else:
+			assert False, "Not supported yet!"
 		return self

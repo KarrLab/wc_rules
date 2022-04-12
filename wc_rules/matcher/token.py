@@ -15,13 +15,20 @@ class CacheToken:
 	data: Dict
 	channel: int=-1
 
+@dataclass(eq=True)
+class VarToken:
+	variable: str
+
 class TokenTransformer:
 	def __init__(self,datamap,actionmap):
 		self.datamap = datamap
 		self.actionmap = actionmap
 
 	def transform(self,token,channel=-1):
-		data = {self.datamap[k]:v for k,v in token.data.items()}
+		if self.datamap is not None:
+			data = {self.datamap[k]:v for k,v in token.data.items()}
+		else:
+			data = token.data
 		action = self.actionmap[token.action]
 		return CacheToken(data=data,action=action,channel=channel)
 

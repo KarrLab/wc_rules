@@ -28,6 +28,10 @@ class InitializationMethods:
 		self.add_node_start()
 		return self
 
+	def initialize_end(self):
+		self.add_node_end()
+		return self
+
 	def initialize_class(self,_class):
 		if self.node_exists(core=_class):
 			return self
@@ -155,6 +159,41 @@ class InitializationMethods:
 			self.add_channel_transform(source=_class,target=pattern,datamap=datamap,actionmap=actionmap,filter_data=filter_data)
 			
 		# to do: HELPERS
-		return self		
+		return self
+
+	def initialize_rule(self,name,rule):
+		model_name = '.'.join(name.split('.')[:-1])
+		parameters, caches = dict(),dict()
+		for param in rule.parameters:
+			parameters[param] = f'{model_name}.{param}'
+			assert self.get_node(core=f'{model_name}.{param}') is not None
+		for pname,pattern in rule.reactants.items():
+			self.initialize_pattern(pattern)
+			cache_ref = self.get_node(core=pattern).state.cache
+			caches[pname] = cache_ref
+		rate_law_executable = rule.get_rate_law_executable()
+		node_name = f'{name}.propensity'
+		self.add_node_variable(
+			name = node_name,
+			default_value = 0,
+			executable = rate_law_executable,
+			parameters = parameters,
+			caches = caches,
+			subtype = 'recompute'
+			)
+		for k,v in parameters.items():
+			self.add_channel_variable_update(source=v,target=node_name,variable=k)
+		for pname, pattern in rule.reactants.items():
+			self.add_channel_variable_update(source=pattern,target=node_name,variable=pname)
+
+		self.add_channel_variable_update(source=node_name,target='end',variable=node_name)
+
+
+	def initialize_model(self,model):
+		for name,value in model.iter_parameters():
+			self.add_node_variable(name,value,subtype='fixed')
+		for name,rule in model.iter_rules():
+			self.initialize_rule(name,rule)
+		return self
 
 	
