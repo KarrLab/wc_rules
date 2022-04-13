@@ -1,7 +1,7 @@
 from wc_rules.schema.base import BaseClass
 from wc_rules.schema.attributes import *
 from wc_rules.schema.actions import *
-from wc_rules.simulator.simulator import SimulationState
+#from wc_rules.simulator.simulator import SimulationState
 #from wc_rules.matcher.core import default_rete_net
 import unittest
 

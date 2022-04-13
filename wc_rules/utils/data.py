@@ -68,6 +68,15 @@ class NestedDict:
 				return False
 		return True
 
+	@staticmethod
+	def flatten(d):
+		return dict(NestedDict.iter_items(d,mode='str'))
+
+	@staticmethod
+	def unflatten(d):
+		return NestedDict.compose(*d.items())
+		
+
 DELIMITER = ','
 
 class YAMLUtil:

@@ -26,6 +26,7 @@ class Scheduler(ABC):
 			event, time = self.events.popitem()
 		return None, float('inf')
 
+
 	
 class NextReactionMethod(Scheduler):
 	''' Gibson & Bruck 2000 '''
@@ -35,12 +36,10 @@ class NextReactionMethod(Scheduler):
 		self.propensities = defaultdict(float)
 		
 	def update(self,time,variables={}):
-		for event, propensity in variables.items():
-			self.propensities[event] = propensity
-			tau = - log(rand()) / propensity
-			self.insert(event,time + tau)
+		for variable, value in variables.items():
+			if variable.endswith('.propensity'):
+				event, propensity = '.'.join(variable.split('.')[:-1]), value
+				self.propensities[event] = propensity
+				tau = - log(rand()) / propensity
+				self.insert(event,time + tau)
 		return self
-
-		
-
-	
