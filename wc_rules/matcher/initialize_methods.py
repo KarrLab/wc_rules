@@ -188,9 +188,10 @@ class InitializationMethods:
 
 		self.add_channel_variable_update(source=node_name,target='end',variable=node_name)
 
-	def initialize_model(self,model,parameters):
+	
+	def initialize_rules(self,rules,parameters):
 		for name,value in parameters.items():
 			self.add_node_variable(name,value,subtype='fixed')
-		for name,rule in model.iter_rules():
+		for name,rule in rules.items():
 			self.initialize_rule(name,rule)
 		return self

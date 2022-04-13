@@ -3,6 +3,10 @@ from .scheduler import NextReactionMethod
 from ..utils.collections import DictLike, LoggableDict
 from ..utils.data import NestedDict
 from ..modeling.model import AggregateModel
+from collections import defaultdict
+
+def get_model_name(rule_name):
+	return '.'.join(rule_name.split('.')[:-1])
 
 class Simulator:
 
@@ -10,24 +14,25 @@ class Simulator:
 	Scheduler = NextReactionMethod
 
 	def __init__(self,model=None,parameters=None,**kwargs):
-		# the root model is always an AggregateModel with name 'model'
-		self.model = AggregateModel('model',models=[model])
-	
-		# parameters are encoded in "flat" mode not as NestedDict
-		if parameters is None:
-			parameters = dict(self.model.iter_parameters())
-		else:
-			parameters = dict(NestedDict.flatten(parameters))
+		
+		model.verify(parameters)
+		self.parameters = NestedDict.flatten(parameters)
+		self.rules = dict(model.iter_rules())
+		self.parameter_dependencies = defaultdict(list)
 
-		self.model.verify(NestedDict.unflatten(parameters))
-		self.parameters = LoggableDict(parameters)
+		for r,rule in self.rules.items():
+			for p in rule.parameters:
+				self.parameter_dependencies[r].append(f'{get_model_name(r)}.{p}')
+
+		self.net = self.ReteNetClass() \
+			.initialize_start() \
+			.initialize_end()	\
+			.initialize_rules(self.rules,self.parameters)
+
+
 		
-		# When ReteNet initialization is called
-		# we MUST have compatible model and parameters
-		self.net = self.ReteNetClass().initialize_start().initialize_end()
-		self.net.initialize_model(self.model,self.parameters)		
-		
-		self.cache = DictLike()
-		self.sampler = self.Scheduler()
+
+
+
 
 

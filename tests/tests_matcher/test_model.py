@@ -35,7 +35,7 @@ class ModelInitialization(unittest.TestCase):
 		model.verify(data={'binding_model':{'k':1}})
 		
 		rn = ReteNet().initialize_start().initialize_end()
-		rn.initialize_model(model,{'binding_model.k':1})
+		rn.initialize_rules(dict(model.iter_rules()),{'binding_model.k':1})
 		self.assertTrue(rn.get_node(core='binding_model.binding_rule.propensity') is not None)
 		self.assertTrue(rn.get_node(core='binding_model.k') is not None)
 		self.assertTrue(rn.get_channel(
@@ -62,7 +62,7 @@ class ModelBehavior(unittest.TestCase):
 
 		model = AggregateModel('model',models=[BindingRuleModel('binding_model')])
 		rn = ReteNet().initialize_start().initialize_end()
-		rn.initialize_model(model,{'binding_model.k':1})
+		rn.initialize_rules(dict(model.iter_rules()),{'binding_model.k':1})
 		start,end = [rn.get_node(type=x) for x in ['start','end',]]
 		prop = rn.get_node(core='binding_model.binding_rule.propensity')
 
