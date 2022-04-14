@@ -82,7 +82,7 @@ class RemoveNode(NodeAction):
 
     @classmethod
     def make(cls,node):
-        return cls(_class=None,idx=node.id,attrs=node.get_literal_attrdict())
+        return cls(_class=node.__class__,idx=node.id,attrs=node.get_literal_attrdict())
 
     def execute(self,sim):
         return self.remove_node(sim,register=True)
@@ -99,12 +99,12 @@ class SetAttr(PrimaryAction):
 
     @classmethod
     def make(cls,node,attr,value):
-        return cls(idx=node.idx,attr=attr,value=value,old_value=node.get(attr))
+        return cls(idx=node.id,attr=attr,value=value,old_value=node.get(attr))
 
     def execute(self,sim):
         node = sim[self.idx]
         node.safely_set_attr(self.attr,self.value)
-        return [dict(_class=node.__class__,idx=self.idx,attr=self.attr,action='SetAttr')]
+        return self
 
     def rollback(self,sim):
         node = sim[self.idx]

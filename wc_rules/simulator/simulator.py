@@ -58,3 +58,4 @@ class Simulator:
 			.initialize_end()	\
 			.initialize_rules(self.rules,self.parameters)
 
+	

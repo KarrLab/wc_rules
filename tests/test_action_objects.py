@@ -1,8 +1,7 @@
 from wc_rules.schema.base import BaseClass
 from wc_rules.schema.attributes import *
 from wc_rules.schema.actions import *
-#from wc_rules.simulator.simulator import SimulationState
-#from wc_rules.matcher.core import default_rete_net
+from wc_rules.utils.collections import DictLike
 import unittest
 
 
@@ -25,12 +24,23 @@ def string_to_action_object(s,_locals):
 	fn = eval('lambda: ' + s,_locals)
 	return fn()	
 
-@unittest.skip('Add this back after simulator module is ready')
+def get_contents(ss,ignore_id=True,ignore_None=True,use_id_for_related=True,sort_for_printing=True):
+	d = {x.id:x.get_attrdict(ignore_id=ignore_id,ignore_None=ignore_None,use_id_for_related=use_id_for_related) for k,x in ss.items()}
+	if sort_for_printing:
+		# sort list attributes
+		for idx,adict in d.items():
+			for k,v in adict.items():
+				if isinstance(v,list):
+					adict[k] = list(sorted(v))
+			adict = dict(sorted(adict.items()))
+		d = dict(sorted(d.items())) 
+	return d
+
 class TestActionObjects(unittest.TestCase):
 
 	def setUp(self):
 		self.locals = dict(
-			sim = SimulationState(),
+			sim = DictLike(),
 			Animal = Animal,
 			Person = Person,
 			AddNode = AddNode,
@@ -46,16 +56,16 @@ class TestActionObjects(unittest.TestCase):
 			AddNode.make(Animal,'doggy',dict(sound='ruff'))
 			AddNode.make(Animal,'kitty',dict(sound='woof'))
 			AddNode.make(Person,'john')
-			SetAttr.make(sim.resolve('kitty'),'sound','meow')
-			AddEdge.make(sim.resolve('doggy'),'owner',sim.resolve('john'))
-			AddEdge.make(sim.resolve('kitty'),'owner',sim.resolve('john'))
-			AddEdge.make(sim.resolve('doggy'),'friends',sim.resolve('kitty'))
-			RemoveEdge.make(sim.resolve('john'),'pets',sim.resolve('doggy'))
-			RemoveEdge.make(sim.resolve('john'),'pets',sim.resolve('kitty'))
-			RemoveEdge.make(sim.resolve('kitty'),'friends',sim.resolve('doggy'))
-			RemoveNode.make(sim.resolve('john'))
-			RemoveNode.make(sim.resolve('doggy'))
-			RemoveNode.make(sim.resolve('kitty'))
+			SetAttr.make(sim.get('kitty'),'sound','meow')
+			AddEdge.make(sim.get('doggy'),'owner',sim.get('john'))
+			AddEdge.make(sim.get('kitty'),'owner',sim.get('john'))
+			AddEdge.make(sim.get('doggy'),'friends',sim.get('kitty'))
+			RemoveEdge.make(sim.get('john'),'pets',sim.get('doggy'))
+			RemoveEdge.make(sim.get('john'),'pets',sim.get('kitty'))
+			RemoveEdge.make(sim.get('kitty'),'friends',sim.get('doggy'))
+			RemoveNode.make(sim.get('john'))
+			RemoveNode.make(sim.get('doggy'))
+			RemoveNode.make(sim.get('kitty'))
 		'''
 
 		actions = [
@@ -98,19 +108,17 @@ class TestActionObjects(unittest.TestCase):
 			self.assertEqual(a,actions[i])
 
 			a.execute(self.locals['sim'])
-			self.assertEqual(self.locals['sim'].get_contents(),states[i+1])
+			self.assertEqual(get_contents(self.locals['sim']),states[i+1])
 
 		rev_states = list(reversed(states))
 		for i,a in enumerate(reversed(actions)):
 			a.rollback(self.locals['sim'])
-			self.assertEqual(self.locals['sim'].get_contents(),rev_states[i+1])
-
+			self.assertEqual(get_contents(self.locals['sim']),rev_states[i+1])
 
 	def test_secondary_action_objects(self):
 		john = Person('john')
 		doggy = Animal('doggy',sound='ruff',owner=john)
 		kitty = Animal('kitty',sound='meow',owner=john,friends=[doggy])
-		sim = SimulationState([john,doggy,kitty])
 		
 		action = RemoveLiteralAttr(doggy,'sound')
 		expandsto = SetAttr.make(doggy,'sound',None)
@@ -132,7 +140,6 @@ class TestActionObjects(unittest.TestCase):
 		expandsto = [RemoveAllEdges(doggy),RemoveNode.make(doggy)]
 		self.assertEqual(action.expand(),expandsto)
 
-	
 	def test_attached_methods(self):
 		# comment = StringAttribute()
 		# passfail = BooleanAttribute()
@@ -193,7 +200,6 @@ class TestActionObjects(unittest.TestCase):
 		self.assertEqual( card.remove_all_edges(), RemoveAllEdges(card))
 		self.assertEqual( card.remove(), Remove(card))
 
-
 	def test_expand_behavior(self):
 		john = Person('john')
 		jim = Person('jim')
@@ -215,7 +221,7 @@ class TestActionObjects(unittest.TestCase):
 		self.assertEqual( RemoveAllEdges(card).expand(), [RemoveEdgeAttr(card,'owner'), RemoveEdgeAttr(card,'signatories') ])
 		self.assertEqual( Remove(card).expand(), [RemoveAllEdges(card), RemoveNode(ReportCard,'card',attrs)])
 
-
+	@unittest.skip('')
 	def test_rete_simple(self):
 		actions = [
 			AddNode(Animal,'doggy',{'sound':'ruff'}),
@@ -233,12 +239,13 @@ class TestActionObjects(unittest.TestCase):
 			RemoveNode(Animal,'kitty',{'sound':'meow'}),
 		]
 
-		ss = default_rete_net()
-		net = default_rete_net()
+		cache = DictLike()
+		ax = ActionStack({},cache)
+		
 		net.initialize_class(Animal)
 		net.initialize_class(Person)
-		net.initialize_collector(Animal,'Animal')
-		net.initialize_collector(Person,'Person')
+		net.initialize_receiver(Animal,'Animal')
+		net.initialize_receiver(Person,'Person')
 
 		ss = SimulationState(matcher=net)
 		ss.push_to_stack(actions)
