@@ -29,6 +29,7 @@ class PrimaryAction(ABC):
     def rollback(self,sim):
         pass
 
+
 class CompositeAction(ABC):
     @abstractmethod
     def expand(self):
@@ -58,11 +59,12 @@ class NodeAction(PrimaryAction):
         for attr, value in self.attrs.items():
             x.safely_set_attr(attr,value)
         sim.add(x)
-        return [dict(_class=x.__class__, idx=x, action='AddNode')]
+        return self
 
     def remove_node(self,sim, register=True):
         x = sim.pop(self.idx)
-        return [dict(_class=x.__class__, idx=x, action='RemoveNode')]
+        return self
+
 
 class AddNode(NodeAction):
 
@@ -128,20 +130,20 @@ class EdgeAction(PrimaryAction):
     def add_edge(self,sim,register=True):
         source,target = sim[self.source_idx], sim[self.target_idx]
         source.safely_add_edge(self.source_attr,target)
-        _class1, idx1, attr1 = source.__class__, source.id, self.source_attr
-        _class2, idx2, attr2 = target.__class__, target.id, self.target_attr 
-        d1 = dict(_class=_class1,idx1=idx1,attr1=attr1,idx2=idx2,attr2=attr2,action='AddEdge')
-        d2 = dict(_class=_class2,idx1=idx2,attr1=attr2,idx2=idx1,attr2=attr1,action='AddEdge')
-        return [d1, d2]
+        # _class1, idx1, attr1 = source.__class__, source.id, self.source_attr
+        # _class2, idx2, attr2 = target.__class__, target.id, self.target_attr 
+        # d1 = dict(_class=_class1,idx1=idx1,attr1=attr1,idx2=idx2,attr2=attr2,action='AddEdge')
+        # d2 = dict(_class=_class2,idx1=idx2,attr1=attr2,idx2=idx1,attr2=attr1,action='AddEdge')
+        return self
 
     def remove_edge(self,sim):
         source,target = sim[self.source_idx], sim[self.target_idx]
         source.safely_remove_edge(self.source_attr,target)
-        _class1, idx1, attr1 = source.__class__, source.id, self.source_attr
-        _class2, idx2, attr2 = target.__class__, target.id, self.target_attr 
-        d1 = dict(_class=_class1,idx1=idx1,attr1=attr1,idx2=idx2,attr2=attr2,action='RemoveEdge')
-        d2 = dict(_class=_class2,idx1=idx2,attr1=attr2,idx2=idx1,attr2=attr1,action='RemoveEdge')
-        return [d1, d2]
+        # _class1, idx1, attr1 = source.__class__, source.id, self.source_attr
+        # _class2, idx2, attr2 = target.__class__, target.id, self.target_attr 
+        # d1 = dict(_class=_class1,idx1=idx1,attr1=attr1,idx2=idx2,attr2=attr2,action='RemoveEdge')
+        # d2 = dict(_class=_class2,idx1=idx2,attr1=attr2,idx2=idx1,attr2=attr1,action='RemoveEdge')
+        return self
 
 class AddEdge(EdgeAction):
     

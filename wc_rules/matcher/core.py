@@ -76,6 +76,11 @@ class ReteNetBase:
 			self.sync(node)
 		return self
 
+	def process_tokens(self,tokens=[]):
+		start = self.get_node(type='start')
+		start.state.incoming.extend(tokens)
+		self.sync(start)
+		return self
 
 def build_rete_net_class(bases=bases,name='ReteNet',symmetry_aware=False):
 	all_bases = [ReteNetBase,] + bases

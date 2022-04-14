@@ -12,19 +12,22 @@ class TestSimpleBindingModel(unittest.TestCase):
 
 	def setUp(self):
 		self.model =  AggregateModel('binding_model',models=[simple_binding_reaction_model])
-		self.data = {'binding_model':{'k':1}}	
+		self.data = {'binding_model':{'k':1}}
+		self.sim = Simulator(model=self.model,parameters=self.data)
 
 	def test_data_verify(self):
 		self.model.verify(self.data)
 		
 	def test_init_simulator(self):
-		model,params = self.model,self.data
-		
-		sim = Simulator(model=model,parameters=params)
-
+		#model,params = self.model,self.data
+	
+		sim = self.sim
 		for name,rule in sim.rules.items():
 			self.assertTrue(sim.net.get_node(core=f'{name}.propensity') is not None)
 			for p in rule.parameters:
 				p1 = '.'.join(name.split('.')[:-1]) + f'.{p}'
 				self.assertTrue(p1 in sim.parameters)
 				self.assertTrue(p1 in sim.parameter_dependencies[name])
+
+	def test_fire_rule(self):
+		pass
