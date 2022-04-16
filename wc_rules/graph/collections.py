@@ -88,17 +88,25 @@ class GraphContainer(DictLike):
             for attr in node.get_literal_attributes(ignore_id=True,ignore_None=True):
                 yield Attr(idx,attr,node.get(attr))
 
-    def generate_actions(self,generator,count=1):
-        idxs = self._dict.keys()
-        node_classes = {idx:node.__class__ for idx, node in self.iter_nodes()}
-        node_attributes = {idx:node.get_literal_attrdict(ignore_id=True,ignore_None=True) for idx, node in self.iter_nodes()}
-        edges = [e.unpack() for e in self.iter_edges()]
-        for _ in range(count):
-            idxmap = dict(zip(idxs,[generator.generate_id() for _ in range(len(idxs))]))
-            for idx in idxs:
-                yield AddNode(node_classes[idx],idxmap[idx],deepcopy(node_attributes[idx]))
-            for n1,e1,n2,e2 in edges:
-                yield AddEdge(idxmap[n1],e1,idxmap[n2],e2)
+    # def generate_actions(self,generator,count=1):
+    #     idxs = self._dict.keys()
+    #     node_classes = {idx:node.__class__ for idx, node in self.iter_nodes()}
+    #     node_attributes = {idx:node.get_literal_attrdict(ignore_id=True,ignore_None=True) for idx, node in self.iter_nodes()}
+    #     edges = [e.unpack() for e in self.iter_edges()]
+    #     for _ in range(count):
+    #         idxmap = dict(zip(idxs,[generator.generate_id() for _ in range(len(idxs))]))
+    #         for idx in idxs:
+    #             yield AddNode(node_classes[idx],idxmap[idx],deepcopy(node_attributes[idx]))
+    #         for n1,e1,n2,e2 in edges:
+    #             yield AddEdge(idxmap[n1],e1,idxmap[n2],e2)
+
+    def generate_actions(self):
+        for idx,node in self.iter_nodes():
+            attrs = deepcopy(node.get_literal_attrdict(ignore_id=True,ignore_None=True))
+            yield AddNode(node.__class__,idx,attrs)
+        for e in self.iter_edges():
+            yield AddEdge(*e.unpack())
+        
 
     def duplicate(self,varmap={},include=None):
         if include is None:

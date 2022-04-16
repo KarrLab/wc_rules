@@ -13,9 +13,8 @@ def get_model_name(rule_name):
 
 class ActionStack:
 
-	def __init__(self,match,cache):
+	def __init__(self,cache):
 		self._dq  = deque()
-		self.match = match
 		self.cache = cache
 
 	def put(self,action):
@@ -25,6 +24,13 @@ class ActionStack:
 			self._dq.append(action)
 		return self
 
+	def put_first(self,action):
+		if isinstance(action,list):
+			self._dq.extend(reversed(action))
+		else:
+			self._dq.appendleft(action)
+		return self
+
 	def do(self):
 		tokens = []
 		while self._dq:
@@ -32,11 +38,11 @@ class ActionStack:
 			if isinstance(x,PrimaryAction):
 				x.execute(self.cache)
 				tokens.extend(convert_action_to_tokens(x,self.cache))
+			elif isinstance(x,CompositeAction):
+				self.put_first(x.expand())
 		return tokens
 
-
-
-class Simulator:
+class SimulationEngine:
 
 	ReteNetClass = build_rete_net_class()
 	Scheduler = NextReactionMethod
@@ -57,5 +63,21 @@ class Simulator:
 			.initialize_start() \
 			.initialize_end()	\
 			.initialize_rules(self.rules,self.parameters)
+
+	def load(self,objects):
+		# object must have an iterator object.generate_actions()
+		ax = ActionStack(self.cache)
+		start = self.net.get_node(type='start')
+		for x in objects:
+			for action in x.generate_actions():
+				tokens = ax.put(action).do()
+				self.net.process_tokens(tokens)
+		return self
+
+			
+
+
+
+
 
 	

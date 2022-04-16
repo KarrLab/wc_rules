@@ -97,6 +97,8 @@ class DatabaseAlias:
 	def count(self):
 		return len(self.target)
 
+	def __len__(self):
+		return len(self.target)
 
 class DatabaseSymmetric(Database):
 
