@@ -7,7 +7,8 @@
 
 from wc_rules.schema import base
 from wc_rules.schema.attributes import *
-from wc_rules.utils import random as randutils
+import random
+random.seed(0)
 
 import unittest
 
@@ -23,7 +24,7 @@ class Pet(base.BaseClass):
 class TestBase(unittest.TestCase):
 
     def setUp(self):
-        randutils.idgen.seed(0)
+        #randutils.idgen.seed(0)
         self.Sherlock = Person(name='Sherlock')
         self.John = Person(name='John')
         self.Mary = Person(name='Mary')
@@ -40,14 +41,13 @@ class TestBase(unittest.TestCase):
         all_things = [self.Sherlock, self.John, self.Mary, self.Kid001, self.Kid002, self.Dog001]
         id_arr = [x.id for x in all_things]
         check_str = [
-            'e3e70682-c209-4cac-629f-6fbed82c07cd',
-            'f728b4fa-4248-5e3a-0a5d-2f346baa9455',
-            'eb1167b3-67a9-c378-7c65-c1e582e2e662',
-            'f7c1bd87-4da5-e709-d471-3d60c8a70639',
-            'e443df78-9558-867f-5ba9-1faf7a024204',
-            '23a7711a-8133-2876-37eb-dcd9e87a1613',
+        'a3f2c9bf-9c63-16b9-50f2-44556f25e2a2',
+        '8d723104-f773-83c1-3458-a748e9bb17bc',
+        '85776e9a-dd84-f39e-7154-5a137a1d5006',
+        'eb2083e6-ce16-4dba-0ff1-8e0242af9fc3',
+        '17e0aa3c-0398-3ca8-ea7e-9d498c778ea6',
+        'b5d32b16-6619-4cb1-d710-37d1b83e90ec'
         ]
-        # works only when utils.idgen.seed(0) in setUp()
         self.assertEqual(id_arr, check_str)
 
     def test_duplicate(self):
