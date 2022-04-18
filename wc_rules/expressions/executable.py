@@ -202,3 +202,12 @@ class ExecutableExpressionManager:
 				return None
 		return match
 
+class ActionManager:
+	def __init__(self,action_execs):
+		self.execs = action_execs
+
+	def exec(self,match,*dicts):
+		for c in self.execs:
+			yield c.exec(match,*dicts)
+			
+

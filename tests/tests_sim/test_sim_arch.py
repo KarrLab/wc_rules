@@ -10,6 +10,9 @@ add_models_folder('/codebase/wc_rules/examples/')
 from simple_binding.model import model as simple_binding_model
 from simple_binding.model import X,Y
 
+def get_lengths(elems):
+	return list(map(len,elems))
+
 class TestSimpleBindingModel(unittest.TestCase):
 
 	def setUp(self):
@@ -59,3 +62,30 @@ class TestSimpleBindingModel(unittest.TestCase):
 		self.assertEqual(len(px_cache),1)
 		self.assertEqual(len(py_cache),0)
 		self.assertEqual(len(pxy_cache),2)
+
+	def test_fire(self):
+		sim = self.sim
+		px, py = sim.net.get_node(core='binding_model.binding_rule.propensity').data.caches.values()
+		pxy = list(sim.net.get_node(core='binding_model.unbinding_rule.propensity').data.caches.values())[0]
+
+		with self.assertRaises(Exception):
+			sim.fire('binding_model.unbinding_rule')
+
+		x1 = X('x1',y=[Y('y1'), Y('y2')])
+		sim.load([GraphContainer(x1.get_connected())])
+		self.assertEqual(get_lengths([px,py,pxy]),[1,0,2])
+
+		sim.fire('binding_model.unbinding_rule')
+		self.assertEqual(get_lengths([px,py,pxy]),[1,1,1])
+
+		sim.fire('binding_model.unbinding_rule')
+		self.assertEqual(get_lengths([px,py,pxy]),[1,2,0])
+
+		sim.fire('binding_model.binding_rule')
+		self.assertEqual(get_lengths([px,py,pxy]),[1,1,1])
+
+		sim.fire('binding_model.binding_rule')
+		self.assertEqual(get_lengths([px,py,pxy]),[1,0,2])
+
+		with self.assertRaises(Exception):
+			sim.fire('binding_model.binding_rule')

@@ -1,12 +1,13 @@
 from ..matcher.core import build_rete_net_class
 from .scheduler import NextReactionMethod
-from ..utils.collections import DictLike, LoggableDict
+from ..utils.collections import DictLike, LoggableDict, subdict
 from ..utils.data import NestedDict
 from ..modeling.model import AggregateModel
-from collections import defaultdict, deque
+from collections import defaultdict, deque, ChainMap
 from attrdict import AttrDict
 from ..schema.actions import PrimaryAction
 from ..matcher.token import convert_action_to_tokens
+from ..expressions.executable import ActionManager
 
 def get_model_name(rule_name):
 	return '.'.join(rule_name.split('.')[:-1])
@@ -16,6 +17,7 @@ class ActionStack:
 	def __init__(self,cache):
 		self._dq  = deque()
 		self.cache = cache
+		self.record = deque()
 
 	def put(self,action):
 		if isinstance(action,list):
@@ -37,6 +39,7 @@ class ActionStack:
 			x = self._dq.popleft()
 			if isinstance(x,PrimaryAction):
 				x.execute(self.cache)
+				self.record.append(x)
 				tokens.extend(convert_action_to_tokens(x,self.cache))
 			elif isinstance(x,CompositeAction):
 				self.put_first(x.expand())
@@ -53,6 +56,7 @@ class SimulationEngine:
 		self.parameters = NestedDict.flatten(parameters)
 		self.rules = dict(model.iter_rules())
 		self.parameter_dependencies = defaultdict(list)
+		self.action_managers = {rule_name:ActionManager(rule.get_action_executables()) for rule_name,rule in self.rules.items()}
 		self.cache = DictLike()
 
 		for r,rule in self.rules.items():
@@ -74,10 +78,22 @@ class SimulationEngine:
 				self.net.process_tokens(tokens)
 		return self
 
-			
+	def fire(self,rule_name):
+		
+		rule = self.rules[rule_name]
+		match = {reactant: AttrDict(self.net.get_node(core=pattern).state.cache.sample()) for reactant,pattern in rule.reactants.items()}
+		model_name = get_model_name(rule_name)
+		parameters = {p:self.parameters[f'{model_name}.{p}'] for p in rule.parameters}
+		action_manager = self.action_managers[rule_name]
+		ax = ActionStack(self.cache)
+		for action in action_manager.exec(match,parameters):
+			tokens = ax.put(action).do()
+			self.net.process_tokens(tokens)
+
+		return self
 
 
 
 
 
-	
+

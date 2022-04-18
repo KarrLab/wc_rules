@@ -1,6 +1,7 @@
 from pydblite import Base
 from ..utils.collections import SimpleMapping
-from ..utils.collections import subdict
+from sortedcontainers import SortedSet
+import random
 
 def dict_overlap(d1,d2):
 	return len(set(d1.items()) & set(d2.items())) > 0
@@ -13,13 +14,15 @@ class Database:
 	def __init__(self,fields,**kwargs):
 		self._db = Base(':memory:')
 		self._db.create(*fields)
+		self._record_keys = SortedSet()
 		
 	@property
 	def fields(self):
 		return self._db.fields
 
 	def insert(self,record):
-		self._db.insert(**record)
+		num = self._db.insert(**record)
+		self._record_keys.add(num)
 		return self
 
 	def filter(self,kwargs={}):
@@ -27,8 +30,11 @@ class Database:
 
 	def delete(self,kwargs={}):
 		records = self._db(**kwargs)
-		self._db.delete(records)
-		return [clean_record(x) for x in records]
+		record_nums = [x['__id__'] for x in records]
+		for num in record_nums:
+			del self._db[num]
+			self._record_keys.remove(num)
+		return self
 
 	def update(self,kwargs={},update_kwargs={}):
 		records = self._db(**kwargs)
@@ -47,6 +53,10 @@ class Database:
 
 	def count(self):
 		return len(self)
+
+	def sample(self):
+		num = random.choice(self._record_keys)
+		return clean_record(self._db[num])
 
 class DatabaseSingleValue:
 
@@ -99,6 +109,9 @@ class DatabaseAlias:
 
 	def __len__(self):
 		return len(self.target)
+
+	def sample(self):
+		return self.forward_transform(self.target.sample())
 
 class DatabaseSymmetric(Database):
 

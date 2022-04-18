@@ -25,12 +25,10 @@ class TestDatabase(unittest.TestCase):
 		self.assertEqual(len(db.filter(dict(a=1))),2)
 		self.assertEqual(len(db.filter(dict(b=2))),1)
 
-		records = db.delete(dict(c=3))
-		self.assertEqual(len(records),1)
+		db.delete(dict(c=3))
 		self.assertEqual(len(db),1)
 
-		records = db.delete(dict(c=4))
-		self.assertEqual(len(records),1)
+		db.delete(dict(c=4))
 		self.assertEqual(len(db),0)
 
 class TestAlias(unittest.TestCase):

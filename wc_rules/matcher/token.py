@@ -60,12 +60,13 @@ def convert_action_to_tokens(action,cache):
 		name = action.__class__.__name__
 		return [make_node_token(action._class,cache[action.idx],name)]
 	if isinstance(action,(AddEdge,RemoveEdge)):
+		name = action.__class__.__name__
 		ref1,ref2 = cache[action.source_idx], cache[action.target_idx]	
 		_class1, attr1 = ref1.__class__, action.source_attr
 		_class2, attr2 = ref2.__class__, action.target_attr 
 		return [
-        	make_edge_token(_class1,ref1,attr1,_class2,ref2,attr2,'AddEdge'),
-        	make_edge_token(_class2,ref2,attr2,_class1,ref1,attr1,'AddEdge'),
+        	make_edge_token(_class1,ref1,attr1,_class2,ref2,attr2,name),
+        	make_edge_token(_class2,ref2,attr2,_class1,ref1,attr1,name),
         	make_attr_token(_class1,ref1,attr1,'SetAttr'),
         	make_attr_token(_class2,ref2,attr2,'SetAttr'),
         ]
