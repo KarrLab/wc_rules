@@ -5,7 +5,7 @@ from ..utils.data import NestedDict
 from ..modeling.model import AggregateModel
 from collections import defaultdict, deque, ChainMap
 from attrdict import AttrDict
-from ..schema.actions import PrimaryAction
+from ..schema.actions import PrimaryAction, CompositeAction
 from ..matcher.token import convert_action_to_tokens
 from ..expressions.executable import ActionManager
 
@@ -53,15 +53,10 @@ class SimulationEngine:
 	def __init__(self,model=None,parameters=None,**kwargs):
 		
 		model.verify(parameters)
-		self.parameters = NestedDict.flatten(parameters)
+		self.parameters = LoggableDict(NestedDict.flatten(parameters))
 		self.rules = dict(model.iter_rules())
-		self.parameter_dependencies = defaultdict(list)
 		self.action_managers = {rule_name:ActionManager(rule.get_action_executables()) for rule_name,rule in self.rules.items()}
 		self.cache = DictLike()
-
-		for r,rule in self.rules.items():
-			for p in rule.parameters:
-				self.parameter_dependencies[r].append(f'{get_model_name(r)}.{p}')
 
 		self.net = self.ReteNetClass() \
 			.initialize_start() \

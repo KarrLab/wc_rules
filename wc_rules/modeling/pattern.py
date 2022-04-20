@@ -4,10 +4,13 @@ from ..graph.collections import GraphContainer
 from ..utils.collections import split_string
 from ..expressions.executable import Constraint, Computation, initialize_from_string
 
+def make_attr_constraints(attrs):
+	return [f'{var}.{attr} == {value}' for var,d in attrs.items() for attr,value in d.items()]
+
 class Pattern:
 
 	def __init__(self, parent=GraphContainer(), helpers=dict(), constraints = [], parameters= []):
-		self.validate_parent(parent)
+		parent, attrs = self.validate_parent(parent)
 		self.parent = parent
 
 		self.validate_helpers(helpers)
@@ -17,7 +20,7 @@ class Pattern:
 		self.parameters = parameters
 		
 		self.assigned_variables = self.validate_constraints(constraints)
-		self.constraints = constraints
+		self.constraints = make_attr_constraints(attrs) + constraints
 
 	@property
 	def variables(self):
@@ -52,6 +55,9 @@ class Pattern:
 			for idx,node in parent.iter_nodes():
 				validate_literal_attributes(node)
 				validate_related_attributes(node)
+			parent,attrs = parent.strip_attrs()
+			return parent,attrs
+		return parent,{}
 
 	def validate_helpers(self,helpers):
 		validate_class(helpers,dict,'Helpers')

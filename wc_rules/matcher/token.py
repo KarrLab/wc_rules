@@ -1,6 +1,6 @@
 from dataclasses import dataclass,replace
 from ..schema.base import BaseClass
-from ..schema.actions import AddNode, RemoveNode, AddEdge, RemoveEdge
+from ..schema.actions import AddNode, RemoveNode, AddEdge, RemoveEdge, SetAttr
 from typing import Dict, Tuple, Any
 
 # A token is something you pass TO the ReteNet
@@ -69,4 +69,7 @@ def convert_action_to_tokens(action,cache):
         	make_edge_token(_class2,ref2,attr2,_class1,ref1,attr1,name),
         	make_attr_token(_class1,ref1,attr1,'SetAttr'),
         	make_attr_token(_class2,ref2,attr2,'SetAttr'),
-        ]
+        	]
+	if isinstance(action,SetAttr):
+		ref = cache[action.idx]
+		return [make_attr_token(ref.__class__,ref,action.attr,'SetAttr')]
