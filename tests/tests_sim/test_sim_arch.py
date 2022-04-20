@@ -1,8 +1,11 @@
+import random
+random.seed(0)
+
 from wc_rules.simulator.simulator import SimulationEngine
 from wc_rules.modeling.utils import add_models_folder
 from wc_rules.modeling.model import AggregateModel
 from wc_rules.graph.collections import GraphContainer
-from wc_rules.simulator.scheduler import RepeatedEventScheduler, CoordinatedScheduler
+from wc_rules.simulator.scheduler import RepeatedEventScheduler, CoordinatedScheduler, NextReactionMethod
 
 import unittest
 
@@ -246,4 +249,68 @@ class TestScheduler(unittest.TestCase):
 				('read', 1.75),
 				('read', 2.0),
 				('write', 2.0),
+			])
+
+	def test_next_reaction_method(self):
+		random.seed(0)
+
+		events = []
+		nrm = NextReactionMethod()
+		nrm.update(time=0,variables=
+			{
+			'event01.propensity': 1.0,
+			'event02.propensity': 2.0,
+			'event03.propensity': 3.0,
+		})
+
+		time = 0
+		while True:
+			event, time = nrm.pop()
+			events.append((event,time))
+			if time > 2:
+				break
+
+		self.assertEqual(events,[
+			('event02', 0.13856602479071722),
+			('event01', 0.16910308517481865),
+			('event03', 0.28871352871962885),
+			('event03', 0.5900571449461188),
+			('event03', 0.6712582094054508),
+			('event02', 0.8141903729866008),
+			('event01', 0.8399513032137732),
+			('event03', 1.0689218448889979),
+			('event03', 1.1010507066243125),
+			('event02', 1.1847324255475482),
+			('event03', 1.328989749801264),
+			('event01', 1.3788643112234498),
+			('event03', 1.4223140583199714),
+			('event02', 1.8179441221928245),
+			('event01', 1.8595342289315115),
+			('event02', 1.8652389011676096),
+			('event01', 1.8768986455222885),
+			('event03', 1.8837377396391415),
+			('event02', 1.9704653385098465),
+			('event01', 1.9798554408324562),
+			('event01', 2.0865075814254235)
+			])
+
+		nrm.update(time=0,variables=
+			{
+			'event02.propensity': 0.0,
+			'event03.propensity': 0.0,
+			})
+		events = []
+		while True:
+			event, time = nrm.pop()
+			events.append((event,time))
+			if time > 4:
+				break
+
+		self.assertEqual(events,[
+			('event01', 2.46632843441263),
+			('event01', 3.3006433234303265),
+			('event01', 3.7934866465332795),
+			('event01', 3.8844939384900092),
+			('event01', 3.91845787027947),
+			('event01', 4.6586761626656585)
 			])

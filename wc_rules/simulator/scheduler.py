@@ -16,7 +16,8 @@ class Scheduler:
 
 	def peek(self):
 		if len(self.events) > 0:
-			return self.events.topitem()
+			event,time = self.events.topitem()
+			return event,time
 		return None, float('inf')
 	
 	def update(self,time,variables={}):
@@ -29,7 +30,7 @@ class Scheduler:
 
 	def pop(self):
 		if len(self.events) > 0:
-			event, time = self.events.popitem()
+			event,time = self.events.popitem()
 			return event,time
 		return None, float('inf')
 
@@ -87,12 +88,6 @@ class NextReactionMethod(Scheduler):
 		super().__init__()
 		self.propensities = defaultdict(float)
 
-	def schedule(self,time,event):
-		propensity = self.propensities[event]
-		tau = - log(random.random()) / propensity
-		self.insert(event,time + tau)
-		return self
-
 	def update(self,time,variables={}):
 		for var, value in variables.items():
 			if var.endswith('.propensity'):
@@ -101,8 +96,16 @@ class NextReactionMethod(Scheduler):
 				self.schedule(time,event)
 		return self
 
+	def schedule(self,time,event):
+		assert event in self.propensities
+		propensity = self.propensities[event]
+		tau = - log(random.random()) / propensity
+		self.insert(time + tau,event)
+		return self
+
 	def pop(self):
-		event,time = Scheduler.pop(self)
-		if event is not None:
-			self.schedule(event,time)
+		event,time =  Scheduler.pop(self)
+		self.schedule(time,event)
 		return event,time
+
+
