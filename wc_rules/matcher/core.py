@@ -9,6 +9,7 @@ from .state import ReteNodeState
 from .node_functions import NodeFunctions
 from .channel_functions import ChannelFunctions
 from ..utils.collections import UniversalSet
+from sortedcontainers import SortedSet
 
 bases = [AddMethods, PrintMethods,InitializationMethods, NodeFunctions, ChannelFunctions]
 
@@ -81,6 +82,11 @@ class ReteNetBase:
 		start.state.incoming.extend(tokens)
 		self.sync(start)
 		return self
+
+	def get_updated_variables(self):
+		end = self.get_node(type='end')
+		output, end.state.cache = list(end.state.cache), SortedSet()
+		return output
 
 def build_rete_net_class(bases=bases,name='ReteNet',symmetry_aware=False):
 	all_bases = [ReteNetBase,] + bases

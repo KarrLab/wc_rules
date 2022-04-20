@@ -2,7 +2,7 @@ from ..utils.collections import UniversalSet, SimpleMapping
 from ..schema.base import BaseClass
 from .dbase import Database, DatabaseAlias, DatabaseSingleValue, DatabaseSymmetric, DatabaseAliasSymmetric
 from .token import TokenTransformer
-
+from sortedcontainers import SortedSet
 from collections import deque
 
 class AddMethods:
@@ -16,7 +16,7 @@ class AddMethods:
 		return self
 
 	def add_node_end(self):
-		self.add_node(type='end',core='end',cache=deque())
+		self.add_node(type='end',core='end',cache=SortedSet())
 		return self
 
 	def add_node_class(self,_class):

@@ -21,7 +21,8 @@ class NodeFunctions:
 		return self
 
 	def function_node_end(self,node,token):
-		self.function_node_receiver(node,token)
+		assert isinstance(token,VarToken)
+		node.state.cache.add(token.variable)
 		return self
 
 	def function_node_canonical_label(self,node,token):

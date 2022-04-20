@@ -88,7 +88,7 @@ class ModelBehavior(unittest.TestCase):
 		start.state.incoming.extend(tokens)
 		rn.sync(start)
 		self.assertEqual(prop.state.cache.value,0)
-		self.assertEqual(len(end.state.cache),2)
+		self.assertEqual(list(end.state.cache),['binding_model.binding_rule.propensity'])
 		
 		
 		
