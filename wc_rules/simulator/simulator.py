@@ -63,6 +63,14 @@ class SimulationEngine:
 			.initialize_end()	\
 			.initialize_rules(self.rules,self.parameters)
 
+		for node in self.net.get_nodes(type='variable'):
+			self.parameters.set(node.core,node.state.cache.value)
+
+	def get_updated_variables(self):
+		modified = list(self.parameters.modified)
+		self.parameters.flush()
+		return modified
+
 	def load(self,objects):
 		# object must have an iterator object.generate_actions()
 		ax = ActionStack(self.cache)
@@ -71,6 +79,9 @@ class SimulationEngine:
 			for action in x.generate_actions():
 				tokens = ax.put(action).do()
 				self.net.process_tokens(tokens)
+		for variable in self.net.get_updated_variables():
+			value = self.net.get_node(core=variable).state.cache.value
+			self.parameters.set(variable,value)
 		return self
 
 	def fire(self,rule_name):
@@ -84,7 +95,9 @@ class SimulationEngine:
 		for action in action_manager.exec(match,parameters):
 			tokens = ax.put(action).do()
 			self.net.process_tokens(tokens)
-
+		for variable in self.net.get_updated_variables():
+			value = self.net.get_node(core=variable).state.cache.value
+			self.parameters.set(variable,value)
 		return self
 
 

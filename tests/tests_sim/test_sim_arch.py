@@ -42,6 +42,12 @@ class TestSimpleBindingModel(unittest.TestCase):
 		self.assertEqual(len(px_cache),0)
 		self.assertEqual(len(py_cache),0)
 		self.assertEqual(len(pxy_cache),0)
+		self.assertEqual(sim.get_updated_variables(),sorted([
+			'binding_model.binding_rule.propensity',
+			'binding_model.unbinding_rule.propensity',
+			'binding_model.kf',
+			'binding_model.kr',
+			]))
 
 
 		x1 = X('x1',y=[Y('y1'), Y('y2')])
@@ -51,8 +57,11 @@ class TestSimpleBindingModel(unittest.TestCase):
 		self.assertEqual(len(px_cache),1)
 		self.assertEqual(len(py_cache),0)
 		self.assertEqual(len(pxy_cache),2)
-		variables = [f'binding_model.{x}binding_rule.propensity' for x in ['','un']]
-		self.assertEqual(sim.net.get_updated_variables(),variables)
+		self.assertEqual(sim.get_updated_variables(),sorted([
+			'binding_model.binding_rule.propensity',
+			'binding_model.unbinding_rule.propensity',
+			]))
+
 
 	def test_fire(self):
 		sim = self.sim
@@ -68,30 +77,38 @@ class TestSimpleBindingModel(unittest.TestCase):
 		with self.assertRaises(Exception):
 			sim.fire('binding_model.unbinding_rule')
 
+		self.assertEqual(sim.get_updated_variables(),sorted([
+			'binding_model.binding_rule.propensity',
+			'binding_model.unbinding_rule.propensity',
+			'binding_model.kf',
+			'binding_model.kr',
+			]))
+
 		x1 = X('x1',y=[Y('y1'), Y('y2')])
 		sim.load([GraphContainer(x1.get_connected())])
 		self.assertEqual(get_lengths([px,py,pxy]),[1,0,2])
 		self.assertEqual([prop_binding.value,prop_unbinding.value],[0,2])
+		self.assertEqual(sim.get_updated_variables(),variables)
 
 		sim.fire('binding_model.unbinding_rule')
 		self.assertEqual(get_lengths([px,py,pxy]),[1,1,1])
 		self.assertEqual([prop_binding.value,prop_unbinding.value],[1,1])
-		self.assertEqual(sim.net.get_updated_variables(),variables)
+		self.assertEqual(sim.get_updated_variables(),variables)
 
 		sim.fire('binding_model.unbinding_rule')
 		self.assertEqual(get_lengths([px,py,pxy]),[1,2,0])
 		self.assertEqual([prop_binding.value,prop_unbinding.value],[2,0])
-		self.assertEqual(sim.net.get_updated_variables(),variables)
+		self.assertEqual(sim.get_updated_variables(),variables)
 
 		sim.fire('binding_model.binding_rule')
 		self.assertEqual(get_lengths([px,py,pxy]),[1,1,1])
 		self.assertEqual([prop_binding.value,prop_unbinding.value],[1,1])
-		self.assertEqual(sim.net.get_updated_variables(),variables)
+		self.assertEqual(sim.get_updated_variables(),variables)
 
 		sim.fire('binding_model.binding_rule')
 		self.assertEqual(get_lengths([px,py,pxy]),[1,0,2])
 		self.assertEqual([prop_binding.value,prop_unbinding.value],[0,2])
-		self.assertEqual(sim.net.get_updated_variables(),variables)
+		self.assertEqual(sim.get_updated_variables(),variables)
 
 		with self.assertRaises(Exception):
 			sim.fire('binding_model.binding_rule')
@@ -119,43 +136,63 @@ class TestFlipModel(unittest.TestCase):
 		g = sim.net.get_node(type='canonical_label').state.cache
 		p = sim.net.get_node(core='flip_model.flipping_rule.propensity').data.caches['rXX']
 		self.assertEqual(get_lengths([s,g,p]),[0,0,0])
+		self.assertEqual(sim.get_updated_variables(),sorted([
+			'flip_model.flipping_rule.propensity',
+			'flip_model.k',
+			]))
+
 
 		x1 = Point('x1',v=False,points=[Point('x2',v=False)])
 		sim.load([GraphContainer(x1.get_connected())])
 		self.assertEqual(get_lengths([s,g,p]),[2,2,0])
-		self.assertEqual(sim.net.get_updated_variables(),[])
-	
+		self.assertEqual(sim.get_updated_variables(),[])
+
+		
 	def test_load2(self):
 		sim = self.sim
 		s = sim.cache
 		g = sim.net.get_node(type='canonical_label').state.cache
 		p = sim.net.get_node(core='flip_model.flipping_rule.propensity').data.caches['rXX']
 		self.assertEqual(get_lengths([s,g,p]),[0,0,0])
+		self.assertEqual(sim.get_updated_variables(),sorted([
+			'flip_model.flipping_rule.propensity',
+			'flip_model.k',
+			]))
 
 		x1 = Point('x1',v=True,points=[Point('x2',v=False)])
 		sim.load([GraphContainer(x1.get_connected())])
 		self.assertEqual(get_lengths([s,g,p]),[2,2,1])
 		self.assertEqual(p.filter()[0],{'x_on':s['x1'],'x_off':s['x2']})
-		self.assertEqual(sim.net.get_updated_variables(),['flip_model.flipping_rule.propensity'])
-	
+		self.assertEqual(sim.get_updated_variables(),['flip_model.flipping_rule.propensity'])
+
+		
 	def test_load3(self):
 		sim = self.sim
 		s = sim.cache
 		g = sim.net.get_node(type='canonical_label').state.cache
 		p = sim.net.get_node(core='flip_model.flipping_rule.propensity').data.caches['rXX']
 		self.assertEqual(get_lengths([s,g,p]),[0,0,0])
+		self.assertEqual(sim.get_updated_variables(),sorted([
+			'flip_model.flipping_rule.propensity',
+			'flip_model.k',
+			]))
 
 		x1 = Point('x1',v=False,points=[Point('x2',v=True)])
 		sim.load([GraphContainer(x1.get_connected())])
 		self.assertEqual(get_lengths([s,g,p]),[2,2,1])
 		self.assertEqual(p.filter()[0],{'x_on':s['x2'],'x_off':s['x1']})
-		self.assertEqual(sim.net.get_updated_variables(),['flip_model.flipping_rule.propensity'])
+		self.assertEqual(sim.get_updated_variables(),['flip_model.flipping_rule.propensity'])
+		
 
 	def test_fire(self):
 		sim = self.sim
 		g = sim.net.get_node(type='canonical_label').state.cache
 		p = sim.net.get_node(core='flip_model.flipping_rule.propensity').data.caches['rXX']
 		prop = sim.net.get_node(core='flip_model.flipping_rule.propensity').state.cache
+		self.assertEqual(sim.get_updated_variables(),sorted([
+			'flip_model.flipping_rule.propensity',
+			'flip_model.k',
+			]))
 
 		self.assertEqual([g.count(),p.count(),prop.value],[0,0,0])
 		with self.assertRaises(Exception):
@@ -165,13 +202,15 @@ class TestFlipModel(unittest.TestCase):
 		sim.load([GraphContainer(x1.get_connected())])
 		self.assertEqual([g.count(),p.count(),prop.value],[2,1,1])
 		self.assertEqual([sim.cache[x].v for x in ['x1','x2']],[False,True])
-
+		self.assertEqual(sim.get_updated_variables(),['flip_model.flipping_rule.propensity'])
+		
 		sim.fire('flip_model.flipping_rule')
 		self.assertEqual([g.count(),p.count(),prop.value],[2,1,1])
 		self.assertEqual([sim.cache[x].v for x in ['x1','x2']],[True,False])
-		self.assertEqual(sim.net.get_updated_variables(),['flip_model.flipping_rule.propensity'])
-
+		self.assertEqual(sim.get_updated_variables(),['flip_model.flipping_rule.propensity'])
+			
 		sim.fire('flip_model.flipping_rule')
 		self.assertEqual([g.count(),p.count(),prop.value],[2,1,1])
 		self.assertEqual([sim.cache[x].v for x in ['x1','x2']],[False,True])
-		self.assertEqual(sim.net.get_updated_variables(),['flip_model.flipping_rule.propensity'])
+		self.assertEqual(sim.get_updated_variables(),['flip_model.flipping_rule.propensity'])
+		

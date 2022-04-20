@@ -388,6 +388,7 @@ class LoggableDict(UserDict):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.modified = SortedSet()
+        self.modified.update(self.keys())
 
     def set(self,key,value):
         self.modified.add(key)
