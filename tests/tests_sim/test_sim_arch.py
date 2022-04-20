@@ -2,6 +2,7 @@ from wc_rules.simulator.simulator import SimulationEngine
 from wc_rules.modeling.utils import add_models_folder
 from wc_rules.modeling.model import AggregateModel
 from wc_rules.graph.collections import GraphContainer
+from wc_rules.simulator.scheduler import RepeatedEventScheduler, CoordinatedScheduler
 
 import unittest
 
@@ -214,3 +215,35 @@ class TestFlipModel(unittest.TestCase):
 		self.assertEqual([sim.cache[x].v for x in ['x1','x2']],[False,True])
 		self.assertEqual(sim.get_updated_variables(),['flip_model.flipping_rule.propensity'])
 		
+
+class TestScheduler(unittest.TestCase):
+
+	def test_coordinated_scheduler(self):
+		events = []
+		sch1 = RepeatedEventScheduler('read',period=0.25,start=0.0)
+		sch2 = RepeatedEventScheduler('write',period=0.5,start=0.0)
+		sch3 = CoordinatedScheduler([sch1,sch2])
+
+		while True:
+			event, time = sch3.pop()
+			if time <= 2:
+				events.append((event,time))
+			else:
+				break
+
+		self.assertEqual(events,[
+				('read', 0.0),
+				('write', 0.0),
+				('read', 0.25),
+				('read', 0.5),
+				('write', 0.5),
+				('read', 0.75),
+				('read', 1.0),
+				('write', 1.0),
+				('read', 1.25),
+				('read', 1.5),
+				('write', 1.5),
+				('read', 1.75),
+				('read', 2.0),
+				('write', 2.0),
+			])
