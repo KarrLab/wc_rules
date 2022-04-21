@@ -54,13 +54,13 @@ class TestSimpleBindingModel(unittest.TestCase):
 			]))
 
 
-		x1 = X('x1',y=[Y('y1'), Y('y2')])
+		x1 = X('x1',y=Y('y1'))
 		sim.load([GraphContainer(x1.get_connected())])
 
-		self.assertEqual(len(sim.cache),3)
-		self.assertEqual(len(px_cache),1)
+		self.assertEqual(len(sim.cache),2)
+		self.assertEqual(len(px_cache),0)
 		self.assertEqual(len(py_cache),0)
-		self.assertEqual(len(pxy_cache),2)
+		self.assertEqual(len(pxy_cache),1)
 		self.assertEqual(sim.get_updated_variables(),sorted([
 			'binding_model.binding_rule.propensity',
 			'binding_model.unbinding_rule.propensity',
@@ -68,17 +68,17 @@ class TestSimpleBindingModel(unittest.TestCase):
 
 	def test_load_molecule_initialization(self):
 		sim = self.sim
-		x1 = X('x1',y=[Y('y1'), Y('y2')])
+		x1 = X('x1',y=Y('y1'))
 		g = MoleculeType(x1.get_connected())
 		mm = MoleculeInitialization([(g,2)])
 		sim.load([mm])
 
 		px_cache, py_cache = sim.net.get_node(core='binding_model.binding_rule.propensity').data.caches.values()
 		pxy_cache = list(sim.net.get_node(core='binding_model.unbinding_rule.propensity').data.caches.values())[0]
-		self.assertEqual(len(sim.cache),6)
-		self.assertEqual(len(px_cache),2)
+		self.assertEqual(len(sim.cache),4)
+		self.assertEqual(len(px_cache),0)
 		self.assertEqual(len(py_cache),0)
-		self.assertEqual(len(pxy_cache),4)
+		self.assertEqual(len(pxy_cache),2)
 
 
 	def test_fire(self):
@@ -102,34 +102,29 @@ class TestSimpleBindingModel(unittest.TestCase):
 			'binding_model.kr',
 			]))
 
-		x1 = X('x1',y=[Y('y1'), Y('y2')])
+		x1 = X('x1',y=Y('y1'))
 		sim.load([GraphContainer(x1.get_connected())])
-		self.assertEqual(get_lengths([px,py,pxy]),[1,0,2])
-		self.assertEqual([prop_binding.value,prop_unbinding.value],[0,2])
+		self.assertEqual(get_lengths([px,py,pxy]),[0,0,1])
+		self.assertEqual([prop_binding.value,prop_unbinding.value],[0,1])
 		self.assertEqual(sim.get_updated_variables(),variables)
 
 		sim.fire('binding_model.unbinding_rule')
-		self.assertEqual(get_lengths([px,py,pxy]),[1,1,1])
-		self.assertEqual([prop_binding.value,prop_unbinding.value],[1,1])
+		self.assertEqual(get_lengths([px,py,pxy]),[1,1,0])
+		self.assertEqual([prop_binding.value,prop_unbinding.value],[1,0])
+		self.assertEqual(sim.get_updated_variables(),variables)
+
+		sim.fire('binding_model.binding_rule')
+		self.assertEqual(get_lengths([px,py,pxy]),[0,0,1])
+		self.assertEqual([prop_binding.value,prop_unbinding.value],[0,1])
 		self.assertEqual(sim.get_updated_variables(),variables)
 
 		sim.fire('binding_model.unbinding_rule')
-		self.assertEqual(get_lengths([px,py,pxy]),[1,2,0])
-		self.assertEqual([prop_binding.value,prop_unbinding.value],[2,0])
-		self.assertEqual(sim.get_updated_variables(),variables)
-
-		sim.fire('binding_model.binding_rule')
-		self.assertEqual(get_lengths([px,py,pxy]),[1,1,1])
-		self.assertEqual([prop_binding.value,prop_unbinding.value],[1,1])
-		self.assertEqual(sim.get_updated_variables(),variables)
-
-		sim.fire('binding_model.binding_rule')
-		self.assertEqual(get_lengths([px,py,pxy]),[1,0,2])
-		self.assertEqual([prop_binding.value,prop_unbinding.value],[0,2])
+		self.assertEqual(get_lengths([px,py,pxy]),[1,1,0])
+		self.assertEqual([prop_binding.value,prop_unbinding.value],[1,0])
 		self.assertEqual(sim.get_updated_variables(),variables)
 
 		with self.assertRaises(Exception):
-			sim.fire('binding_model.binding_rule')
+			sim.fire('binding_model.unbinding_rule')
 
 class TestFlipModel(unittest.TestCase):
 	# note that the pattern used here is symmetric, 
