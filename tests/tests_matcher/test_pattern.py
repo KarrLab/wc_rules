@@ -24,7 +24,9 @@ class BigAttributeClass(Entity):
 ReteNet = build_rete_net_class()
 
 class TestRetePatternInitialization(unittest.TestCase):
+
 	# test the pattern, its incoming channel
+
 
 	def test_pattern_alias(self):
 		# an alias pattern is a pattern that is a pure graph
@@ -107,6 +109,23 @@ class TestRetePatternInitialization(unittest.TestCase):
 		attrs = [attr for ch in channels for attr in ch.data.filter_data.keywords.values()]
 		self.assertEqual(attrs,sorted('x y n1 n2 s1 s2'.split()))
 
+	def test_pattern_assigned_variables(self):
+		p = Pattern(
+			parent = GraphContainer([BigAttributeClass('elem')]),
+			constraints = ['n = elem.n1 + elem.n2']
+			)
+
+		p1 = Pattern(parent=p,constraints=['n > 2'])
+
+		rn = ReteNet().initialize_start()
+		start = rn.get_node(type='start')
+		rn.initialize_pattern(p1)
+
+		p_node = rn.get_node(core=p)
+		p1_node = rn.get_node(core=p1)
+		
+		self.assertEqual(p_node.state.cache.fields,['elem','n'])
+		self.assertEqual(p1_node.state.cache.fields,['elem','n'])
 
 class TestRetePatternBehavior(unittest.TestCase):
 	# test insert/remove/filter
@@ -251,3 +270,33 @@ class TestRetePatternBehavior(unittest.TestCase):
 		start.state.incoming.append(token)
 		rn.sync(start)
 		self.assertEqual(len(rn_p.state.cache),1)
+
+	def test_pattern_assigned_variables(self):
+		p = Pattern(
+			parent = GraphContainer([BigAttributeClass('elem')]),
+			constraints = ['n = elem.n1 + elem.n2']
+		)
+		p1 = Pattern(parent=p,constraints=['n > 2'])
+
+		rn = ReteNet().initialize_start()
+		start = rn.get_node(type='start')
+		rn.initialize_pattern(p1)
+
+		p_node = rn.get_node(core=p)
+		p1_node = rn.get_node(core=p1)
+
+		elem1 = BigAttributeClass('elem1',x=True,y=False,n1=1,n2=2,s1='ABC',s2='DEF')
+		token = make_node_token(BigAttributeClass,elem1,'AddNode')
+		start.state.incoming.append(token)
+		rn.sync(start)
+
+		self.assertEqual(p_node.state.cache.filter(),[{'elem':elem1,'n':3}])
+		self.assertEqual(p1_node.state.cache.filter(),[{'elem':elem1,'n':3}])
+
+		elem1.n1 = 0
+		token = make_attr_token(BigAttributeClass,elem1,'n1','SetAttr')
+		start.state.incoming.append(token)
+		rn.sync(start)
+
+		self.assertEqual(p_node.state.cache.filter(),[{'elem':elem1,'n':2}])
+		self.assertEqual(p1_node.state.cache.filter(),[])
