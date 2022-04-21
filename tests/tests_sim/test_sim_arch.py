@@ -4,7 +4,7 @@ random.seed(0)
 from wc_rules.simulator.simulator import SimulationEngine
 from wc_rules.modeling.utils import add_models_folder
 from wc_rules.modeling.model import AggregateModel
-from wc_rules.graph.collections import GraphContainer
+from wc_rules.graph.collections import GraphContainer, MoleculeType, MoleculeInitialization
 from wc_rules.simulator.scheduler import RepeatedEventScheduler, CoordinatedScheduler, NextReactionMethod
 
 import unittest
@@ -65,6 +65,20 @@ class TestSimpleBindingModel(unittest.TestCase):
 			'binding_model.binding_rule.propensity',
 			'binding_model.unbinding_rule.propensity',
 			]))
+
+	def test_load_molecule_initialization(self):
+		sim = self.sim
+		x1 = X('x1',y=[Y('y1'), Y('y2')])
+		g = MoleculeType(x1.get_connected())
+		mm = MoleculeInitialization([(g,2)])
+		sim.load([mm])
+
+		px_cache, py_cache = sim.net.get_node(core='binding_model.binding_rule.propensity').data.caches.values()
+		pxy_cache = list(sim.net.get_node(core='binding_model.unbinding_rule.propensity').data.caches.values())[0]
+		self.assertEqual(len(sim.cache),6)
+		self.assertEqual(len(px_cache),2)
+		self.assertEqual(len(py_cache),0)
+		self.assertEqual(len(pxy_cache),4)
 
 
 	def test_fire(self):

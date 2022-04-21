@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from ..utils.collections import DictLike, listmap, Mapping, merge_dicts, no_overlaps, merge_lists
-from itertools import chain
+from itertools import chain, repeat,starmap
 from typing import Tuple, Any
 from ..schema.actions import AddNode, AddEdge
 from copy import deepcopy
+from ..utils.random import generate_id
+from collections import UserDict
 
 @dataclass(order=True,frozen=True)
 class Port:
@@ -199,6 +201,31 @@ class GraphContainer(DictLike):
             self.set_attr(*a)
         return self
         
+class MoleculeType(GraphContainer):
+
+    def generate_actions(self,n=1):
+        actions = list(GraphContainer.generate_actions(self))
+        native_ids = self.keys()
+        for i in range(n):
+            idmap = dict(zip(native_ids,[generate_id() for _ in range(len(native_ids))]))
+            for action in actions:
+                yield action.remap(idmap)
+
+
+class MoleculeInitialization:
+
+    def __init__(self,tuplist):
+        for g,n in tuplist:
+            assert isinstance(g,MoleculeType) and isinstance(n,int)
+        self.items = tuplist
+
+    def generate_actions(self):
+        for g,n in self.items:
+            for act in g.generate_actions(n):
+                yield act
+
+
+
 
 @dataclass(eq=True,order=True,frozen=True)
 class TextualForm:

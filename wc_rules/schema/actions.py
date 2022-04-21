@@ -29,6 +29,10 @@ class PrimaryAction(ABC):
     def rollback(self,sim):
         pass
 
+    @abstractmethod
+    def remap(self,d):
+        pass
+
 
 class CompositeAction(ABC):
     @abstractmethod
@@ -64,6 +68,13 @@ class NodeAction(PrimaryAction):
     def remove_node(self,sim, register=True):
         x = sim.pop(self.idx)
         return self
+
+    def remap(self,d):
+        return self.__class__(
+            _class = self._class,
+            idx = d[self.idx],
+            attrs = self.attrs
+            )
 
 
 class AddNode(NodeAction):
@@ -111,6 +122,15 @@ class SetAttr(PrimaryAction):
         node.safely_set_attr(self.attr,self.old_value)
         return self
 
+    def remap(self,d):
+        return self.__class__(
+            idx = d[self.idx],
+            attr = self.attr,
+            value = self.value,
+            old_value = self.old_value
+            )
+
+
 @dataclass
 class EdgeAction(PrimaryAction):
     source_idx: str
@@ -144,6 +164,15 @@ class EdgeAction(PrimaryAction):
         # d1 = dict(_class=_class1,idx1=idx1,attr1=attr1,idx2=idx2,attr2=attr2,action='RemoveEdge')
         # d2 = dict(_class=_class2,idx1=idx2,attr1=attr2,idx2=idx1,attr2=attr1,action='RemoveEdge')
         return self
+
+    def remap(self,d):
+        return self.__class__(
+            source_idx = d[self.source_idx],
+            source_attr = self.source_attr,
+            target_idx = d[self.target_idx],
+            target_attr = self.target_attr
+            )
+
 
 class AddEdge(EdgeAction):
     
