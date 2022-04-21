@@ -108,4 +108,8 @@ class NextReactionMethod(Scheduler):
 		self.schedule(time,event)
 		return event,time
 
+	def peek(self):
+		event,time =  Scheduler.peek(self)
+		self.schedule(time,event)
+		return event,time
 
