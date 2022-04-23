@@ -2,7 +2,9 @@
 from ..utils.validate import *
 from ..graph.collections import GraphContainer
 from ..utils.collections import split_string
-from ..expressions.executable import Constraint, Computation, initialize_from_string
+from ..expressions.executable import Constraint, Computation, initialize_from_string, ExecutableExpressionManager
+from attrdict import AttrDict
+
 
 def make_attr_constraints(attrs):
 	return [f'{var}.{attr} == {value}' for var,d in attrs.items() for attr,value in d.items()]
@@ -98,3 +100,24 @@ class Pattern:
 	def make_executable_constraint(self,s):
 		return initialize_from_string(s,(Constraint,Computation))
 
+	def make_executable_expression_manager(self):
+		execs = [initialize_from_string(s,(Constraint,Computation)) for s in self.constraints]
+		manager = ExecutableExpressionManager(execs,self.namespace)
+		return manager
+
+	def get_initialization_code(self):
+		code = AttrDict({
+			'parent': None,
+			'constraints': bool(self.constraints),
+			'helpers': bool(self.helpers)
+			})
+		if isinstance(self.parent,GraphContainer) and len(self.parent)>0:
+			code['parent'] = 'graph'
+		elif isinstance(self.parent,Pattern):
+			code['parent'] = 'pattern'
+
+		if not any([code.helpers,code.constraints]):
+			code['subtype'] = 'alias'		
+		elif not code.helpers:
+			code['subtype'] = 'no_helpers'
+		return code

@@ -5,8 +5,8 @@ from .token import TokenTransformer
 from ..graph.graph_partitioning import partition_canonical_form
 from ..graph.canonical_labeling import canonical_label
 from ..graph.permutations import Mapping
-from ..expressions.executable import ExecutableExpressionManager
 from functools import partial
+from attrdict import AttrDict
 
 class InitializationMethods:
 
@@ -106,37 +106,60 @@ class InitializationMethods:
 		return self
 
 	def initialize_pattern(self,pattern):
-		parent_obj, mapping = self.initialize_parent(pattern.parent)
-		assert len(pattern.helpers)==0, 'Pattern not supported yet.'
-		if len(pattern.constraints) == 0:
-			self.initialize_pattern_alias(pattern,parent_obj,mapping)
-		elif len(pattern.helpers)==0:
-			self.initialize_pattern_constraints(pattern,parent_obj,mapping)	
-		return self
+		code = pattern.get_initialization_code()
+		caches = dict()
+		if code.parent is not None:
+			if code.parent == 'graph':
+				mapping, parent, symmetry_group = canonical_label(pattern.parent)
+				self.initialize_canonical_label(parent,symmetry_group)
+			elif code.parent == 'pattern':
+				self.initialize_pattern(pattern.parent)
+				parent, mapping = pattern.parent, Mapping.create(pattern.parent.cache_variables)
+			else:
+				assert False, 'Parent not supported yet'
+			actionmap, datamap= {'AddEntry':'AddEntry', 'RemoveEntry':'RemoveEntry'}, mapping._dict
+			self.add_channel_transform(source=parent,target=pattern,datamap=datamap,actionmap=actionmap)
+			caches['parent'] = self.generate_cache_reference(parent,mapping.reverse()._dict)
 
-	def initialize_parent(self,parent):
-		# figures out what kind of object parent is
-		# initializes it
-		# returns the "core" object corresponding to parent
-		# and the mapping to child
-		if isinstance(parent,GraphContainer):
-			mapping,labeling,symmetry_group = canonical_label(parent)
-			self.initialize_canonical_label(labeling,symmetry_group)
-			parent_obj, mapping = labeling,mapping
-		elif isinstance(parent,Pattern):
-			self.initialize_pattern(parent)
-			parent_obj, mapping = parent, Mapping.create(parent.cache_variables)
-		return parent_obj, mapping
+
+		#add_node_pattern(self,pattern,cache,subtype='default',executables=[],caches={})
+
+		if code.subtype == 'alias':
+			self.add_node_pattern(pattern=pattern,cache = caches['parent'],subtype ='alias',caches=caches)
+		elif not code.helpers:
+			manager = pattern.make_executable_expression_manager()
+			self.add_node_pattern(pattern=pattern,subtype='default',executables=manager,caches=caches)
+			for variable, attr in manager.get_attribute_calls():
+				assert issubclass(pattern.namespace[variable],BaseClass)
+				self.add_channel_transform(
+					source = pattern.namespace[variable],
+					target = pattern,
+					datamap = {'ref':variable,'attr':'attr'},
+					actionmap = {'SetAttr':'VerifyEntry'},
+					filter_data = partial(lambda data,attr: data['attr'] == attr, attr=attr)
+				)
 			
-	def initialize_pattern_alias(self,pattern,parent,mapping):
-		cache_ref = self.generate_cache_reference(parent,mapping.reverse()._dict)
-		self.add_node_pattern(pattern=pattern,cache=cache_ref,subtype='alias')
-		actionmap = {'AddEntry':'AddEntry', 'RemoveEntry':'RemoveEntry'}
-		datamap = mapping._dict
-		self.add_channel_transform(source=parent,target=pattern,datamap=datamap,actionmap=actionmap)
 		return self
 
-	def initialize_pattern_constraints(self,pattern,parent,mapping):
+		# if code['helpers']:
+		# 	assert False, 'Helpers not supported yet'
+		# elif code['constraints']:
+		# 	manager = pattern.make_executable_expression_manager()
+		# 	for variable, attr in manager.get_attribute_calls():
+		# 		assert issubclass(pattern.namespace[variable],BaseClass)
+		# 		self.add_channel_transform(
+		# 			source = pattern.namespace[variable],
+		# 			target = pattern,
+		# 			datamap = {'ref':variable,'attr':'attr'},
+		# 			actionmap = {'SetAttr':'VerifyEntry'},
+		# 			filter_data = partial(lambda data,attr: data['attr'] == attr, attr=attr)
+
+		# 		)
+		# else:
+		# 	self.add_node_pattern(pattern=pattern,cache=caches['parent'],subtype='alias')
+		
+
+	def initialize_pattern_constraints2(self,pattern,parent,mapping):
 		cache = self.generate_cache(pattern.cache_variables)
 		# these are helpers
 		caches = {'parent':self.generate_cache_reference(parent,mapping.reverse()._dict)}

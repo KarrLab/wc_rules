@@ -43,7 +43,11 @@ class AddMethods:
 			)
 		return self
 
-	def add_node_pattern(self,pattern,cache,subtype='default',executables=[],caches={}):
+	def add_node_pattern(self,pattern,cache=None,subtype='default',executables=[],caches={}):
+		if cache is None:
+			cache = self.DATABASE_CLASS(
+				fields = pattern.cache_variables
+				)
 		self.add_node(
 			type = 'pattern',
 			core = pattern,
@@ -115,7 +119,6 @@ class AddMethods:
 			variable = variable
 			)
 		return self
-
 
 class AddMethodsSymmetric(AddMethods):
 
