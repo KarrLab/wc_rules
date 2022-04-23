@@ -118,6 +118,6 @@ class Pattern:
 
 		if not any([code.helpers,code.constraints]):
 			code['subtype'] = 'alias'		
-		elif not code.helpers:
-			code['subtype'] = 'no_helpers'
+		else:
+			code['subtype'] = 'default'
 		return code

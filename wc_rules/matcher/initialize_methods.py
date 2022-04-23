@@ -8,6 +8,7 @@ from ..graph.permutations import Mapping
 from functools import partial
 from attrdict import AttrDict
 
+
 class InitializationMethods:
 
 	def node_exists(self,**kwargs):
@@ -106,58 +107,66 @@ class InitializationMethods:
 		return self
 
 	def initialize_pattern(self,pattern):
-		code = pattern.get_initialization_code()
+		if self.get_node(core=pattern) is not None:
+			return self
+
+		# Approach
+		# If it requires a parent, initialize parent, and parent-pattern channel
+		#	subcase: if no constraints, it is an alias. Initialize and exit.
+		# If it requires helpers, initialize helpers, links to helper caches
+		# Create executable expression manager
+		# collect attribute calls, create attr-transform channels for each attr
+		# collect helper function calls, create entry-transform channels
+		# for each unique kwarg setting
+
 		caches = dict()
-		if code.parent is not None:
-			if code.parent == 'graph':
+		
+		# If it requires a parent pattern/graphcontainer
+		# initialize parent, create the channel from parent to current pattern
+		requires_parent = (isinstance(pattern.parent,GraphContainer) and len(pattern.parent)) or isinstance(pattern.parent,Pattern)
+
+		if requires_parent:
+			if isinstance(pattern.parent,GraphContainer):
 				mapping, parent, symmetry_group = canonical_label(pattern.parent)
 				self.initialize_canonical_label(parent,symmetry_group)
-			elif code.parent == 'pattern':
+			elif isinstance(pattern.parent,Pattern):
 				self.initialize_pattern(pattern.parent)
 				parent, mapping = pattern.parent, Mapping.create(pattern.parent.cache_variables)
-			else:
-				assert False, 'Parent not supported yet'
 			actionmap, datamap= {'AddEntry':'AddEntry', 'RemoveEntry':'RemoveEntry'}, mapping._dict
 			self.add_channel_transform(source=parent,target=pattern,datamap=datamap,actionmap=actionmap)
 			caches['parent'] = self.generate_cache_reference(parent,mapping.reverse()._dict)
 
+			if len(pattern.constraints)==0:
+				self.add_node_pattern(pattern=pattern,cache = caches['parent'],subtype ='alias',caches=caches)
+				return self
 
-		#add_node_pattern(self,pattern,cache,subtype='default',executables=[],caches={})
+		for var,pat in pattern.helpers.items():
+			self.initialize_pattern(pat)
+			caches[var] = self.get_node(core=pat).state.cache
 
-		if code.subtype == 'alias':
-			self.add_node_pattern(pattern=pattern,cache = caches['parent'],subtype ='alias',caches=caches)
-		elif not code.helpers:
-			manager = pattern.make_executable_expression_manager()
-			self.add_node_pattern(pattern=pattern,subtype='default',executables=manager,caches=caches)
-			for variable, attr in manager.get_attribute_calls():
-				assert issubclass(pattern.namespace[variable],BaseClass)
-				self.add_channel_transform(
-					source = pattern.namespace[variable],
-					target = pattern,
-					datamap = {'ref':variable,'attr':'attr'},
-					actionmap = {'SetAttr':'VerifyEntry'},
-					filter_data = partial(lambda data,attr: data['attr'] == attr, attr=attr)
-				)
-			
+		manager = pattern.make_executable_expression_manager()
+		self.add_node_pattern(pattern=pattern,subtype='default',executables=manager,caches=caches)
+
+		for variable, attr in manager.get_attribute_calls():
+			assert issubclass(pattern.namespace[variable],BaseClass)
+			self.add_channel_transform(
+				source = pattern.namespace[variable],
+				target = pattern,
+				datamap = {'ref':variable,'attr':'attr'},
+				actionmap = {'SetAttr':'VerifyEntry'},
+				filter_data = partial(lambda data,attr: data['attr'] == attr, attr=attr)
+			)
+
+		for p,kwargs in manager.get_helper_calls():
+			self.add_channel_transform(
+				source = pattern.helpers[p],
+				target = pattern,
+				datamap = dict(kwargs),
+				actionmap = {'AddEntry':'VerifyEntry','RemoveEntry':'VerifyEntry'}
+			)
+
 		return self
 
-		# if code['helpers']:
-		# 	assert False, 'Helpers not supported yet'
-		# elif code['constraints']:
-		# 	manager = pattern.make_executable_expression_manager()
-		# 	for variable, attr in manager.get_attribute_calls():
-		# 		assert issubclass(pattern.namespace[variable],BaseClass)
-		# 		self.add_channel_transform(
-		# 			source = pattern.namespace[variable],
-		# 			target = pattern,
-		# 			datamap = {'ref':variable,'attr':'attr'},
-		# 			actionmap = {'SetAttr':'VerifyEntry'},
-		# 			filter_data = partial(lambda data,attr: data['attr'] == attr, attr=attr)
-
-		# 		)
-		# else:
-		# 	self.add_node_pattern(pattern=pattern,cache=caches['parent'],subtype='alias')
-		
 
 	def initialize_pattern_constraints2(self,pattern,parent,mapping):
 		cache = self.generate_cache(pattern.cache_variables)

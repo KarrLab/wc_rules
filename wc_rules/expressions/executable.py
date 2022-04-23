@@ -6,6 +6,7 @@ from .builtins import ordered_builtins, global_builtins
 from .exprgraph import dfs_make
 from collections import ChainMap, defaultdict
 from sortedcontainers import SortedSet
+from frozendict import frozendict
 
 import inspect
 
@@ -185,14 +186,27 @@ class ExecutableExpressionManager:
 			for fnametuple in c.deps.function_calls:
 				if len(fnametuple)==2:
 					var,fname = fnametuple
-					_class = self.namespace[var]
-					fn = getattr(_class,fname)
-					assert fn._is_computation, f'Could not find function {fnametuple}'
-					kws = sorted(set(fn._kws) & set(_class.get_literal_attrs()))
-					attrcalls[var].update(kws)
+					if isinstance(self.namespace[var],type):
+						_class = self.namespace[var]
+						fn = getattr(_class,fname)
+						assert fn._is_computation, f'Could not find function {fnametuple}'
+						kws = sorted(set(fn._kws) & set(_class.get_literal_attrs()))
+						attrcalls[var].update(kws) 
 		for k,v in attrcalls.items():
 			for a in v:
 				yield k,a
+
+	def get_helper_calls(self):
+		helpercalls = defaultdict(SortedSet)
+		for c in self.execs:
+			for fnametuple,kwargs in c.deps.function_calls.items():
+				if len(fnametuple)==2:
+					var,fname = fnametuple
+					if self.namespace[var]=='Helper Pattern':
+						helpercalls[var].add(tuple(kwargs['kwpairs']))
+		for k,v in helpercalls.items():
+			for tup in v:
+				yield k,tup
 
 	def exec(self,match,*dicts):
 		for c in self.execs:
