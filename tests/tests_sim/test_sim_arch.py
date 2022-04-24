@@ -1,5 +1,7 @@
 import random
 random.seed(0)
+import sys
+from pathlib import Path
 
 from wc_rules.simulator.simulator import SimulationEngine
 from wc_rules.modeling.utils import add_models_folder
@@ -9,7 +11,9 @@ from wc_rules.simulator.scheduler import RepeatedEventScheduler, CoordinatedSche
 
 import unittest
 
-add_models_folder('/codebase/wc_rules/examples/')
+#add_models_folder('/codebase/wc_rules/examples/')
+path = Path(__file__).resolve().parent.parent.parent / 'examples'
+sys.path.append(str(path))
 
 from simple_binding.model import model as simple_binding_model
 from simple_binding.model import X,Y

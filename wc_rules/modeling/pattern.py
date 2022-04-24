@@ -4,8 +4,6 @@ from ..graph.collections import GraphContainer
 from ..utils.collections import split_string
 from ..expressions.executable import Constraint, Computation, initialize_from_string, ExecutableExpressionManager, ObservableExpression
 
-
-
 def make_attr_constraints(attrs):
 	return [f'{var}.{attr} == {value}' for var,d in attrs.items() for attr,value in d.items()]
 
