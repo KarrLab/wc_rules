@@ -167,32 +167,6 @@ class InitializationMethods:
 
 		return self
 
-
-	def initialize_pattern_constraints2(self,pattern,parent,mapping):
-		cache = self.generate_cache(pattern.cache_variables)
-		# these are helpers
-		caches = {'parent':self.generate_cache_reference(parent,mapping.reverse()._dict)}
-		manager = ExecutableExpressionManager(pattern.make_executable_constraints(),pattern.namespace)
-
-		self.add_node_pattern(pattern=pattern,cache=cache,subtype='default',executables=manager,caches=caches)
-		actionmap = {'AddEntry':'AddEntry', 'RemoveEntry':'RemoveEntry'}
-		datamap = mapping._dict
-		self.add_channel_transform(source=parent,target=pattern,datamap=datamap,actionmap=actionmap)
-
-		####
-		# process constraints
-		filterfn = lambda data,attr: data['attr'] == attr
-		actionmap = {'SetAttr':'VerifyEntry'}
-		for variable,attr in manager.get_attribute_calls():
-			_class = pattern.namespace[variable]
-			assert issubclass(_class,BaseClass)
-			datamap = {'ref':variable,'attr':'attr'}
-			filter_data = partial(filterfn,attr=attr)
-			self.add_channel_transform(source=_class,target=pattern,datamap=datamap,actionmap=actionmap,filter_data=filter_data)
-			
-		# to do: HELPERS
-		return self
-
 	def initialize_rule(self,name,rule):
 		model_name = '.'.join(name.split('.')[:-1])
 		parameters, caches = dict(),dict()
