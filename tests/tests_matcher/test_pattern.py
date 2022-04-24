@@ -23,6 +23,9 @@ class BigAttributeClass(Entity):
 
 ReteNet = build_rete_net_class()
 
+def get_lengths(*nodes):
+	return [len(node.state.cache) for node in nodes]
+
 class TestRetePatternInitialization(unittest.TestCase):
 
 	# test the pattern, its incoming channel
@@ -126,6 +129,29 @@ class TestRetePatternInitialization(unittest.TestCase):
 		
 		self.assertEqual(p_node.state.cache.fields,['elem','n'])
 		self.assertEqual(p1_node.state.cache.fields,['elem','n'])
+
+	def test_pattern_helpers(self):
+		ReteNet = build_rete_net_class()
+		net = ReteNet().initialize_start()
+
+
+		p = Pattern(GraphContainer([BigAttributeClass('elem',x=True,y=True)]))
+		q = Pattern(GraphContainer([BigAttributeClass('elem',n1=0,n2=0)]))
+
+		r = Pattern(
+			parent = GraphContainer([BigAttributeClass('elem')]),
+			helpers = {'p':p,'q':q},
+			constraints = ['p.contains(elem=elem) == True', 'q.contains(elem=elem)==True']
+		)
+
+		net.initialize_pattern(r)
+
+		p_rn, q_rn, r_rn = [net.get_node(core=x) for x in [p,q,r]]
+		self.assertEqual(r_rn.data.caches['p'],p_rn.state.cache)
+		self.assertEqual(r_rn.data.caches['q'],q_rn.state.cache)
+		pr, qr = [net.get_channel(source=x,target=y) for x,y in [(p,r),(q,r)]]
+		self.assertEqual(pr.data.transformer.datamap,{'elem':'elem'})
+		self.assertEqual(qr.data.transformer.datamap,{'elem':'elem'})
 
 class TestRetePatternBehavior(unittest.TestCase):
 	# test insert/remove/filter
@@ -300,3 +326,89 @@ class TestRetePatternBehavior(unittest.TestCase):
 
 		self.assertEqual(p_node.state.cache.filter(),[{'elem':elem1,'n':2}])
 		self.assertEqual(p1_node.state.cache.filter(),[])
+
+
+	def test_pattern_helpers(self):
+		ReteNet = build_rete_net_class()
+		net = ReteNet().initialize_start()
+
+
+		p = Pattern(GraphContainer([BigAttributeClass('elem',x=True,y=True)]))
+		q = Pattern(GraphContainer([BigAttributeClass('elem',n1=0,n2=0)]))
+
+		r = Pattern(
+			parent = GraphContainer([BigAttributeClass('elem')]),
+			helpers = {'p':p,'q':q},
+			constraints = ['p.contains(elem=elem) == True', 'q.contains(elem=elem)==True']
+		)
+
+		net.initialize_pattern(r)
+		start = net.get_node(type='start')
+
+		p_rn, q_rn, r_rn = [net.get_node(core=x) for x in [p,q,r]]
+		self.assertEqual(get_lengths(p_rn,q_rn,r_rn),[0,0,0])		
+
+		# first add elem1 which should map with q but not p
+		elem1 = BigAttributeClass('elem1',x=False,y=False,n1=0,n2=0,s1='',s2='')
+		token = make_node_token(BigAttributeClass,elem1,'AddNode')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(get_lengths(p_rn,q_rn,r_rn),[0,1,0])
+		self.assertEqual(q_rn.state.cache.filter()[0],{'elem':elem1})
+		
+		# then add elem2 which should map with p but not q
+		elem2 = BigAttributeClass('elem2',x=True,y=True,n1=1,n2=1,s1='',s2='')
+		token = make_node_token(BigAttributeClass,elem2,'AddNode')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(get_lengths(p_rn,q_rn,r_rn),[1,1,0])
+		self.assertEqual(p_rn.state.cache.filter()[0],{'elem':elem2})
+		
+		# change attributes of elem1 so it maps to both p and q, ergo r
+		elem1.x = True
+		token = make_attr_token(BigAttributeClass,elem1,'x','SetAttr')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(get_lengths(p_rn,q_rn,r_rn),[1,1,0])
+		elem1.y = True
+		token = make_attr_token(BigAttributeClass,elem1,'y','SetAttr')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(get_lengths(p_rn,q_rn,r_rn),[2,1,1])
+		self.assertEqual(r_rn.state.cache.filter(),[{'elem':elem1}])
+
+		# change attributes of elem2 so it maps to both p and q, ergo r
+		elem2.n1 = 0
+		token = make_attr_token(BigAttributeClass,elem2,'n1','SetAttr')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(get_lengths(p_rn,q_rn,r_rn),[2,1,1])
+		elem2.n2 = 0
+		token = make_attr_token(BigAttributeClass,elem2,'n2','SetAttr')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(get_lengths(p_rn,q_rn,r_rn),[2,2,2])
+		self.assertEqual(r_rn.state.cache.filter(),[{'elem':elem1},{'elem':elem2}])
+
+		# change attribute of elem1 so it maps to p but not q
+		elem1.n1 = 1
+		token = make_attr_token(BigAttributeClass,elem1,'n1','SetAttr')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(get_lengths(p_rn,q_rn,r_rn),[2,1,1])
+		self.assertEqual(r_rn.state.cache.filter(),[{'elem':elem2}])
+		self.assertEqual(p_rn.state.cache.filter(),[{'elem':elem2},{'elem':elem1}])
+		self.assertEqual(q_rn.state.cache.filter(),[{'elem':elem2}])
+
+		# change attribute of elem2 so it maps to q but not p
+		elem2.x = False
+		token = make_attr_token(BigAttributeClass,elem2,'x','SetAttr')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(get_lengths(p_rn,q_rn,r_rn),[1,1,0])
+		self.assertEqual(p_rn.state.cache.filter(),[{'elem':elem1}])
+		self.assertEqual(q_rn.state.cache.filter(),[{'elem':elem2}])
+
+		# we went from p:[elem2], q:[elem1], r:[]
+		# to p:[elem1,elem2], q:[elem1,elem2], r:[elem1,elem2]
+		# to p:[elem1], q:[elem2], r:[]

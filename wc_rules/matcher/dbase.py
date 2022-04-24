@@ -58,6 +58,11 @@ class Database:
 		num = random.choice(self._record_keys)
 		return clean_record(self._db[num])
 
+	def contains(self,**kwargs):
+		for x in self._db(**kwargs):
+			return True
+		return False
+
 class DatabaseSingleValue:
 
 	def __init__(self,value=None):
@@ -112,6 +117,9 @@ class DatabaseAlias:
 
 	def sample(self):
 		return self.forward_transform(self.target.sample())
+
+	def contains(self,**kwargs):
+		return self.target.contains(**self.reverse_transform(kwargs))
 
 class DatabaseSymmetric(Database):
 
