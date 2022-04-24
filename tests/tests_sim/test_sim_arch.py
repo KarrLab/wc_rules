@@ -37,8 +37,8 @@ class TestSimpleBindingModel(unittest.TestCase):
 		sim = self.sim
 		self.assertTrue(sim.net.get_node(core='binding_model.binding_rule.propensity') is not None)
 		self.assertTrue(sim.net.get_node(core='binding_model.unbinding_rule.propensity') is not None)
-		self.assertTrue('binding_model.kf' in sim.parameters)
-		self.assertTrue('binding_model.kr' in sim.parameters)
+		self.assertTrue('binding_model.kf' in sim.variables)
+		self.assertTrue('binding_model.kr' in sim.variables)
 
 
 	def test_load(self):
@@ -145,7 +145,7 @@ class TestFlipModel(unittest.TestCase):
 	def test_init_simulator(self):
 		sim = self.sim
 		self.assertTrue(sim.net.get_node(core='flip_model.flipping_rule.propensity') is not None)
-		self.assertTrue('flip_model.k' in sim.parameters)
+		self.assertTrue('flip_model.k' in sim.variables)
 		
 	def test_load1(self):
 		sim = self.sim

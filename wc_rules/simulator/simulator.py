@@ -53,7 +53,7 @@ class SimulationEngine:
 	def __init__(self,model=None,parameters=None,**kwargs):
 		
 		model.verify(parameters)
-		self.parameters = LoggableDict(NestedDict.flatten(parameters))
+		self.variables = LoggableDict(NestedDict.flatten(parameters))
 		self.rules = dict(model.iter_rules())
 		self.action_managers = {rule_name:ActionManager(rule.get_action_executables()) for rule_name,rule in self.rules.items()}
 		self.cache = DictLike()
@@ -61,14 +61,14 @@ class SimulationEngine:
 		self.net = self.ReteNetClass() \
 			.initialize_start() \
 			.initialize_end()	\
-			.initialize_rules(self.rules,self.parameters)
+			.initialize_rules(self.rules,self.variables)
 
 		for node in self.net.get_nodes(type='variable'):
-			self.parameters.set(node.core,node.state.cache.value)
+			self.variables.set(node.core,node.state.cache.value)
 
 	def get_updated_variables(self):
-		modified = list(self.parameters.modified)
-		self.parameters.flush()
+		modified = list(self.variables.modified)
+		self.variables.flush()
 		return modified
 
 	def load(self,objects):
@@ -81,7 +81,7 @@ class SimulationEngine:
 				self.net.process_tokens(tokens)
 		for variable in self.net.get_updated_variables():
 			value = self.net.get_node(core=variable).state.cache.value
-			self.parameters.set(variable,value)
+			self.variables.set(variable,value)
 		return self
 
 	def fire(self,rule_name):
@@ -89,7 +89,7 @@ class SimulationEngine:
 		rule = self.rules[rule_name]
 		match = {reactant: AttrDict(self.net.get_node(core=pattern).state.cache.sample()) for reactant,pattern in rule.reactants.items()}
 		model_name = get_model_name(rule_name)
-		parameters = {p:self.parameters[f'{model_name}.{p}'] for p in rule.parameters}
+		parameters = {p:self.variables[f'{model_name}.{p}'] for p in rule.parameters}
 		action_manager = self.action_managers[rule_name]
 		ax = ActionStack(self.cache)
 		for action in action_manager.exec(match,parameters):
@@ -97,7 +97,7 @@ class SimulationEngine:
 			self.net.process_tokens(tokens)
 		for variable in self.net.get_updated_variables():
 			value = self.net.get_node(core=variable).state.cache.value
-			self.parameters.set(variable,value)
+			self.variables.set(variable,value)
 		return self
 
 
