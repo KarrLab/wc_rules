@@ -1,6 +1,6 @@
 from wc_rules.schema.entity import Entity
 from wc_rules.schema.attributes import BooleanAttribute, IntegerAttribute, StringAttribute, computation
-from wc_rules.modeling.pattern import Pattern, GraphContainer
+from wc_rules.modeling.pattern import Pattern, GraphContainer, Observable
 from wc_rules.matcher.core import build_rete_net_class
 from wc_rules.matcher.token import *
 from wc_rules.graph.examples import X,Y
@@ -133,8 +133,6 @@ class TestRetePatternInitialization(unittest.TestCase):
 	def test_pattern_helpers(self):
 		ReteNet = build_rete_net_class()
 		net = ReteNet().initialize_start()
-
-
 		p = Pattern(GraphContainer([BigAttributeClass('elem',x=True,y=True)]))
 		q = Pattern(GraphContainer([BigAttributeClass('elem',n1=0,n2=0)]))
 
@@ -152,6 +150,27 @@ class TestRetePatternInitialization(unittest.TestCase):
 		pr, qr = [net.get_channel(source=x,target=y) for x,y in [(p,r),(q,r)]]
 		self.assertEqual(pr.data.transformer.datamap,{'elem':'elem'})
 		self.assertEqual(qr.data.transformer.datamap,{'elem':'elem'})
+
+	def test_observable(self):
+		ReteNet = build_rete_net_class()
+		net = ReteNet().initialize_start().initialize_end()
+		p = Pattern(GraphContainer([BigAttributeClass('elem',x=True,y=True)]))
+		q = Observable(name='obsTrue',helpers={'p':p},expression='p.count()')
+		
+		net.initialize_observable('obsTrue',q)
+		q_rn = net.get_node(core='obsTrue')
+		self.assertTrue(q_rn is not None)
+		self.assertTrue(net.get_node(core=p) is not None)
+		ch = net.get_channel(source=p,target='obsTrue')
+		self.assertTrue(ch is not None)
+		self.assertEqual(ch.type,'variable_update')
+		self.assertEqual(q_rn.state.cache.value,0)
+		ch = net.get_channel(source='obsTrue',target='end')
+		self.assertTrue(ch is not None)
+
+		
+
+
 
 class TestRetePatternBehavior(unittest.TestCase):
 	# test insert/remove/filter
@@ -412,3 +431,53 @@ class TestRetePatternBehavior(unittest.TestCase):
 		# we went from p:[elem2], q:[elem1], r:[]
 		# to p:[elem1,elem2], q:[elem1,elem2], r:[elem1,elem2]
 		# to p:[elem1], q:[elem2], r:[]
+	
+	def test_observable(self):
+		ReteNet = build_rete_net_class()
+		net = ReteNet().initialize_start().initialize_end()
+		start = net.get_node(type='start')
+		p = Pattern(GraphContainer([BigAttributeClass('elem',x=True,y=True)]))
+		q = Observable(name='obsTrue',helpers={'p':p},expression='p.count()')
+		
+		net.initialize_observable('obsTrue',q)
+		q_rn = net.get_node(core='obsTrue')
+		self.assertEqual(q_rn.state.cache.value,0)
+
+		elem1 = BigAttributeClass('elem1',x=True,y=True,n1=0,n2=0,s1='',s2='')
+		token = make_node_token(BigAttributeClass,elem1,'AddNode')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(q_rn.state.cache.value,1)
+
+		elem2 = BigAttributeClass('elem2',x=True,y=False,n1=1,n2=0,s1='',s2='')
+		token = make_node_token(BigAttributeClass,elem2,'AddNode')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(q_rn.state.cache.value,1)
+
+		elem2.y = True
+		token = make_attr_token(BigAttributeClass,elem2,'y','SetAttr')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(q_rn.state.cache.value,2)
+
+		elem1.x = False
+		token = make_attr_token(BigAttributeClass,elem1,'x','SetAttr')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(q_rn.state.cache.value,1)
+
+		elem2.x = False
+		token = make_attr_token(BigAttributeClass,elem2,'x','SetAttr')
+		start.state.incoming.append(token)
+		net.sync(start)
+		self.assertEqual(q_rn.state.cache.value,0)
+
+		end = net.get_node(type='end')
+		self.assertEqual(list(end.state.cache),['obsTrue'])
+
+		# first add elem1 which matches q
+		# then elem2 which does not match q
+		# then modify elem2 so it does match q
+		# then modify elem1 so it does not match q
+		# then modify elem2 so it does not match q

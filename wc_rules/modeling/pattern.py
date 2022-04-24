@@ -2,8 +2,8 @@
 from ..utils.validate import *
 from ..graph.collections import GraphContainer
 from ..utils.collections import split_string
-from ..expressions.executable import Constraint, Computation, initialize_from_string, ExecutableExpressionManager
-from attrdict import AttrDict
+from ..expressions.executable import Constraint, Computation, initialize_from_string, ExecutableExpressionManager, ObservableExpression
+
 
 
 def make_attr_constraints(attrs):
@@ -105,19 +105,36 @@ class Pattern:
 		manager = ExecutableExpressionManager(execs,self.namespace)
 		return manager
 
-	def get_initialization_code(self):
-		code = AttrDict({
-			'parent': None,
-			'constraints': bool(self.constraints),
-			'helpers': bool(self.helpers)
-			})
-		if isinstance(self.parent,GraphContainer) and len(self.parent)>0:
-			code['parent'] = 'graph'
-		elif isinstance(self.parent,Pattern):
-			code['parent'] = 'pattern'
 
-		if not any([code.helpers,code.constraints]):
-			code['subtype'] = 'alias'		
-		else:
-			code['subtype'] = 'default'
-		return code
+class Observable:
+
+	def __init__(self,name,helpers,expression,default=0):
+		self.name = name
+		self.default = default
+
+		self.validate_helpers(helpers)
+		self.helpers = helpers
+
+		self.validate_expression(expression)
+		self.expression = expression
+
+	def validate_helpers(self,helpers):
+		validate_class(helpers,dict,'Helpers')
+		validate_keywords(helpers.keys(),'Helper')
+		validate_dict(helpers,Pattern,'Helper')
+
+	def validate_expression(self,expression):
+		validate_class(expression,str,'Expression')
+		namespace = list(self.helpers.keys())
+		x = initialize_from_string(expression,(ObservableExpression,))
+		validate_contains(namespace,x.keywords,'Variable')
+		
+	def make_executable(self):
+		return initialize_from_string(self.expression,(ObservableExpression,))
+
+class SimpleObservable:
+
+	def __init__(self,name,target,default=0):
+		helpers = {'target':target}
+		expression = 'target.count()'
+		super().__init__(name,helpers,expression,default)

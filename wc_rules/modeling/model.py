@@ -1,5 +1,5 @@
 from .rule import Rule
-from .observable import Observable
+from .pattern import Observable
 from ..utils.validate import *
 from ..utils.collections import DictLike,merge_lists
 from collections.abc import Sequence
@@ -22,6 +22,8 @@ class RuleBasedModel:
 		validate_set(rule_names,'Rule names in a model')
 		self.rules = rules
 		validate_list(observables,Observable,'Observable')
+		obs_names = [x.name for x in observables]
+		validate_set(obs_names,'Rule names in a model')
 		self.observables = observables
 		self._dict = {x.name:x for x in self.rules}
 

@@ -128,6 +128,13 @@ class RateLaw(ExecutableExpression):
 	allowed_forms = ['<expr>']
 	allowed_returns = (int,float,)
 
+
+class ObservableExpression(ExecutableExpression):
+	start = 'expression'
+	builtins = global_builtins
+	allowed_forms = ['<expr>']
+	allowed_returns = None
+
 ######## Simulator methods #########
 def rollback(expr):
     assert isinstance(expr,bool), "Rollback condition must evaluate to a boolean."

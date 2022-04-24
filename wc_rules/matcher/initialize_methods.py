@@ -145,7 +145,9 @@ class InitializationMethods:
 			caches[var] = self.get_node(core=pat).state.cache
 
 		manager = pattern.make_executable_expression_manager()
-		self.add_node_pattern(pattern=pattern,subtype='default',executables=manager,caches=caches)
+
+		if requires_parent:
+			self.add_node_pattern(pattern=pattern,subtype='default',executables=manager,caches=caches)
 
 		for variable, attr in manager.get_attribute_calls():
 			assert issubclass(pattern.namespace[variable],BaseClass)
@@ -200,4 +202,21 @@ class InitializationMethods:
 			self.add_node_variable(name,value,subtype='fixed')
 		for name,rule in rules.items():
 			self.initialize_rule(name,rule)
+		return self
+
+	def initialize_observable(self,name,observable):
+		caches = dict()
+		for pname,pattern in observable.helpers.items():
+			self.initialize_pattern(pattern)
+			caches[pname]= self.get_node(core=pattern).state.cache
+		self.add_node_variable(
+			name = name,
+			default_value = observable.default,
+			executable = observable.make_executable(),
+			caches = caches,
+			subtype = 'recompute'
+			)
+		for pname,pattern in observable.helpers.items():
+			self.add_channel_variable_update(source=pattern,target=name,variable=pname)
+		self.add_channel_variable_update(source=name,target='end',variable=name)			
 		return self
