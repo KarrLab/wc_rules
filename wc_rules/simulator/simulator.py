@@ -1,5 +1,5 @@
 from ..matcher.core import build_rete_net_class
-from .scheduler import NextReactionMethod
+from .scheduler import NextReactionMethod, PeriodicWriteObservables,CoordinatedScheduler
 from ..utils.collections import DictLike, LoggableDict, subdict
 from ..utils.data import NestedDict
 from ..modeling.model import AggregateModel
@@ -48,20 +48,22 @@ class ActionStack:
 class SimulationEngine:
 
 	ReteNetClass = build_rete_net_class()
-	Scheduler = NextReactionMethod
+	
+	def __init__(self,model=None,parameters=None):
 
-	def __init__(self,model=None,parameters=None,**kwargs):
-		
+		model = AggregateModel('model',models=[model])
 		model.verify(parameters)
 		self.variables = LoggableDict(NestedDict.flatten(parameters))
 		self.rules = dict(model.iter_rules())
+		self.observables = dict(model.iter_observables())
 		self.action_managers = {rule_name:ActionManager(rule.get_action_executables()) for rule_name,rule in self.rules.items()}
 		self.cache = DictLike()
 
 		self.net = self.ReteNetClass() \
 			.initialize_start() \
 			.initialize_end()	\
-			.initialize_rules(self.rules,self.variables)
+			.initialize_rules(self.rules,self.variables) \
+			.initialize_observables(self.observables)
 
 		for node in self.net.get_nodes(type='variable'):
 			self.variables.set(node.core,node.state.cache.value)
@@ -99,6 +101,35 @@ class SimulationEngine:
 			value = self.net.get_node(core=variable).state.cache.value
 			self.variables.set(variable,value)
 		return self
+
+	def simulate(self,start=0.0,end=1.0,period=1,write_location=None):
+		time = start
+		sch = CoordinatedScheduler([
+			NextReactionMethod(),
+			PeriodicWriteObservables(
+				start=start,
+				period=period,
+				write_location=write_location
+			)])
+		sch.update(start,self.variables)
+		while True:
+			event,time = sch.pop()
+			if event=='write_observables':
+				self.write_observables(time,write_location)
+				if time >= end:
+					break
+			elif event in self.rules:
+				self.fire(event)
+				sch.update(time,subdict(self.variables,self.variables.modified))
+			self.variables.flush()
+		return self
+
+	def write_observables(self,time,write_location):
+		write_location.data.append({'time':time,'observables':subdict(self.variables,self.observables)})
+		return self
+
+
+
 
 
 

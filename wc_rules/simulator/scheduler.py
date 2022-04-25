@@ -1,10 +1,12 @@
 from pqdict import pqdict
-from collections import defaultdict
+from collections import defaultdict, deque
 from numpy import log, seterr
 #from numpy.random import rand
 import random
 from abc import ABC, abstractmethod
 from sortedcontainers import SortedSet
+from ..utils.collections import subdict
+import copy
 
 seterr(divide="ignore",invalid='ignore')
 
@@ -34,6 +36,7 @@ class Scheduler:
 			return event,time
 		return None, float('inf')
 
+
 class RepeatedEventScheduler(Scheduler):
 
 	def __init__(self, event, period, start=0.0):
@@ -53,32 +56,24 @@ class CoordinatedScheduler(Scheduler):
 	def __init__(self,schedulers):
 		self.schedulers = schedulers
 
+	def get_first_scheduler(self):
+		ind = pqdict({i:x.peek()[1] for i,x in enumerate(self.schedulers)}).top()
+		return self.schedulers[ind]
+
 	def pop(self):
-		events = SortedSet()
-		for i,x in enumerate(self.schedulers):
-			event,time = x.peek()
-			if event is not None:
-				events.add((time,event,i))
-		if len(events) > 0:
-			time,event, i = events[0]
-			return self.schedulers[i].pop()
-		return None, float('inf')
+		return self.get_first_scheduler().pop()
 
 	def peek(self):
-		events = SortedSet()
-		for i,x in enumerate(self.schedulers):
-			event,time = x.peek()
-			if event is not None:
-				events.add((time,event,i))
-		if len(events) > 0:
-			time,event, i = events[0]
-			return event,time
-		return None, float('inf')
-
-
+		return self.get_first_scheduler().peek()
+		
 	def update(self,time,variables={}):
 		for sch in self.schedulers:
 			sch.update(time,variables)
+		return self
+
+	def close(self):
+		for sch in self.schedulers:
+			sch.close()
 		return self
 
 class NextReactionMethod(Scheduler):
@@ -104,7 +99,7 @@ class NextReactionMethod(Scheduler):
 		return self
 
 	def pop(self):
-		event,time =  Scheduler.pop(self)
+		event,time = Scheduler.pop(self)
 		self.schedule(time,event)
 		return event,time
 
@@ -112,4 +107,12 @@ class NextReactionMethod(Scheduler):
 		event,time =  Scheduler.peek(self)
 		self.schedule(time,event)
 		return event,time
+
+class PeriodicWriteObservables(RepeatedEventScheduler):
+
+	def __init__(self,start=0.0,period=1.0,write_location='output',observables=[]):
+		super().__init__('write_observables',period,start)
+		self.write_location = write_location
+		self.observables = observables
+		self.data = deque()
 

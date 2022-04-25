@@ -174,7 +174,7 @@ class InitializationMethods:
 		parameters, caches = dict(),dict()
 		for param in rule.parameters:
 			parameters[param] = f'{model_name}.{param}'
-			assert self.get_node(core=f'{model_name}.{param}') is not None
+			assert self.get_node(core=f'{model_name}.{param}') is not None, f'Cannot find {model_name}.{param}'
 		for pname,pattern in rule.reactants.items():
 			self.initialize_pattern(pattern)
 			cache_ref = self.get_node(core=pattern).state.cache
@@ -219,4 +219,9 @@ class InitializationMethods:
 		for pname,pattern in observable.helpers.items():
 			self.add_channel_variable_update(source=pattern,target=name,variable=pname)
 		self.add_channel_variable_update(source=name,target='end',variable=name)			
+		return self
+
+	def initialize_observables(self,observables):
+		for name,obs in observables.items():
+			self.initialize_observable(name,obs)
 		return self

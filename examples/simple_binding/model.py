@@ -1,8 +1,9 @@
 from wc_rules.schema.entity import Entity
 from wc_rules.schema.attributes import *
 from wc_rules.modeling.model import RuleBasedModel,AggregateModel
-from wc_rules.modeling.pattern import Pattern,GraphContainer
+from wc_rules.modeling.pattern import Pattern,GraphContainer, SimpleObservable
 from wc_rules.modeling.rule import InstanceRateRule
+from wc_rules.utils.data import DataFileUtil
 
 class X(Entity):
 	pass
@@ -31,7 +32,8 @@ class SimpleBindingModel(RuleBasedModel):
 			rate_prefix = 'kr',
 			parameters = ['kr']
 		)
-		super().__init__(name=name,rules=[rule1,rule2])
+		observables = [SimpleObservable(name,target) for name,target in {'x':px,'y':py,'xy':pxy}.items()]
+		super().__init__(name=name,rules=[rule1,rule2],observables=observables)
 
 
 model = SimpleBindingModel('binding_model')

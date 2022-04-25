@@ -8,7 +8,7 @@ from wc_rules.modeling.utils import add_models_folder
 from wc_rules.modeling.model import AggregateModel
 from wc_rules.graph.collections import GraphContainer, MoleculeType, MoleculeInitialization
 from wc_rules.simulator.scheduler import RepeatedEventScheduler, CoordinatedScheduler, NextReactionMethod
-
+from wc_rules.utils.data import DataFileUtil, OutputUtil
 import unittest
 
 #add_models_folder('/codebase/wc_rules/examples/')
@@ -26,12 +26,9 @@ def get_lengths(elems):
 class TestSimpleBindingModel(unittest.TestCase):
 
 	def setUp(self):
-		self.model =  AggregateModel('model',models=[simple_binding_model])
+		#self.model =  AggregateModel('model',models=[simple_binding_model])
 		self.data = {'binding_model':{'kf':1,'kr':1}}
-		self.sim = SimulationEngine(model=self.model,parameters=self.data)
-
-	def test_data_verify(self):
-		self.model.verify(self.data)
+		self.sim = SimulationEngine(model=simple_binding_model,parameters=self.data)
 		
 	def test_init_simulator(self):
 		sim = self.sim
@@ -39,7 +36,6 @@ class TestSimpleBindingModel(unittest.TestCase):
 		self.assertTrue(sim.net.get_node(core='binding_model.unbinding_rule.propensity') is not None)
 		self.assertTrue('binding_model.kf' in sim.variables)
 		self.assertTrue('binding_model.kr' in sim.variables)
-
 
 	def test_load(self):
 		sim = self.sim
@@ -50,13 +46,15 @@ class TestSimpleBindingModel(unittest.TestCase):
 		self.assertEqual(len(px_cache),0)
 		self.assertEqual(len(py_cache),0)
 		self.assertEqual(len(pxy_cache),0)
-		self.assertEqual(sim.get_updated_variables(),sorted([
+		updated = set(sim.get_updated_variables())
+		variables = [
 			'binding_model.binding_rule.propensity',
 			'binding_model.unbinding_rule.propensity',
 			'binding_model.kf',
 			'binding_model.kr',
-			]))
-
+			]
+		self.assertTrue(updated.issuperset(variables))
+		
 
 		x1 = X('x1',y=Y('y1'))
 		sim.load([GraphContainer(x1.get_connected())])
@@ -65,10 +63,12 @@ class TestSimpleBindingModel(unittest.TestCase):
 		self.assertEqual(len(px_cache),0)
 		self.assertEqual(len(py_cache),0)
 		self.assertEqual(len(pxy_cache),1)
-		self.assertEqual(sim.get_updated_variables(),sorted([
+		updated = set(sim.get_updated_variables())
+		variables = [
 			'binding_model.binding_rule.propensity',
 			'binding_model.unbinding_rule.propensity',
-			]))
+			]
+		self.assertTrue(updated.issuperset(variables))
 
 	def test_load_molecule_initialization(self):
 		sim = self.sim
@@ -99,49 +99,69 @@ class TestSimpleBindingModel(unittest.TestCase):
 		with self.assertRaises(Exception):
 			sim.fire('binding_model.unbinding_rule')
 
-		self.assertEqual(sim.get_updated_variables(),sorted([
+		updated = set(sim.get_updated_variables())
+		variables = [
 			'binding_model.binding_rule.propensity',
 			'binding_model.unbinding_rule.propensity',
 			'binding_model.kf',
 			'binding_model.kr',
-			]))
+			]
+		self.assertTrue(updated.issuperset(variables))
+
+		variables = [f'binding_model.{x}binding_rule.propensity' for x in ['','un']]
 
 		x1 = X('x1',y=Y('y1'))
 		sim.load([GraphContainer(x1.get_connected())])
 		self.assertEqual(get_lengths([px,py,pxy]),[0,0,1])
 		self.assertEqual([prop_binding.value,prop_unbinding.value],[0,1])
-		self.assertEqual(sim.get_updated_variables(),variables)
+		updated = set(sim.get_updated_variables())
+		self.assertTrue(updated.issuperset(variables))
 
 		sim.fire('binding_model.unbinding_rule')
 		self.assertEqual(get_lengths([px,py,pxy]),[1,1,0])
 		self.assertEqual([prop_binding.value,prop_unbinding.value],[1,0])
-		self.assertEqual(sim.get_updated_variables(),variables)
+		updated = set(sim.get_updated_variables())
+		self.assertTrue(updated.issuperset(variables))
 
 		sim.fire('binding_model.binding_rule')
 		self.assertEqual(get_lengths([px,py,pxy]),[0,0,1])
 		self.assertEqual([prop_binding.value,prop_unbinding.value],[0,1])
-		self.assertEqual(sim.get_updated_variables(),variables)
+		updated = set(sim.get_updated_variables())
+		self.assertTrue(updated.issuperset(variables))
 
 		sim.fire('binding_model.unbinding_rule')
 		self.assertEqual(get_lengths([px,py,pxy]),[1,1,0])
 		self.assertEqual([prop_binding.value,prop_unbinding.value],[1,0])
-		self.assertEqual(sim.get_updated_variables(),variables)
+		updated = set(sim.get_updated_variables())
+		self.assertTrue(updated.issuperset(variables))
 
 		with self.assertRaises(Exception):
 			sim.fire('binding_model.unbinding_rule')
+
+	def test_simulate(self):
+		random.seed(0)
+		cwd = Path(__file__).parent.resolve()
+		test_data = DataFileUtil(cwd).read_file('simdata.json')
+		
+		sim = self.sim
+		m1,m2 = MoleculeType([X('x')]), MoleculeType([Y('y')])
+		params = {'binding_model':{'kf':1.0,'kr':1.0}}
+		init = MoleculeInitialization([(m1,10),(m2,10)])
+		sim.load([init])
+		output = OutputUtil()
+		sim.simulate(end=2.0,period=0.1,write_location=output)
+		self.assertEqual(output.data,test_data)
+
 
 class TestFlipModel(unittest.TestCase):
 	# note that the pattern used here is symmetric, 
 	# so test multiple ways to load
 
 	def setUp(self):
-		self.model =  AggregateModel('model',models=[flip_model])
+		self.model =  flip_model
 		self.data = {'flip_model':{'k':1}}
 		self.sim = SimulationEngine(model=self.model,parameters=self.data)
 
-	def test_data_verify(self):
-		self.model.verify(self.data)
-	
 	def test_init_simulator(self):
 		sim = self.sim
 		self.assertTrue(sim.net.get_node(core='flip_model.flipping_rule.propensity') is not None)

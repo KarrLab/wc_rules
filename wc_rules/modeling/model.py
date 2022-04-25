@@ -151,7 +151,7 @@ class AggregateModel:
 		for observable in self.observables:
 			yield add_prefix(prefix,observable.name), observable
 		for n,m in self.iter_models(prefix):
-			yield from m.iter_observables()
+			yield from m.iter_observables(prefix=n)
 
 	def iter_parameters(self,prefix=''):
 		for n,m in self.iter_models(prefix):

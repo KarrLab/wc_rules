@@ -184,4 +184,8 @@ class DataFileUtil:
 		return {file.stem:self.read_file(file.name) for file in files}
 
 
+class OutputUtil:
+
+	def __init__(self):
+		self.data = []
 

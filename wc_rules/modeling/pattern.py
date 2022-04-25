@@ -130,7 +130,7 @@ class Observable:
 	def make_executable(self):
 		return initialize_from_string(self.expression,(ObservableExpression,))
 
-class SimpleObservable:
+class SimpleObservable(Observable):
 
 	def __init__(self,name,target,default=0):
 		helpers = {'target':target}
