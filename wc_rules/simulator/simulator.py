@@ -5,7 +5,7 @@ from ..utils.data import NestedDict
 from ..modeling.model import AggregateModel
 from collections import defaultdict, deque, ChainMap
 from attrdict import AttrDict
-from ..schema.actions import PrimaryAction, CompositeAction
+from ..schema.actions import PrimaryAction, CompositeAction, RemoveNode
 from ..matcher.token import convert_action_to_tokens
 from ..expressions.executable import ActionManager
 
@@ -38,9 +38,13 @@ class ActionStack:
 		while self._dq:
 			x = self._dq.popleft()
 			if isinstance(x,PrimaryAction):
-				x.execute(self.cache)
+				if isinstance(x,RemoveNode):
+					tokens.extend(convert_action_to_tokens(x,self.cache))
+					x.execute(self.cache)
+				else:	
+					x.execute(self.cache)
+					tokens.extend(convert_action_to_tokens(x,self.cache))
 				self.record.append(x)
-				tokens.extend(convert_action_to_tokens(x,self.cache))
 			elif isinstance(x,CompositeAction):
 				self.put_first(x.expand())
 		return tokens
@@ -50,7 +54,7 @@ class SimulationEngine:
 	ReteNetClass = build_rete_net_class()
 	
 	def __init__(self,model=None,parameters=None):
-
+		print('Importing model and parameters.')
 		model = AggregateModel('model',models=[model])
 		model.verify(parameters)
 		self.variables = LoggableDict(NestedDict.flatten(parameters))
@@ -59,6 +63,7 @@ class SimulationEngine:
 		self.action_managers = {rule_name:ActionManager(rule.get_action_executables()) for rule_name,rule in self.rules.items()}
 		self.cache = DictLike()
 
+		print('Initializing rete net matching engine.')
 		self.net = self.ReteNetClass() \
 			.initialize_start() \
 			.initialize_end()	\
@@ -75,6 +80,7 @@ class SimulationEngine:
 
 	def load(self,objects):
 		# object must have an iterator object.generate_actions()
+		print('Loading simulation state.')
 		ax = ActionStack(self.cache)
 		start = self.net.get_node(type='start')
 		for x in objects:
@@ -87,7 +93,6 @@ class SimulationEngine:
 		return self
 
 	def fire(self,rule_name):
-		
 		rule = self.rules[rule_name]
 		match = {reactant: AttrDict(self.net.get_node(core=pattern).state.cache.sample()) for reactant,pattern in rule.reactants.items()}
 		model_name = get_model_name(rule_name)
@@ -103,6 +108,7 @@ class SimulationEngine:
 		return self
 
 	def simulate(self,start=0.0,end=1.0,period=1,write_location=None):
+		print(f'Simulating from time={start} to time={end}.')
 		time = start
 		sch = CoordinatedScheduler([
 			NextReactionMethod(),
@@ -115,6 +121,7 @@ class SimulationEngine:
 		while True:
 			event,time = sch.pop()
 			if event=='write_observables':
+				print(f'Current time={time}.')
 				self.write_observables(time,write_location)
 				if time >= end:
 					break
@@ -122,10 +129,11 @@ class SimulationEngine:
 				self.fire(event)
 				sch.update(time,subdict(self.variables,self.variables.modified))
 			self.variables.flush()
+		print(f'Simulation complete. Exiting.')
 		return self
 
 	def write_observables(self,time,write_location):
-		write_location.data.append({'time':time,'observables':subdict(self.variables,self.observables)})
+		write_location.append({'time':time,'observables':subdict(self.variables,self.observables)})
 		return self
 
 

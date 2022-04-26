@@ -14,3 +14,7 @@ pydblite
 frozendict
 pqdict
 parameterized
+matplotlib
+jupyter
+pandas
+plotly_express

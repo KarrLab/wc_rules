@@ -63,6 +63,9 @@ class Database:
 			return True
 		return False
 
+	def sum_over(self,variable):
+		return sum([x[variable] for x in self.filter()])
+
 class DatabaseSingleValue:
 
 	def __init__(self,value=None):
@@ -120,6 +123,7 @@ class DatabaseAlias:
 
 	def contains(self,**kwargs):
 		return self.target.contains(**self.reverse_transform(kwargs))
+		
 
 class DatabaseSymmetric(Database):
 
