@@ -10,7 +10,7 @@ numpy
 scipy
 jupyter
 matplotlib
-plotly_express
+plotly
 biopython
 networkx
 lark_parser
