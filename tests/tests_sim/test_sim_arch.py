@@ -8,7 +8,7 @@ from wc_rules.modeling.utils import add_models_folder
 from wc_rules.modeling.model import AggregateModel
 from wc_rules.graph.collections import GraphContainer, MoleculeType, MoleculeInitialization
 from wc_rules.simulator.scheduler import RepeatedEventScheduler, CoordinatedScheduler, NextReactionMethod
-from wc_rules.utils.data import DataFileUtil, OutputUtil
+from wc_rules.utils.data import DataFileUtil, TrajectoryUtil
 import unittest
 
 #add_models_folder('/codebase/wc_rules/examples/')
@@ -148,7 +148,7 @@ class TestSimpleBindingModel(unittest.TestCase):
 		params = {'binding_model':{'kf':1.0,'kr':1.0}}
 		init = MoleculeInitialization([(m1,10),(m2,10)])
 		sim.load([init])
-		output = OutputUtil()
+		output = TrajectoryUtil()
 		sim.simulate(end=2.0,period=0.1,write_location=output)
 		self.assertEqual(output.data,test_data)
 
