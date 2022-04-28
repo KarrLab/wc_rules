@@ -4,6 +4,8 @@ import yaml
 
 from pathlib import Path
 from collections import defaultdict, Counter
+import plotly.express as px
+import pandas as pd
 
 class NestedDict:
 	# static methods for working with Nested Dicts
@@ -67,6 +69,15 @@ class NestedDict:
 			if sorted(NestedDict.iter_items(d)) != d0_items:
 				return False
 		return True
+
+	@staticmethod
+	def flatten(d):
+		return dict(NestedDict.iter_items(d,mode='str'))
+
+	@staticmethod
+	def unflatten(d):
+		return NestedDict.compose(*d.items())
+		
 
 DELIMITER = ','
 
@@ -174,5 +185,55 @@ class DataFileUtil:
 			files = [self.folder / x for x in filenames]
 		return {file.stem:self.read_file(file.name) for file in files}
 
+
+class TrajectoryUtil(DataFileUtil):
+
+	def __init__(self,folder='.'):
+		self.folder = Path(folder)
+		self.data = []
+
+	def append(self,elem):
+		self.data.append(elem)
+		return self
+
+	def read_file(self,filename):
+		self.data = DataFileUtil.read_file(self,filename)
+		return self
+
+	def write_file(self,filename):
+		DataFileUtil.write_file(self,self.data,filename)
+		return self
+
+	def make_pandas_df(self):
+		return pd.DataFrame([{'time':d['time'], 'observable':k, 'value':v} for d in self.data for k,v in d['observables'].items()])
+
+	def plot(self,**kwargs):
+		df = self.make_pandas_df()
+		return px.line(df,x='time',y='value',color='observable',**kwargs)
+
+class TrajectorySetUtil(TrajectoryUtil):
+	def __init__(self,folder='.'):
+		self.folder = Path(folder)
+		self.data = []
+		self.runmax = 0
+
+	def update_run(self):
+		self.runmax+=1
+		return self
+
+	def append(self,elem):
+		elem['run'] = self.runmax
+		self.data.append(elem)
+		return self
+
+	def make_pandas_df(self):
+		df = pd.DataFrame()
+		for elem in self.data:
+			run = elem['run']
+			time = elem['time']
+			obs = elem['observables']
+			for k,v in obs.items():
+				df.append({'run':run,'time':time, 'observable':k, 'value':v},ignore_index=True)
+		return df		
 
 

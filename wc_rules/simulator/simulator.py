@@ -1,120 +1,145 @@
-from collections import deque 
-from ..utils.collections import DictLike
-from ..matcher.core import ReteNet
-from ..matcher.actions import make_node_token, make_edge_token, make_attr_token
-from .sampler import NextReactionMethod
+from ..matcher.core import build_rete_net_class
+from .scheduler import NextReactionMethod, PeriodicWriteObservables,CoordinatedScheduler
+from ..utils.collections import DictLike, LoggableDict, subdict
+from ..utils.data import NestedDict
+from ..modeling.model import AggregateModel
+from collections import defaultdict, deque, ChainMap
+from attrdict import AttrDict
+from ..schema.actions import PrimaryAction, CompositeAction, RemoveNode
+from ..matcher.token import convert_action_to_tokens
+from ..expressions.executable import ActionManager
 
-class SimulationState:
-	def __init__(self,nodes=[],**kwargs):
-		self.cache = DictLike(nodes)
-		# for both stacks, use LIFO semantics using appendleft and popleft
-		self.rollback = kwargs.get('rollback',False)
-		self.action_stack = deque()
-		self.rollback_stack = deque()
-		self.matcher = kwargs.get('matcher',ReteNet.default_initialization())
-		
-		self.start_time = kwargs.get('start_time',0.0)
-		self.end_time = kwargs.get('end_time',0.0)
-		self.sampler = NextReactionMethod(time=self.start_time)
+def get_model_name(rule_name):
+	return '.'.join(rule_name.split('.')[:-1])
 
-	# These are elementary methods, used as 
-	# the final step in adding/removing a node
-	def resolve(self,idx):
-		return self.cache.get(idx)
+class ActionStack:
 
-	def update(self,node):
-		self.cache.add(node)
-		return self
+	def __init__(self,cache):
+		self._dq  = deque()
+		self.cache = cache
+		self.record = deque()
 
-	def remove(self,node):
-		self.cache.remove(node)
-		return self
-
-	def get_contents(self,ignore_id=True,ignore_None=True,use_id_for_related=True,sort_for_printing=True):
-		d = {x.id:x.get_attrdict(ignore_id=ignore_id,ignore_None=ignore_None,use_id_for_related=use_id_for_related) for k,x in self.cache.items()}
-		if sort_for_printing:
-			# sort list attributes
-			for idx,adict in d.items():
-				for k,v in adict.items():
-					if isinstance(v,list):
-						adict[k] = list(sorted(v))
-				adict = dict(sorted(adict.items()))
-			d = dict(sorted(d.items())) 
-		return d
-
-	def push_to_stack(self,action):
+	def put(self,action):
 		if isinstance(action,list):
-			# assume list has to be executed left to right
-			self.action_stack = deque(action) + self.action_stack
+			self._dq.extend(action)
 		else:
-			self.action_stack.appendleft(action)
+			self._dq.append(action)
 		return self
 
-	def simulate(self):
-		while self.action_stack:
-			action = self.action_stack.popleft()
-			if hasattr(action,'expand'):
-				self.push_to_stack(action.expand())
-			elif action.__class__.__name__ == 'RemoveNode':
-				if self.rollback:
-					self.rollback_stack.appendleft(action)
-				matcher_tokens = self.compile_to_matcher_tokens(action)
-				action.execute(self)
-				outtokens = self.matcher.process(matcher_tokens)
-			else:
-				if self.rollback:
-					self.rollback_stack.appendleft(action)
-				action.execute(self)
-				matcher_tokens = self.compile_to_matcher_tokens(action)
-				outtokens = self.matcher.process(matcher_tokens)
-
-		self.update_sampler(outtokens)
+	def put_first(self,action):
+		if isinstance(action,list):
+			self._dq.extend(reversed(action))
+		else:
+			self._dq.appendleft(action)
 		return self
 
-	def rollback(self):
-		while self.rollback_stack:
-			action = self.rollback_stack.popleft()
-			action.execute(self)
+	def do(self):
+		tokens = []
+		while self._dq:
+			x = self._dq.popleft()
+			if isinstance(x,PrimaryAction):
+				if isinstance(x,RemoveNode):
+					tokens.extend(convert_action_to_tokens(x,self.cache))
+					x.execute(self.cache)
+				else:	
+					x.execute(self.cache)
+					tokens.extend(convert_action_to_tokens(x,self.cache))
+				self.record.append(x)
+			elif isinstance(x,CompositeAction):
+				self.put_first(x.expand())
+		return tokens
+
+class SimulationEngine:
+
+	ReteNetClass = build_rete_net_class()
+	
+	def __init__(self,model=None,parameters=None):
+		print('Importing model and parameters.')
+		model = AggregateModel('model',models=[model])
+		model.verify(parameters)
+		self.variables = LoggableDict(NestedDict.flatten(parameters))
+		self.rules = dict(model.iter_rules())
+		self.observables = dict(model.iter_observables())
+		self.action_managers = {rule_name:ActionManager(rule.get_action_executables()) for rule_name,rule in self.rules.items()}
+		self.cache = DictLike()
+
+		print('Initializing rete net matching engine.')
+		self.net = self.ReteNetClass() \
+			.initialize_start() \
+			.initialize_end()	\
+			.initialize_rules(self.rules,self.variables) \
+			.initialize_observables(self.observables)
+
+		for node in self.net.get_nodes(type='variable'):
+			self.variables.set(node.core,node.state.cache.value)
+
+	def get_updated_variables(self):
+		modified = list(self.variables.modified)
+		self.variables.flush()
+		return modified
+
+	def load(self,objects):
+		# object must have an iterator object.generate_actions()
+		print('Loading simulation state.')
+		ax = ActionStack(self.cache)
+		start = self.net.get_node(type='start')
+		for x in objects:
+			for action in x.generate_actions():
+				tokens = ax.put(action).do()
+				self.net.process_tokens(tokens)
+		for variable in self.net.get_updated_variables():
+			value = self.net.get_node(core=variable).state.cache.value
+			self.variables.set(variable,value)
 		return self
 
-	def compile_to_matcher_tokens(self,action):
-		action_name = action.__class__.__name__
-		#d = {'AddNode':'add','RemoveNode':'remove','AddEdge':'add','RemoveEdge':'remove'}
-		# NOTE: WE"RE ATTACHING ACTUAL NODES HERE, NOT IDS, FIX action.idx,idx1,idx2 later
-		if action_name in ['AddNode','RemoveNode']:
-			return [make_node_token(action._class, self.resolve(action.idx), action_name)]
-		if action_name in ['SetAttr']:
-			_class = self.resolve(action.idx).__class__
-			return [make_attr_token(_class, self.resolve(action.idx), action.attr, action.value, action_name)]
-		if action_name in ['AddEdge','RemoveEdge']:
-			i1,a1,i2,a2 = [getattr(action,x) for x in ['source_idx','source_attr','target_idx','target_attr']]
-			c1,c2 = [self.resolve(x).__class__ for x in [i1,i2]]
-			return [
-				make_edge_token(c1,self.resolve(i1),a1,self.resolve(i2),a2,action_name),
-				make_edge_token(c2,self.resolve(i2),a2,self.resolve(i1),a1,action_name)
-			]
-		return []
-
-	def update_sampler(self,tokens):
-		for token in tokens:
-			self.sampler.update_propensity(reaction=token['source'],propensity=token['propensity'])
+	def fire(self,rule_name):
+		rule = self.rules[rule_name]
+		match = {reactant: AttrDict(self.net.get_node(core=pattern).state.cache.sample()) for reactant,pattern in rule.reactants.items()}
+		model_name = get_model_name(rule_name)
+		parameters = {p:self.variables[f'{model_name}.{p}'] for p in rule.parameters}
+		action_manager = self.action_managers[rule_name]
+		ax = ActionStack(self.cache)
+		for action in action_manager.exec(match,parameters):
+			tokens = ax.put(action).do()
+			self.net.process_tokens(tokens)
+		for variable in self.net.get_updated_variables():
+			value = self.net.get_node(core=variable).state.cache.value
+			self.variables.set(variable,value)
 		return self
 
-	def sample_next_event(self):
-		rule,time = self.sampler.next_event()
-		if time == float('inf'):
-			print('Null event!')
-			return self
-		sample = self.matcher.function_sample_rule(rule)
-		rule_node = self.matcher.get_node(core=rule,type='rule')
-		for act in rule_node.data.actions:
-			if act.deps.declared_variable is not None:
-				sample[act.deps.declared_variable] = act.exec(sample,rule_node.data.helpers)
-			else:
-				self.push_to_stack(act.exec(sample,rule_node.data.helpers))
-		self.sampler.update_time(time)
-		self.simulate()
-		return self			
+	def simulate(self,start=0.0,end=1.0,period=1,write_location=None):
+		print(f'Simulating from time={start} to time={end}.')
+		time = start
+		sch = CoordinatedScheduler([
+			NextReactionMethod(),
+			PeriodicWriteObservables(
+				start=start,
+				period=period,
+				write_location=write_location
+			)])
+		sch.update(start,self.variables)
+		while True:
+			event,time = sch.pop()
+			if event=='write_observables':
+				print(f'Current time={time}.')
+				self.write_observables(time,write_location)
+				if time >= end:
+					break
+			elif event in self.rules:
+				self.fire(event)
+				sch.update(time,subdict(self.variables,self.variables.modified))
+			self.variables.flush()
+		print(f'Simulation complete. Exiting.')
+		return self
+
+	def write_observables(self,time,write_location):
+		write_location.append({'time':time,'observables':subdict(self.variables,self.observables)})
+		return self
+
+
+
+
+
 
 
 

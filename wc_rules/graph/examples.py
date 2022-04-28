@@ -1,6 +1,8 @@
 from ..schema.attributes import *
 from ..schema.entity import Entity
 from .collections import GraphContainer
+from .canonical_labeling import canonical_label
+
 import random,math
 
 class X(Entity): 
@@ -30,6 +32,24 @@ def single_node():
 	g = GraphContainer(seed_node.get_connected())
 	return g,nsyms	
 
+def single_edge_asymmetric():
+	x = X('x',y=[Y('y')])
+	seed_node, nsyms = x, 1
+	g = GraphContainer(seed_node.get_connected())
+	return g,nsyms
+
+def two_edges():
+	x =  X('x',y=[Y('y1'),Y('y2')])
+	seed_node, nsyms = x, 2
+	g = GraphContainer(seed_node.get_connected())
+	return g,nsyms
+
+def single_edge_symmetric():
+	x = E('e1',e=E('e2'))
+	seed_node, nsyms = x, 2
+	g = GraphContainer(seed_node.get_connected())
+	return g,nsyms
+
 def directed_square():
 	k = [K(x) for x in 'abcd']
 	for i in range(-1,len(k)-1):
@@ -40,8 +60,8 @@ def directed_square():
 
 def spoke():
 	x = X('a')
-	x.y = [Y(z) for z in random.sample('bcdef',len('bcdef'))]
-	seed_node,nsyms = x, math.factorial(len('bcdef'))
+	x.y = [Y(z) for z in random.sample('bcde',len('bcde'))]
+	seed_node,nsyms = x, math.factorial(len('bcde'))
 
 	g = GraphContainer(seed_node.get_connected())
 	return g,nsyms
@@ -115,10 +135,10 @@ def bowtie():
 	return g,nsyms
 
 
-def gen_all_graphs():
-
-	graphs = [
+graphs = [
 		single_node,
+		single_edge_asymmetric,
+		two_edges,
 		spoke,
 		directed_square,
 		directed_wheel,
@@ -128,4 +148,13 @@ def gen_all_graphs():
 		clique,
 		bowtie
 		]
+
+def gen_all_graphs():
 	return {g.__name__:g() for g in graphs}
+
+def get_graph(name):
+	return [f() for f in graphs if f.__name__==name][0][0]
+
+def get_canonical_label(name):
+	mapping, labeling, symmetry_group = canonical_label(get_graph(name))
+	return mapping,labeling,symmetry_group

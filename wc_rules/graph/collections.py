@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from ..utils.collections import DictLike, listmap, Mapping, merge_dicts, no_overlaps, merge_lists
-from itertools import chain
+from itertools import chain, repeat,starmap
 from typing import Tuple, Any
+from ..schema.actions import AddNode, AddEdge
+from copy import deepcopy
+from ..utils.random import generate_id
+from collections import UserDict
 
 @dataclass(order=True,frozen=True)
 class Port:
@@ -31,6 +35,9 @@ class Edge:
 
     def nodes(self):
         return (self.ports[0].node,self.ports[1].node)
+
+    def attrs(self):
+        return (self.ports[0].attr,self.ports[1].attr)
 
     def remap(self,d):
         n1,e1,n2,e2 = self.unpack()
@@ -82,6 +89,26 @@ class GraphContainer(DictLike):
         for idx,node in self.iter_nodes():
             for attr in node.get_literal_attributes(ignore_id=True,ignore_None=True):
                 yield Attr(idx,attr,node.get(attr))
+
+    # def generate_actions(self,generator,count=1):
+    #     idxs = self._dict.keys()
+    #     node_classes = {idx:node.__class__ for idx, node in self.iter_nodes()}
+    #     node_attributes = {idx:node.get_literal_attrdict(ignore_id=True,ignore_None=True) for idx, node in self.iter_nodes()}
+    #     edges = [e.unpack() for e in self.iter_edges()]
+    #     for _ in range(count):
+    #         idxmap = dict(zip(idxs,[generator.generate_id() for _ in range(len(idxs))]))
+    #         for idx in idxs:
+    #             yield AddNode(node_classes[idx],idxmap[idx],deepcopy(node_attributes[idx]))
+    #         for n1,e1,n2,e2 in edges:
+    #             yield AddEdge(idxmap[n1],e1,idxmap[n2],e2)
+
+    def generate_actions(self):
+        for idx,node in self.iter_nodes():
+            attrs = deepcopy(node.get_literal_attrdict(ignore_id=True,ignore_None=True))
+            yield AddNode(node.__class__,idx,attrs)
+        for e in self.iter_edges():
+            yield AddEdge(*e.unpack())
+        
 
     def duplicate(self,varmap={},include=None):
         if include is None:
@@ -174,6 +201,31 @@ class GraphContainer(DictLike):
             self.set_attr(*a)
         return self
         
+class MoleculeType(GraphContainer):
+
+    def generate_actions(self,n=1):
+        actions = list(GraphContainer.generate_actions(self))
+        native_ids = self.keys()
+        for i in range(n):
+            idmap = dict(zip(native_ids,[generate_id() for _ in range(len(native_ids))]))
+            for action in actions:
+                yield action.remap(idmap)
+
+
+class MoleculeInitialization:
+
+    def __init__(self,tuplist):
+        for g,n in tuplist:
+            assert isinstance(g,MoleculeType) and isinstance(n,int)
+        self.items = tuplist
+
+    def generate_actions(self):
+        for g,n in self.items:
+            for act in g.generate_actions(n):
+                yield act
+
+
+
 
 @dataclass(eq=True,order=True,frozen=True)
 class TextualForm:

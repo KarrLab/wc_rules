@@ -2,13 +2,15 @@
 from ..utils.validate import *
 from ..graph.collections import GraphContainer
 from ..utils.collections import split_string
-from ..utils.random import idgen
-from ..expressions.executable import Constraint, Computation, initialize_from_string
+from ..expressions.executable import Constraint, Computation, initialize_from_string, ExecutableExpressionManager, ObservableExpression
+
+def make_attr_constraints(attrs):
+	return [f'{var}.{attr} == {value}' for var,d in attrs.items() for attr,value in d.items()]
 
 class Pattern:
 
 	def __init__(self, parent=GraphContainer(), helpers=dict(), constraints = [], parameters= []):
-		self.validate_parent(parent)
+		parent, attrs = self.validate_parent(parent)
 		self.parent = parent
 
 		self.validate_helpers(helpers)
@@ -18,7 +20,7 @@ class Pattern:
 		self.parameters = parameters
 		
 		self.assigned_variables = self.validate_constraints(constraints)
-		self.constraints = constraints
+		self.constraints = make_attr_constraints(attrs) + constraints
 
 	@property
 	def variables(self):
@@ -39,9 +41,8 @@ class Pattern:
 	@property
 	def cache_variables(self):
 		if isinstance(self.parent,GraphContainer):
-			return self.parent.names + self.assigned_variables
+			return self.parent.variables + self.assigned_variables
 		return self.parent.cache_variables + self.assigned_variables
-	
 
 	def asdict(self):
 		return dict(**self.namespace,constraints=self.constraints)
@@ -54,6 +55,9 @@ class Pattern:
 			for idx,node in parent.iter_nodes():
 				validate_literal_attributes(node)
 				validate_related_attributes(node)
+			parent,attrs = parent.strip_attrs()
+			return parent,attrs
+		return parent,{}
 
 	def validate_helpers(self,helpers):
 		validate_class(helpers,dict,'Helpers')
@@ -94,12 +98,41 @@ class Pattern:
 	def make_executable_constraint(self,s):
 		return initialize_from_string(s,(Constraint,Computation))
 
+	def make_executable_expression_manager(self):
+		execs = [initialize_from_string(s,(Constraint,Computation)) for s in self.constraints]
+		manager = ExecutableExpressionManager(execs,self.namespace)
+		return manager
 
-			
-class SynthesisPattern:
 
-	def __init__(self,prototype):
-		err = "FactoryPattern must be initialized from a GraphContainer with a connected graph."
-		assert isinstance(prototype,GraphContainer) and prototype.validate_connected(), err
-		self.prototype = prototype
+class Observable:
 
+	def __init__(self,name,helpers,expression,default=0):
+		self.name = name
+		self.default = default
+
+		self.validate_helpers(helpers)
+		self.helpers = helpers
+
+		self.validate_expression(expression)
+		self.expression = expression
+
+	def validate_helpers(self,helpers):
+		validate_class(helpers,dict,'Helpers')
+		validate_keywords(helpers.keys(),'Helper')
+		validate_dict(helpers,Pattern,'Helper')
+
+	def validate_expression(self,expression):
+		validate_class(expression,str,'Expression')
+		namespace = list(self.helpers.keys())
+		x = initialize_from_string(expression,(ObservableExpression,))
+		validate_contains(namespace,x.keywords,'Variable')
+		
+	def make_executable(self):
+		return initialize_from_string(self.expression,(ObservableExpression,))
+
+class SimpleObservable(Observable):
+
+	def __init__(self,name,target,default=0):
+		helpers = {'target':target}
+		expression = 'target.count()'
+		super().__init__(name,helpers,expression,default)

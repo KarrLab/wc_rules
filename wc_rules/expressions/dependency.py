@@ -14,8 +14,11 @@ class DependencyCollector:
 		self.collect_dependencies(deps)
 
 	def to_string(self):
+		return pformat(self.asdict())
+		
+	def asdict(self):
 		attrs = ['declared_variable','attribute_calls','builtins','function_calls','variables','subvariables']
-		return pformat({attr:getattr(self,attr) for attr in attrs})
+		return {attr:getattr(self,attr) for attr in attrs}
 		
 	def collect_dependencies(self,deps):
 		if not isinstance(deps,list):

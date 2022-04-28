@@ -91,6 +91,9 @@ class BioSeqAttribute(seq.SeqAttribute):
     def __init__(self):
         super().__init__(default=None)
 
+    def check_value(self,value):
+        return isinstance(value,str)
+
 # wrapper for methods that can be called for setting pattern constraints & during simulation
 def computation(fn):
     ''' 

@@ -7,7 +7,6 @@
 """
 
 from . import seq
-from ..utils import utils
 from Bio.Alphabet.IUPAC import IUPACAmbiguousDNA,IUPACUnambiguousDNA,IUPACAmbiguousRNA,IUPACUnambiguousRNA,IUPACProtein,ExtendedIUPACProtein
 
 ###### Sequence Objects ######
@@ -22,13 +21,14 @@ class Polynucleotide(seq.SequenceMolecule):
         elif option=='reverse_complementary':
             x = seq.complement()[::-1]
         else:
-            raise utils.SeqError('''convert_sequence() must use kwarg option='coding'|'complementary'|'reverse_complementary'. ''')
+            assert False, '''convert_sequence() must use kwarg option='coding'|'complementary'|'reverse_complementary'. '''
         return x
 
     def translate(self,start=None,end=None,length=None,option='coding',table=1,to_stop=False):
         seq = self.convert_sequence(start=start,end=end,length=length,option=option)
         x = seq.translate(table=table,to_stop=to_stop)
         return x
+
 
 class DNA(Polynucleotide):
     alphabet_dict = {'strict':IUPACUnambiguousDNA(),'permissive':IUPACAmbiguousDNA()}

@@ -5,8 +5,8 @@
 :License: MIT
 """
 from . import chem
-from ..utils import utils
-from obj_model import core,bio
+from obj_tables import core,bio
+from .attributes import BioSeqAttribute, IntegerAttribute
 
 import Bio.Seq
 import Bio.Alphabet
@@ -14,7 +14,7 @@ import Bio.Alphabet
 class SequenceMolecule(chem.Molecule):
     """ Generic SequenceMolecule (template for DNA, RNA, protein sequence objects) """
 
-    sequence = bio.BioSeqAttribute()
+    sequence = BioSeqAttribute()
     alphabet_dict = { 'strict': None, 'permissive': None }
     use_permissive_alphabet = True
     alphabet = None
@@ -77,14 +77,12 @@ class SequenceMolecule(chem.Molecule):
     def verify_sequence(self,start=None,end=None,length=None):
         sequence = self.get_sequence(start=start,end=end,length=length)
         invalid_chars = ''.join(sorted(list(set(sequence) - set(self.alphabet.letters))))
-        if len(invalid_chars) > 0:
-            raise utils.SeqError('Invalid characters found: ' + invalid_chars)
+        assert len(invalid_chars) == 0,'Invalid characters found: ' + invalid_chars
         return
 
     def verify_location(self,start=None,end=None):
         L = self.get_sequence_length()
-        if not 0 <= start <= end <= L:
-            raise utils.SeqError('Start/end must be in range [0,L], where L is sequence length.')
+        assert 0 <= start <= end <= L, 'Start/end must be in range [0,L], where L is sequence length.'
         return
 
 
@@ -99,8 +97,8 @@ class SequenceFeature(chem.Site):
         feature with start=6,end=0 has sequence ''
     '''
 
-    start = core.IntegerAttribute(default=None,min=0)
-    end = core.IntegerAttribute(default=None,min=0)
+    start = IntegerAttribute()
+    end = IntegerAttribute()
 
     # Setters
     def set_location(self,start=None,end=None,length=None):

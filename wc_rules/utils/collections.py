@@ -8,7 +8,25 @@ import math, itertools, functools, collections, operator, pprint
 from dataclasses import dataclass, field
 from typing import Tuple, Dict
 from backports.cached_property import cached_property
-from collections import defaultdict
+from collections import defaultdict, UserDict
+from sortedcontainers import SortedSet
+
+class SimpleMapping(UserDict):
+
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+
+    def __mul__(self,other):
+        # convention self * other == f o g
+        # takes g's keys and f's values
+        # {x:a,y:b,z:c}*{p:x,q:y,r:z} = {p:a,q:b,r:c}
+        return {k:self[v] for k,v in other.items() if v in self}
+
+    @cached_property
+    def reverse(self):
+        return SimpleMapping({v:k for k,v in self.items()})
+
+
 
 @dataclass(order=True,frozen=True)
 class Mapping:
@@ -135,18 +153,19 @@ class DictLike(object):
             self.add(x)
 
     def get(self,key,value=None):
+        # get ONLY works with id
         if key not in self._dict:
             return value
         return self._dict[key]
 
     def add(self,item):
-        if item.id in self._dict:
-            assert self._dict[item.id] == item, 'Item {0} could not be added.'.format(item)
-        else:
-            self._dict[item.id] = item
+        # add ONLY works with item, not id
+        assert item.id not in self._dict,   f"Could not add item with id `{item.id}` as another item exists with the same id."
+        self._dict[item.id] = item
         return self
 
     def remove(self,item):
+        # remove ONLY works with item, not id
         self._dict.pop(item.id)
         return self
 
@@ -170,6 +189,10 @@ class DictLike(object):
 
     def __add__(self,other):
         return self.__class__([*self.values(),*other.values()])
+
+    def pop(self,idx):
+        item = self._dict.pop(idx)
+        return item
 
 
 ############ functional programming
@@ -228,6 +251,19 @@ def remap_values(d,oldvalues,newvalue):
     return d
 
 ###### Methods ######
+def compose_mapping(m1,m2):
+    # mappings are simple dict
+    # downgrade Mapping above????
+    # m1: ad,be,cf
+    # m2: dg,eh,fi
+    # produces: ag,bh,ci
+    # equivalent to m2 o m1
+    return {k:m2[v] for k in m1 if v in m2}
+
+
+def get_values(d,keys):
+    return [d[k] for k in keys]
+    
 def iter_to_string(iterable):
     return '\n'.join([str(x) for x in list(iterable)])
 
@@ -254,6 +290,7 @@ def subdict(d,keys,ignore=False):
     if ignore:
         keys = [x for x in keys if x in d] 
     return {k:d[k] for k in keys}
+
 
 def triple_split(iter1,iter2):
     # L1, L2 are iters
@@ -329,3 +366,35 @@ def quoted(x):
 
 def unzip(zipped):
     return list(zip(*zipped))
+
+def intersect(iter1,iter2):
+    return set(iter1).intersection(iter2)
+
+class UniversalSet:
+
+    def __contains__(self,x):
+        return True
+
+class ExclusionSet:
+
+    def __init__(self,elems):
+        self._exclude = set(elems)
+
+    def __contains__(self,x):
+        return x not in self._exclude
+
+class LoggableDict(UserDict):
+
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.modified = SortedSet()
+        self.modified.update(self.keys())
+
+    def set(self,key,value):
+        self.modified.add(key)
+        UserDict.__setitem__(self,key,value)
+        return self
+
+    def flush(self):
+        self.modified = SortedSet()
+    

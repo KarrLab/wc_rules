@@ -6,10 +6,12 @@ from sortedcontainers import SortedSet
 from copy import deepcopy
 from collections import Counter
 import math
+from backports.cached_property import cached_property
 
 def print_cycles(cycles,lb=r'(',rb=r')',sep=','):
     return ''.join([f"{lb}{sep.join(x)}{rb}" for x in cycles])
 
+@dataclass(order=True,frozen=True)
 class Permutation(Mapping):
 
 	### INSIGHT
@@ -72,16 +74,15 @@ class PermutationGroup:
 			x.validate()			
 		assert self.generators[0].is_identity(), f"Atleast one generator must be an identity permutation."
 		
-	def orbits(self,simple=False):
+	@cached_property
+	def orbits(self):
 		orbindex = index_dict(self.generators[0].sources)
 		for g in self.generators:
 			for cyc in g.cyclic_form():
 				if len(cyc) > 1:
 					nums = [orbindex[x] for x in cyc]
 					orbindex = remap_values(orbindex,nums,min(nums))	
-		orbits = invert_dict(orbindex).values()
-		if simple:
-			return print_cycles(orbits,r'{',r'}')
+		orbits = list(invert_dict(orbindex).values())
 		return tuplify(orbits)
 		
 	def iter_subgroups(self):
@@ -115,7 +116,7 @@ class PermutationGroup:
 		return self.__class__.create(gens)
 
 	def orbit(self,variable):
-		for orb in self.orbits():
+		for orb in self.orbits:
 			if variable in orb:
 				return orb
 
@@ -134,6 +135,12 @@ class PermutationGroup:
 
 	def restrict(self,variables):
 		return self.__class__.create([x.restrict(variables) for x in self.generators])
+
+	def verify_symmetry_breaking(self,match):
+		if self.is_trivial():
+			return True
+		elems = [[match[x].id for x in orb] for orb in self.orbits if len(orb)>1]
+		return all([elem==sorted(elem) for elem in elems])
 
 
 

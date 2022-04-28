@@ -11,7 +11,7 @@ class BindingModel(RuleBasedModel):
 		n1, n2, n3 = reactants.keys()
 		
 		binding_rule = Rule(
-			name = f'{name}_binding_rule',
+			name = f'binding_rule',
 			reactants = {n1:reactants[n1],n2:reactants[n2]},
 			actions = [f'{n1}.{targets[n1]}.add_bond({n2}.{targets[n2]})'],
 			rate_prefix = 'association_constant',
@@ -19,7 +19,7 @@ class BindingModel(RuleBasedModel):
 			)
 
 		unbinding_rule = Rule(
-			name = f'{name}_unbinding_rule',
+			name = f'unbinding_rule',
 			reactants = {n3:reactants[n3]},
 			actions = [f'{n3}.{targets[n3]}.remove_bond()'],
 			rate_prefix = 'dissociation_constant',
@@ -36,7 +36,7 @@ class TransPhosphorylationModel(RuleBasedModel):
 	def __init__(self,name,reactant,target):
 
 		phosphorylation_rule = Rule(
-			name = f'{name}_phosphorylation_rule',
+			name = f'phosphorylation_rule',
 			reactants = {'reactant':reactant},
 			actions = [f'reactant.{target}.setTrue_ph()'],
 			rate_prefix = 'phosphorylation_rate',
@@ -54,7 +54,7 @@ class DephosphorylationModel(RuleBasedModel):
 	def __init__(self,name,reactant,target):
 
 		dephosphorylation_rule = Rule(
-			name = f'{name}_dephosphorylation_rule',
+			name = f'dephosphorylation_rule',
 			reactants = {'reactant':reactant},
 			actions = [f'reactant.{target}.setFalse_ph()'],
 			rate_prefix = 'dephosphorylation_rate',

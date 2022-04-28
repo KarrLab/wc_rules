@@ -4,7 +4,11 @@ from ..utils.collections import subdict
 from ..schema.actions import RollbackAction, TerminateAction, PrimaryAction, CompositeAction, SimulatorAction
 from .builtins import ordered_builtins, global_builtins
 from .exprgraph import dfs_make
-from collections import ChainMap
+from collections import ChainMap, defaultdict
+from sortedcontainers import SortedSet
+from frozendict import frozendict
+
+import inspect
 
 def register_builtin(name,fn,ordered_arguments=True):
 	global ordered_builtins
@@ -18,7 +22,7 @@ def register_builtin(name,fn,ordered_arguments=True):
 class ExecutableExpression:
 	# is a fancy lambda function that can be executed
 	start = None
-	builtins = {}
+	builtins = global_builtins
 
 	def __init__(self,keywords,builtins,fn,code,deps):
 		self.keywords = keywords
@@ -46,11 +50,12 @@ class ExecutableExpression:
 			keywords = list(deps.variables)
 
 			# this step figures what builtins to use, picks them from the global_builtins list
-			builtins = subdict(cls.builtins, ['__builtins__'] + list(deps.builtins))
+			#builtins = subdict(cls.builtins, ['__builtins__'] + list(deps.builtins))
+			#builtins = subdict(global_builtins,['__builtins__'] + list(deps.builtins))
 			code2 = 'lambda {vars}: {code}'.format(vars=','.join(keywords),code=code)
 			try:
-				fn = eval(code2,builtins,{})
-				x = cls(keywords=keywords,builtins=builtins,fn=fn,code=code,deps=deps)
+				fn = eval(code2,global_builtins)
+				x = cls(keywords=keywords,builtins=global_builtins,fn=fn,code=code,deps=deps)
 			except:
 				x = None
 		except:
@@ -123,6 +128,13 @@ class RateLaw(ExecutableExpression):
 	allowed_forms = ['<expr>']
 	allowed_returns = (int,float,)
 
+
+class ObservableExpression(ExecutableExpression):
+	start = 'expression'
+	builtins = global_builtins
+	allowed_forms = ['<expr>']
+	allowed_returns = None
+
 ######## Simulator methods #########
 def rollback(expr):
     assert isinstance(expr,bool), "Rollback condition must evaluate to a boolean."
@@ -159,3 +171,64 @@ def initialize_from_string(string,classes):
 			return x
 	err = 'Could not create a valid instance of {0} from {1}'
 	assert False, err.format(classes,string)
+
+
+class ExecutableExpressionManager:
+	# assume top-level variable are variables of a pattern
+	# e.g., a.x => a is a node on a pattern, x is an attribute
+	# similarly, a.x(), x is a computation
+
+	def __init__(self,constraint_execs,namespace):
+		self.execs = constraint_execs
+		self.namespace = namespace
+
+	def pprint(self):
+		return '\n'.join([x.code for x in self.execs])
+
+	def get_attribute_calls(self):
+		attrcalls = defaultdict(SortedSet)
+		for c in self.execs:
+			for k,v in c.deps.attribute_calls.items():
+				attrcalls[k].update(v)
+			for fnametuple in c.deps.function_calls:
+				if len(fnametuple)==2:
+					var,fname = fnametuple
+					if isinstance(self.namespace[var],type):
+						_class = self.namespace[var]
+						fn = getattr(_class,fname)
+						assert fn._is_computation, f'Could not find function {fnametuple}'
+						kws = sorted(set(fn._kws) & set(_class.get_literal_attrs()))
+						attrcalls[var].update(kws) 
+		for k,v in attrcalls.items():
+			for a in v:
+				yield k,a
+
+	def get_helper_calls(self):
+		helpercalls = defaultdict(SortedSet)
+		for c in self.execs:
+			for fnametuple,kwargs in c.deps.function_calls.items():
+				if len(fnametuple)==2:
+					var,fname = fnametuple
+					if self.namespace[var]=='Helper Pattern':
+						helpercalls[var].add(tuple(kwargs['kwpairs']))
+		for k,v in helpercalls.items():
+			for tup in v:
+				yield k,tup
+
+	def exec(self,match,*dicts):
+		for c in self.execs:
+			if c.deps.declared_variable is not None:
+				match[c.deps.declared_variable] = c.exec(match,*dicts)
+			elif not c.exec(match,*dicts):
+				return None
+		return match
+
+class ActionManager:
+	def __init__(self,action_execs):
+		self.execs = action_execs
+
+	def exec(self,match,*dicts):
+		for c in self.execs:
+			yield c.exec(match,*dicts)
+			
+

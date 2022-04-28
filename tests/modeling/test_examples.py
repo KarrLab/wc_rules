@@ -7,7 +7,7 @@ import sys
 class TestFceriJI(unittest.TestCase):
 
 	def test_fceri_ji(self):
-		path = Path(__file__).resolve().parent.parent / 'examples'
+		path = Path(__file__).resolve().parent.parent.parent / 'examples'
 		sys.path.append(str(path))
 
 		from fceri_ji.model import model
