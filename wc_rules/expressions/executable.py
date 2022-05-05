@@ -155,8 +155,8 @@ class ActionCaller(ExecutableExpression):
     allowed_forms = ['<actioncall> ( <boolexpr> )', '<pattern>.<var>.<actioncall> (<params>)', '<pattern>.<actioncall> (<params>)']
     allowed_returns = None
 
-    def exec(self,matches,helpers):
-        v = super().exec(matches,helpers)
+    def exec(self,match,*dicts):
+        v = super().exec(match,*dicts)
         #err = 'An element in the following nested list is not a recognized Action: {0}'
         #assert verify_list(v,(SimulatorAction,PrimaryAction,CompositeAction)), err.format(list(v))
         # verifying that every element of a nested list is an action is slow AF

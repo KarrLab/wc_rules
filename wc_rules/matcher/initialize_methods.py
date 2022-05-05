@@ -7,7 +7,7 @@ from ..graph.canonical_labeling import canonical_label
 from ..graph.permutations import Mapping
 from functools import partial
 from attrdict import AttrDict
-
+from collections import ChainMap
 
 class InitializationMethods:
 
@@ -175,7 +175,7 @@ class InitializationMethods:
 		for param in rule.parameters:
 			parameters[param] = f'{model_name}.{param}'
 			assert self.get_node(core=f'{model_name}.{param}') is not None, f'Cannot find {model_name}.{param}'
-		for pname,pattern in rule.reactants.items():
+		for pname,pattern in ChainMap(rule.reactants,rule.helpers).items():
 			self.initialize_pattern(pattern)
 			cache_ref = self.get_node(core=pattern).state.cache
 			caches[pname] = cache_ref
