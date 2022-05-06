@@ -214,7 +214,9 @@ class GraphFactory(GraphContainer):
 
     def build(self):
         idmap = self.build_random_idmap()
-        return list(self.generate_actions(idmap)) + [idmap]
+        return list(self.generate_actions(idmap)), idmap
+        
+        
         
 class GraphLoader:
 

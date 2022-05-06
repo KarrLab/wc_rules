@@ -20,10 +20,27 @@ xrule = InstanceRateRule(
 	name = 'x_addition_rule',
 	factories = {'px':gx},
 	actions = ['px.build()'],
-	rate_prefix = 'kp',
-	parameters = ['kp']
+	rate_prefix = 'kx',
+	parameters = ['kx']
 	)
 
-model = RuleBasedModel('addremove_model',rules=[xrule])
+yrule = InstanceRateRule(
+	name = 'y_addition_rule',
+	factories = {'py':gy},
+	actions = ['py.build()'],
+	rate_prefix = 'ky',
+	parameters = ['ky']
+	)
+
+xyzrule = InstanceRateRule(
+	name = 'xyz_rule',
+	reactants = {'px':px,'py':py},
+	factories = {'pz':gz},
+	actions = ['px.remove()','py.remove()','pz.build()'],
+	rate_prefix = 'ky',
+	parameters = ['ky']
+	)
+
+model = RuleBasedModel('addremove_model',rules=[xrule,yrule,xyzrule	])
 
 

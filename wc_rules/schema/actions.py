@@ -366,3 +366,12 @@ class ActionMixin:
         self.attach_method('remove',removefn)
         return self
 
+@dataclass
+class CollectReferences:
+
+    data: dict
+    variable: str = ''
+    
+    def execute(self,match,cache):
+        match[self.variable] = {k:cache[v] for k,v in self.data.items()}
+        return self

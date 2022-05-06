@@ -2,10 +2,35 @@
 from ..utils.validate import *
 from ..graph.collections import GraphContainer, GraphFactory
 from .pattern import Pattern
-from ..expressions.executable import ActionCaller,Constraint, Computation, RateLaw, initialize_from_string, ActionManager
+from ..expressions.executable import ActionCaller,Constraint, Computation, RateLaw, initialize_from_string
 from collections import Counter,ChainMap
+from collections.abc import Sequence
 from ..utils.collections import sort_by_value
+from ..schema.actions import CollectReferences
 
+class ActionManager:
+	def __init__(self,action_execs,factories):
+		self.execs = action_execs
+
+		for e in self.execs:
+			for fnametuple in e.deps.function_calls:
+				if fnametuple[-1] == 'build':
+					assert len(fnametuple)==2
+					assert fnametuple[0] in factories
+					setattr(e,'build_variable',fnametuple[0])
+
+	def exec(self,match,*dicts):
+		for c in self.execs:
+			if hasattr(c,'build_variable'):
+				actions, idmap = c.exec(match,*dicts)
+				actions.append(CollectReferences(variable=c.build_variable,data=idmap))
+			else:
+				actions = c.exec(match,*dicts)
+			if isinstance(actions,Sequence):
+				yield from actions
+			else:
+				yield actions
+			
 class Rule:
 
 	def __init__(self, name='', reactants=dict(), helpers=dict(), actions=[], factories=dict(),rate_prefix='', parameters = []):
@@ -43,6 +68,8 @@ class Rule:
 			d[r] = x.namespace
 		for h in self.helpers:
 			d[h] = "Helper Pattern"
+		for f in self.factories:
+			d[f] = "Graph Factory"
 		for p in self.parameters:
 			d[p] = "Parameter"
 		return d
@@ -108,7 +135,7 @@ class Rule:
 		return [initialize_from_string(s,classes) for s in self.actions]
 
 	def get_action_manager(self):
-		return ActionManager(self.get_action_executables())	
+		return ActionManager(self.get_action_executables(),factories=self.factories)	
 
 class InstanceRateRule(Rule):
 
@@ -117,4 +144,6 @@ class InstanceRateRule(Rule):
 		elems = [f'comb({x[0]}.count(),{len(x)})' for x in reactant_sets]
 		rate_law = "*".join([self.rate_prefix] + elems)
 		return rate_law
+
+
 

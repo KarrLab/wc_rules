@@ -6,9 +6,8 @@ from ..modeling.model import AggregateModel
 from collections import defaultdict, deque, ChainMap
 from collections.abc import Sequence
 from attrdict import AttrDict
-from ..schema.actions import PrimaryAction, CompositeAction, RemoveNode
+from ..schema.actions import PrimaryAction, CompositeAction, RemoveNode, CollectReferences
 from ..matcher.token import convert_action_to_tokens
-from ..expressions.executable import ActionManager
 
 def get_model_name(rule_name):
 	return '.'.join(rule_name.split('.')[:-1])
@@ -27,9 +26,10 @@ class PrefixSubdict:
 
 class ActionStack:
 
-	def __init__(self,cache):
+	def __init__(self,cache,match):
 		self._dq  = deque()
 		self.cache = cache
+		self.match = match
 		self.record = deque()
 
 	def put(self,action):
@@ -50,7 +50,8 @@ class ActionStack:
 		tokens = []
 		while self._dq:
 			x = self._dq.popleft()
-			print(x)
+			if isinstance(x,CollectReferences):
+				x.execute(self.match,self.cache)
 			if isinstance(x,PrimaryAction):
 				if isinstance(x,RemoveNode):
 					tokens.extend(convert_action_to_tokens(x,self.cache))
@@ -62,6 +63,7 @@ class ActionStack:
 			elif isinstance(x,CompositeAction):
 				self.put_first(x.expand())
 		return tokens
+
 
 
 class SimulationEngine:
@@ -76,7 +78,6 @@ class SimulationEngine:
 
 		self.rules = dict(model.iter_rules())
 		self.observables = dict(model.iter_observables())
-		#self.action_managers = {rule_name:ActionManager(rule.get_action_executables()) for rule_name,rule in self.rules.items()}
 		self.cache = DictLike()
 		self.compiled_rules = dict()
 
@@ -87,7 +88,7 @@ class SimulationEngine:
 			.initialize_rules(self.rules,self.variables) \
 			.initialize_observables(self.observables)
 
-		print('Linking rules to matching enginge')
+		print('Linking rules to matching engine.')
 		for name,rule in self.rules.items():
 			self.compile_rule(name,rule)
 
@@ -107,7 +108,7 @@ class SimulationEngine:
 		compilation.reactants = {k:self.net.get_node(core=v).state.cache for k,v in rule.reactants.items()}
 		compilation.helpers = {k:self.net.get_node(core=v).state.cache for k,v in rule.helpers.items()}
 		compilation.parameters = PrefixSubdict(get_model_name(rule_name),self.variables)
-		compilation.actions = ActionManager(rule.get_action_executables())
+		compilation.action_manager = rule.get_action_manager()
 		compilation.factories = rule.factories
 		self.compiled_rules[rule_name] = compilation
 		return self
@@ -123,8 +124,7 @@ class SimulationEngine:
 			for x in obj:
 				self.load(x)
 			return self
-		# object must have an iterator object.generate_actions()
-		ax = ActionStack(self.cache)
+		ax = ActionStack(self.cache,{})
 		for action in obj.generate_actions():
 			tokens = ax.put(action).do()
 			self.net.process_tokens(tokens)
@@ -137,8 +137,8 @@ class SimulationEngine:
 		match = AttrDict()
 		for name,pcache in rule.reactants.items():
 			match[name] = AttrDict(pcache.sample())
-		ax = ActionStack(self.cache)
-		for action in rule.actions.exec(match,rule.parameters,rule.reactants,rule.helpers,rule.factories):
+		ax = ActionStack(self.cache,match)
+		for action in rule.action_manager.exec(ax.match,rule.parameters,rule.reactants,rule.helpers,rule.factories):
 			tokens = ax.put(action).do()
 			self.net.process_tokens(tokens)
 		variables = self.net.get_updated_variables()
