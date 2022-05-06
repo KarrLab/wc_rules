@@ -203,15 +203,19 @@ class GraphContainer(DictLike):
 
 class GraphFactory(GraphContainer):
 
-    def generate_actions(self,n=1):
-        actions = list(GraphContainer.generate_actions(self))
-        native_ids = self.keys()
-        for i in range(n):
-            idmap = dict(zip(native_ids,[generate_id() for _ in range(len(native_ids))]))
-            for action in actions:
-                yield action.remap(idmap)
+    def generate_actions(self,idmap=None):
+        if idmap is None:
+            idmap = self.build_random_idmap()
+        for action in GraphContainer.generate_actions(self):
+            yield action.remap(idmap)
 
+    def build_random_idmap(self):
+        return {idx:generate_id() for idx in self.keys()}
 
+    def build(self):
+        idmap = self.build_random_idmap()
+        return list(self.generate_actions(idmap)) + [idmap]
+        
 class GraphLoader:
 
     def __init__(self,graphcounts):
@@ -221,8 +225,9 @@ class GraphLoader:
 
     def generate_actions(self):
         for g,n in self.items:
-            for act in g.generate_actions(n):
-                yield act
+            for _ in range(n):
+                for act in g.generate_actions():
+                    yield act
 
 
 

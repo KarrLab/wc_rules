@@ -50,6 +50,7 @@ class ActionStack:
 		tokens = []
 		while self._dq:
 			x = self._dq.popleft()
+			print(x)
 			if isinstance(x,PrimaryAction):
 				if isinstance(x,RemoveNode):
 					tokens.extend(convert_action_to_tokens(x,self.cache))
@@ -107,6 +108,7 @@ class SimulationEngine:
 		compilation.helpers = {k:self.net.get_node(core=v).state.cache for k,v in rule.helpers.items()}
 		compilation.parameters = PrefixSubdict(get_model_name(rule_name),self.variables)
 		compilation.actions = ActionManager(rule.get_action_executables())
+		compilation.factories = rule.factories
 		self.compiled_rules[rule_name] = compilation
 		return self
 
@@ -136,7 +138,7 @@ class SimulationEngine:
 		for name,pcache in rule.reactants.items():
 			match[name] = AttrDict(pcache.sample())
 		ax = ActionStack(self.cache)
-		for action in rule.actions.exec(match,rule.parameters,rule.reactants,rule.helpers):
+		for action in rule.actions.exec(match,rule.parameters,rule.reactants,rule.helpers,rule.factories):
 			tokens = ax.put(action).do()
 			self.net.process_tokens(tokens)
 		variables = self.net.get_updated_variables()

@@ -2,7 +2,7 @@
 from ..utils.validate import *
 from ..graph.collections import GraphContainer, GraphFactory
 from .pattern import Pattern
-from ..expressions.executable import ActionCaller,Constraint, Computation, RateLaw, initialize_from_string
+from ..expressions.executable import ActionCaller,Constraint, Computation, RateLaw, initialize_from_string, ActionManager
 from collections import Counter,ChainMap
 from ..utils.collections import sort_by_value
 
@@ -106,6 +106,9 @@ class Rule:
 	def get_action_executables(self):
 		classes = (Constraint,Computation,ActionCaller)
 		return [initialize_from_string(s,classes) for s in self.actions]
+
+	def get_action_manager(self):
+		return ActionManager(self.get_action_executables())	
 
 class InstanceRateRule(Rule):
 
