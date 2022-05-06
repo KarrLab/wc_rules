@@ -1,13 +1,14 @@
 
 from ..utils.validate import *
+from ..graph.collections import GraphContainer, GraphFactory
 from .pattern import Pattern
 from ..expressions.executable import ActionCaller,Constraint, Computation, RateLaw, initialize_from_string
-from collections import Counter
+from collections import Counter,ChainMap
 from ..utils.collections import sort_by_value
 
 class Rule:
 
-	def __init__(self, name='', reactants=dict(), helpers=dict(), actions=[], rate_prefix='', parameters = []):
+	def __init__(self, name='', reactants=dict(), helpers=dict(), actions=[], factories=dict(),rate_prefix='', parameters = []):
 		validate_keywords([name],'Rule name')
 		self.name = name
 		
@@ -17,8 +18,13 @@ class Rule:
 		self.validate_helpers(helpers)
 		self.helpers = helpers
 
+		self.validate_factories(factories)
+		self.factories = factories
+
 		self.validate_parameters(parameters)
 		self.parameters = parameters
+
+		self.validate_namespace()
 
 		newvars = self.validate_actions(actions)
 		self.actions = actions
@@ -28,7 +34,7 @@ class Rule:
 
 	@property
 	def variables(self):
-		return list(self.reactants.keys()) + list(self.helpers.keys()) + self.parameters 
+		return list(ChainMap(self.reactants,self.helpers,self.factories).keys()) + self.parameters 
 	
 	@property
 	def namespace(self):
@@ -53,12 +59,20 @@ class Rule:
 		validate_class(helpers,dict,'Helpers')
 		validate_keywords(helpers.keys(),'Helper')
 		validate_dict(helpers,Pattern,'Helper')
-		validate_unique(self.reactants.keys(),helpers.keys(), 'Helper')
+		
+	def validate_factories(self,factories):
+		validate_class(factories,dict,'Factories')
+		validate_keywords(factories.keys(),'Factory')
+		validate_dict(factories,GraphFactory,'Factory')
 
 	def validate_parameters(self,params):
 		validate_class(params,list,'Parameters')
 		validate_keywords(params,'Parameter')
-		validate_unique(list(self.reactants.keys()) + list(self.helpers.keys()), params, 'Parameter')
+		
+	def validate_namespace(self):
+		names = [k for x in [self.reactants,self.helpers,self.factories] for k in x.keys()] + self.parameters
+		assert len(names) == len(set(names)), 'Overlapping assignments found in rule namespace. Check reactants, helpers, factors.'
+
 
 	def validate_actions(self,actions):
 		validate_class(actions,list,'Actions')

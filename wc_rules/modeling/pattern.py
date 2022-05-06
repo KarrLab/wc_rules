@@ -104,9 +104,6 @@ class Pattern:
 		return manager
 
 
-
-
-
 class Observable:
 
 	def __init__(self,name,helpers,expression,default=0):

@@ -6,7 +6,7 @@ from pathlib import Path
 from wc_rules.simulator.simulator import SimulationEngine
 from wc_rules.modeling.utils import add_models_folder
 from wc_rules.modeling.model import AggregateModel
-from wc_rules.graph.collections import GraphContainer, MoleculeType, MoleculeInitialization
+from wc_rules.graph.collections import GraphContainer, GraphFactory, GraphLoader
 from wc_rules.simulator.scheduler import RepeatedEventScheduler, CoordinatedScheduler, NextReactionMethod
 from wc_rules.utils.data import DataFileUtil, TrajectoryUtil
 import unittest
@@ -73,8 +73,8 @@ class TestSimpleBindingModel(unittest.TestCase):
 	def test_load_molecule_initialization(self):
 		sim = self.sim
 		x1 = X('x1',y=Y('y1'))
-		g = MoleculeType(x1.get_connected())
-		mm = MoleculeInitialization([(g,2)])
+		g = GraphFactory(x1.get_connected())
+		mm = GraphLoader([(g,2)])
 		sim.load([mm])
 
 		px_cache, py_cache = sim.net.get_node(core='binding_model.binding_rule.propensity').data.caches.values()
@@ -144,9 +144,9 @@ class TestSimpleBindingModel(unittest.TestCase):
 		test_data = DataFileUtil(cwd).read_file('simdata.json')
 		
 		sim = self.sim
-		m1,m2 = MoleculeType([X('x')]), MoleculeType([Y('y')])
+		m1,m2 = GraphFactory([X('x')]), GraphFactory([Y('y')])
 		params = {'binding_model':{'kf':1.0,'kr':1.0}}
-		init = MoleculeInitialization([(m1,10),(m2,10)])
+		init = GraphLoader([(m1,10),(m2,10)])
 		sim.load([init])
 		output = TrajectoryUtil()
 		sim.simulate(end=2.0,period=0.1,write_location=output)

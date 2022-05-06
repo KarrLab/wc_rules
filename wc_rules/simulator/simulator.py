@@ -4,6 +4,7 @@ from ..utils.collections import DictLike, LoggableDict, subdict
 from ..utils.data import NestedDict
 from ..modeling.model import AggregateModel
 from collections import defaultdict, deque, ChainMap
+from collections.abc import Sequence
 from attrdict import AttrDict
 from ..schema.actions import PrimaryAction, CompositeAction, RemoveNode
 from ..matcher.token import convert_action_to_tokens
@@ -76,7 +77,7 @@ class SimulationEngine:
 		self.observables = dict(model.iter_observables())
 		#self.action_managers = {rule_name:ActionManager(rule.get_action_executables()) for rule_name,rule in self.rules.items()}
 		self.cache = DictLike()
-		self.compiled_rules = AttrDict()
+		self.compiled_rules = dict()
 
 		print('Initializing rete net matching engine.')
 		self.net = self.ReteNetClass() \
@@ -115,18 +116,18 @@ class SimulationEngine:
 			self.variables.set(variable,value)
 		return self
 
-	def load(self,objects):
+	def load(self,obj):
+		if isinstance(obj,Sequence):
+			for x in obj:
+				self.load(x)
+			return self
 		# object must have an iterator object.generate_actions()
-		print('Loading simulation state.')
 		ax = ActionStack(self.cache)
-		start = self.net.get_node(type='start')
-		for x in objects:
-			for action in x.generate_actions():
-				tokens = ax.put(action).do()
-				self.net.process_tokens(tokens)
-		for variable in self.net.get_updated_variables():
-			value = self.net.get_node(core=variable).state.cache.value
-			self.variables.set(variable,value)
+		for action in obj.generate_actions():
+			tokens = ax.put(action).do()
+			self.net.process_tokens(tokens)
+		variables = self.net.get_updated_variables()
+		self.update(variables)
 		return self
 
 	def fire(self,rule_name):

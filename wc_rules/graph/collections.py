@@ -200,8 +200,8 @@ class GraphContainer(DictLike):
         for a in attrs:
             self.set_attr(*a)
         return self
-        
-class MoleculeType(GraphContainer):
+
+class GraphFactory(GraphContainer):
 
     def generate_actions(self,n=1):
         actions = list(GraphContainer.generate_actions(self))
@@ -212,12 +212,12 @@ class MoleculeType(GraphContainer):
                 yield action.remap(idmap)
 
 
-class MoleculeInitialization:
+class GraphLoader:
 
-    def __init__(self,tuplist):
-        for g,n in tuplist:
-            assert isinstance(g,MoleculeType) and isinstance(n,int)
-        self.items = tuplist
+    def __init__(self,graphcounts):
+        for g,n in graphcounts:
+            assert isinstance(g,GraphFactory) and isinstance(n,int)
+        self.items = graphcounts
 
     def generate_actions(self):
         for g,n in self.items:
