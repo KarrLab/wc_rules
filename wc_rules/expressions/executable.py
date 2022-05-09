@@ -1,12 +1,13 @@
 from .parse import process_expression_string, serialize
 from .dependency import DependencyCollector
 from ..utils.collections import subdict
-from ..schema.actions import RollbackAction, TerminateAction, PrimaryAction, CompositeAction, SimulatorAction
+from ..schema.actions import RollbackAction, TerminateAction, PrimaryAction, CompositeAction, SimulatorAction, action_builtins, CollectReferences
 from .builtins import ordered_builtins, global_builtins
 from .exprgraph import dfs_make
 from collections import ChainMap, defaultdict
 from sortedcontainers import SortedSet
 from frozendict import frozendict
+from collections.abc import Sequence
 
 import inspect
 
@@ -50,12 +51,11 @@ class ExecutableExpression:
 			keywords = list(deps.variables)
 
 			# this step figures what builtins to use, picks them from the global_builtins list
-			#builtins = subdict(cls.builtins, ['__builtins__'] + list(deps.builtins))
-			#builtins = subdict(global_builtins,['__builtins__'] + list(deps.builtins))
+			builtins = subdict(cls.builtins, ['__builtins__'] + list(deps.builtins))
 			code2 = 'lambda {vars}: {code}'.format(vars=','.join(keywords),code=code)
 			try:
-				fn = eval(code2,global_builtins)
-				x = cls(keywords=keywords,builtins=global_builtins,fn=fn,code=code,deps=deps)
+				fn = eval(code2,builtins)
+				x = cls(keywords=keywords,builtins=builtins,fn=fn,code=code,deps=deps)
 			except:
 				x = None
 		except:
@@ -151,7 +151,7 @@ setattr(terminate,'_is_action',True)
 # is equivalent to an action method call
 class ActionCaller(ExecutableExpression):
     start = 'function_call'
-    builtins = ChainMap(global_builtins,dict(rollback=rollback,terminate=terminate))
+    builtins = ChainMap(global_builtins,dict(rollback=rollback,terminate=terminate),action_builtins)
     allowed_forms = ['<actioncall> ( <boolexpr> )', '<pattern>.<var>.<actioncall> (<params>)', '<pattern>.<actioncall> (<params>)']
     allowed_returns = None
 
@@ -222,3 +222,27 @@ class ExecutableExpressionManager:
 			elif not c.exec(match,*dicts):
 				return None
 		return match
+
+
+class ActionManager:
+    def __init__(self,action_execs,factories):
+        self.execs = action_execs
+
+        for e in self.execs:
+            for fnametuple in e.deps.function_calls:
+                if fnametuple == ('add',):
+                    assert len(e.deps.variables)==1
+                    var = list(e.deps.variables)[0]
+                    assert var in factories
+                    setattr(e,'build_variable',var)
+                    
+    def exec(self,match,*dicts):
+        for c in self.execs:
+            actions = c.exec(match,*dicts)
+            if hasattr(c,'build_variable'):
+                assert isinstance(actions[-1],CollectReferences)
+                actions[-1].variable = c.build_variable
+            if isinstance(actions,Sequence):
+                yield from actions
+            else:
+                yield actions

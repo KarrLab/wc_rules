@@ -2,34 +2,10 @@
 from ..utils.validate import *
 from ..graph.collections import GraphContainer, GraphFactory
 from .pattern import Pattern
-from ..expressions.executable import ActionCaller,Constraint, Computation, RateLaw, initialize_from_string
+from ..expressions.executable import ActionCaller,Constraint, Computation, RateLaw, initialize_from_string, ActionManager
 from collections import Counter,ChainMap
-from collections.abc import Sequence
 from ..utils.collections import sort_by_value
 from ..schema.actions import CollectReferences
-
-class ActionManager:
-	def __init__(self,action_execs,factories):
-		self.execs = action_execs
-
-		for e in self.execs:
-			for fnametuple in e.deps.function_calls:
-				if fnametuple[-1] == 'build':
-					assert len(fnametuple)==2
-					assert fnametuple[0] in factories
-					setattr(e,'build_variable',fnametuple[0])
-
-	def exec(self,match,*dicts):
-		for c in self.execs:
-			if hasattr(c,'build_variable'):
-				actions, idmap = c.exec(match,*dicts)
-				actions.append(CollectReferences(variable=c.build_variable,data=idmap))
-			else:
-				actions = c.exec(match,*dicts)
-			if isinstance(actions,Sequence):
-				yield from actions
-			else:
-				yield actions
 			
 class Rule:
 

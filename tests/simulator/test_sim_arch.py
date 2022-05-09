@@ -19,6 +19,8 @@ from simple_binding.model import model as simple_binding_model
 from simple_binding.model import X,Y
 from simple_flip.model import model as flip_model
 from simple_flip.model import Point
+from simple_addremove.model import model as addremove_model
+
 
 def get_lengths(elems):
 	return list(map(len,elems))
@@ -251,6 +253,33 @@ class TestFlipModel(unittest.TestCase):
 		self.assertEqual([sim.cache[x].v for x in ['x1','x2']],[False,True])
 		self.assertEqual(sim.get_updated_variables(),['flip_model.flipping_rule.propensity'])
 		
+class TestAddRemove(unittest.TestCase):
+
+	def setUp(self):
+		self.model =  addremove_model
+		self.data = {'addremove_model':{'k1':1,'k2':1,'k3':1,'k4':1}}
+		self.sim = SimulationEngine(model=self.model,parameters=self.data)
+
+	def test_fire(self):
+		sim = self.sim
+		r1 = 'addremove_model.adding_x'
+		r2 = 'addremove_model.adding_y'
+		r3 = 'addremove_model.transforming_xy_to_z'
+		r4 = 'addremove_model.removing_z'
+
+		self.assertEqual(len(sim.cache),0)
+		sim.fire(r1)
+		self.assertEqual(len(sim.cache),1)
+		sim.fire(r2)
+		self.assertEqual(len(sim.cache),2)
+		sim.fire(r3)
+		self.assertEqual(len(sim.cache),1)
+		sim.fire(r4)
+		self.assertEqual(len(sim.cache),0)
+
+
+
+
 
 class TestScheduler(unittest.TestCase):
 

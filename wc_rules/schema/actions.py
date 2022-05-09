@@ -375,3 +375,15 @@ class CollectReferences:
     def execute(self,match,cache):
         match[self.variable] = {k:cache[v] for k,v in self.data.items()}
         return self
+
+
+
+# Builtins for actions
+def add(graphfactory):
+    idmap = graphfactory.build_random_idmap()
+    return list(graphfactory.generate_actions(idmap)) + [CollectReferences(data=idmap)]
+
+def remove(match):
+    return [Remove(source=elem) for elem in match.values()]
+
+action_builtins = {'add':add,'remove':remove}
