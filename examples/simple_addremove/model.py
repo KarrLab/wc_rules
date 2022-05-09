@@ -54,8 +54,8 @@ class SimpleAddRemoveModel(RuleBasedModel):
 			parameters = ['k4']
 			)
 
-		obs1 = SimpleObservable(name='x',target=pz)
-		obs2 = SimpleObservable(name='y',target=pz)
+		obs1 = SimpleObservable(name='x',target=px)
+		obs2 = SimpleObservable(name='y',target=py)
 		obs3 = SimpleObservable(name='z',target=pz)
 
 		super().__init__(name,rules=[r1,r2,r3,r4],observables=[obs1,obs2,obs3])
