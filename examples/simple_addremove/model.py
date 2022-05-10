@@ -1,7 +1,7 @@
 from wc_rules.schema.entity import Entity
 from wc_rules.graph.collections import GraphContainer, GraphFactory
 from wc_rules.modeling.pattern import Pattern,SimpleObservable
-from wc_rules.modeling.rule import InstanceRateRule
+from wc_rules.modeling.rule import InstanceRateRule, Rule
 from wc_rules.modeling.model import RuleBasedModel
 
 class X(Entity):
@@ -21,7 +21,7 @@ class SimpleAddRemoveModel(RuleBasedModel):
 		gx,gy,gz = [GraphFactory([C(c)]) for C,c in [(X,'x'),(Y,'y'),(Z,'z')]]
 		px,py,pz = [Pattern(x) for x in [gx,gy,gz]]
 
-		r1 = InstanceRateRule(
+		r1 = Rule(
 			name = 'adding_x',
 			factories = {'px':gx},
 			actions = ['add(px)'],
@@ -29,7 +29,7 @@ class SimpleAddRemoveModel(RuleBasedModel):
 			parameters = ['k1']
 			)
 
-		r2 = InstanceRateRule(
+		r2 = Rule(
 			name = 'adding_y',
 			factories = {'py':gy},
 			actions = ['add(py)'],

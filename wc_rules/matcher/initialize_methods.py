@@ -195,7 +195,7 @@ class InitializationMethods:
 			self.add_channel_variable_update(source=pattern,target=node_name,variable=pname)
 
 		self.add_channel_variable_update(source=node_name,target='end',variable=node_name)
-
+		self.function_node_variable(self.get_node(core=f'{name}.propensity'),token={})
 	
 	def initialize_rules(self,rules,parameters):
 		for name,value in parameters.items():
@@ -218,7 +218,8 @@ class InitializationMethods:
 			)
 		for pname,pattern in observable.helpers.items():
 			self.add_channel_variable_update(source=pattern,target=name,variable=pname)
-		self.add_channel_variable_update(source=name,target='end',variable=name)			
+		self.add_channel_variable_update(source=name,target='end',variable=name)
+		self.function_node_variable(self.get_node(core=name),token={})
 		return self
 
 	def initialize_observables(self,observables):

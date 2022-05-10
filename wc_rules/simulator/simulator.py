@@ -172,7 +172,8 @@ class SimulationEngine:
 		return self
 
 	def write_observables(self,time,write_location):
-		write_location.append({'time':time,'observables':subdict(self.variables,self.observables)})
+		variables = [x.core for x in self.net.get_nodes(type='variable') if x.data.subtype=='recompute']
+		write_location.append({'time':time,'observables':subdict(self.variables,variables)})
 		return self
 
 
