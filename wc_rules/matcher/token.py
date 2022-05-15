@@ -27,7 +27,8 @@ class TokenTransformer:
 
 	def transform(self,token,channel=-1):
 		if self.datamap is not None:
-			data = {self.datamap[k]:v for k,v in token.data.items()}
+			data = {self.datamap[k]:v for k,v in token.data.items() if k in self.datamap}
+			#data = {v:token.data[k] for k,v in self.datamap.items()}
 		else:
 			data = token.data
 		action = self.actionmap[token.action]

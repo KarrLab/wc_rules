@@ -5,6 +5,7 @@ from types import MethodType
 from abc import ABC, abstractmethod
 from obj_tables import core
 from .attributes import action
+from attrdict import AttrDict
 
 ### Action prototypes
 class SimulatorAction(ABC):
@@ -373,7 +374,7 @@ class CollectReferences:
     variable: str = ''
     
     def execute(self,match,cache):
-        match[self.variable] = {k:cache[v] for k,v in self.data.items()}
+        match[self.variable] = AttrDict({k:cache[v] for k,v in self.data.items()})
         return self
 
 

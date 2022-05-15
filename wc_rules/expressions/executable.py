@@ -150,19 +150,14 @@ setattr(terminate,'_is_action',True)
 # an executable expression object that when called on a match
 # is equivalent to an action method call
 class ActionCaller(ExecutableExpression):
-    start = 'function_call'
-    builtins = ChainMap(global_builtins,dict(rollback=rollback,terminate=terminate),action_builtins)
-    allowed_forms = ['<actioncall> ( <boolexpr> )', '<pattern>.<var>.<actioncall> (<params>)', '<pattern>.<actioncall> (<params>)']
-    allowed_returns = None
+	start = 'function_call'
+	builtins = ChainMap(global_builtins,dict(rollback=rollback,terminate=terminate),action_builtins)
+	allowed_forms = ['<actioncall> ( <boolexpr> )', '<pattern>.<var>.<actioncall> (<params>)', '<pattern>.<actioncall> (<params>)']
+	allowed_returns = None
 
-    def exec(self,match,*dicts):
-        v = super().exec(match,*dicts)
-        #err = 'An element in the following nested list is not a recognized Action: {0}'
-        #assert verify_list(v,(SimulatorAction,PrimaryAction,CompositeAction)), err.format(list(v))
-        # verifying that every element of a nested list is an action is slow AF
-        # just don't do any verification here
-        # todo: verification can be done by the simulator when it processes the output of an action caller.
-        return v  
+	def exec(self,match,*dicts):
+		v = super().exec(match,*dicts)
+		return v  
 
 def initialize_from_string(string,classes):
 	for c in classes:
@@ -225,24 +220,26 @@ class ExecutableExpressionManager:
 
 
 class ActionManager:
-    def __init__(self,action_execs,factories):
-        self.execs = action_execs
+	def __init__(self,action_execs,factories):
+		self.execs = action_execs
 
-        for e in self.execs:
-            for fnametuple in e.deps.function_calls:
-                if fnametuple == ('add',):
-                    assert len(e.deps.variables)==1
-                    var = list(e.deps.variables)[0]
-                    assert var in factories
-                    setattr(e,'build_variable',var)
-                    
-    def exec(self,match,*dicts):
-        for c in self.execs:
-            actions = c.exec(match,*dicts)
-            if hasattr(c,'build_variable'):
-                assert isinstance(actions[-1],CollectReferences)
-                actions[-1].variable = c.build_variable
-            if isinstance(actions,Sequence):
-                yield from actions
-            else:
-                yield actions
+		for e in self.execs:
+			for fnametuple in e.deps.function_calls:
+				if fnametuple == ('add',):
+					assert len(e.deps.variables)==1
+					var = list(e.deps.variables)[0]
+					assert var in factories
+					setattr(e,'build_variable',var)
+
+
+	def exec(self,match,*dicts):
+		for c in self.execs:
+			actions = c.exec(match,*dicts)
+			if hasattr(c,'build_variable'):
+				assert isinstance(actions[-1],CollectReferences)
+				actions[-1].variable = c.build_variable
+			if isinstance(actions,Sequence):
+				yield from actions
+			else:
+				yield actions
+
