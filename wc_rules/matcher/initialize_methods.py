@@ -107,6 +107,7 @@ class InitializationMethods:
 		return self
 
 	def initialize_pattern(self,pattern):
+
 		if self.get_node(core=pattern) is not None:
 			return self
 
@@ -137,6 +138,7 @@ class InitializationMethods:
 			caches['parent'] = self.generate_cache_reference(parent,mapping.reverse()._dict)
 
 			if len(pattern.constraints)==0:
+				# TODO: use cache = DatabaseAlias(caches['parent']) instead of cache = caches['parent']
 				self.add_node_pattern(pattern=pattern,cache = caches['parent'],subtype ='alias',caches=caches)
 				return self
 

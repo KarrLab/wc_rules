@@ -47,10 +47,11 @@ class TestChannelFunctions(unittest.TestCase):
 		self.assertEqual(cached_token.data,{'a':x1})
 		self.assertEqual(cached_token.action,'RemoveEntry')
 
+		# DEPRECATED. Now we assume token.data is never weird
 		# key error when token.data is weird
-		token = BasicToken(L.classes[0],'AddNode',{'some_key':x1})
-		with self.assertRaises(KeyError):
-			rn.function_channel_transform(channel,token)
+		# token = BasicToken(L.classes[0],'AddNode',{'some_key':x1})
+		# with self.assertRaises(KeyError):
+		# 	rn.function_channel_transform(channel,token)
 
 		# no need to check if token.action is weird.
 		# it wont be passed to the channel in the first place
