@@ -147,7 +147,6 @@ class TestSimpleBindingModel(unittest.TestCase):
 		
 		sim = self.sim
 		m1,m2 = GraphFactory([X('x')]), GraphFactory([Y('y')])
-		params = {'binding_model':{'kf':1.0,'kr':1.0}}
 		init = GraphLoader([(m1,10),(m2,10)])
 		sim.load([init])
 		output = TrajectoryUtil()

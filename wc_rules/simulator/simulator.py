@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from attrdict import AttrDict
 from ..schema.actions import PrimaryAction, CompositeAction, RemoveNode, CollectReferences
 from ..matcher.token import convert_action_to_tokens
+import sys
 
 def get_model_name(rule_name):
 	return '.'.join(rule_name.split('.')[:-1])
@@ -23,6 +24,8 @@ class PrefixSubdict:
 
 	def __getitem__(self,key):
 		return self.target[f'{self.prefix}.{key}']
+
+CURRENT_ACTION_RECORD = deque()
 
 class ActionStack:
 
@@ -41,18 +44,22 @@ class ActionStack:
 
 	def put_first(self,action):
 		if isinstance(action,list):
-			self._dq.extend(reversed(action))
+			self._dq.extendleft(reversed(action))
 		else:
 			self._dq.appendleft(action)
 		return self
 
 	def do(self):
+		global CURRENT_ACTION_RECORD
+		CURRENT_ACTION_RECORD = deque()
+
 		tokens = []
 		while self._dq:
 			x = self._dq.popleft()
 			if isinstance(x,CollectReferences):
 				x.execute(self.match,self.cache)
 			if isinstance(x,PrimaryAction):
+				CURRENT_ACTION_RECORD.append(x)
 				if isinstance(x,RemoveNode):
 					tokens.extend(convert_action_to_tokens(x,self.cache))
 					x.execute(self.cache)
@@ -145,8 +152,8 @@ class SimulationEngine:
 		self.update(variables)
 		return self
 		
-
 	def simulate(self,start=0.0,end=1.0,period=1,write_location=None):
+		global CURRENT_ACTION_RECORD
 		print(f'Simulating from time={start} to time={end}.')
 		time = start
 		sch = CoordinatedScheduler([
@@ -160,12 +167,21 @@ class SimulationEngine:
 		while True:
 			event,time = sch.pop()
 			if event=='write_observables':
-				print(f'Current time={time}.')
+				print(f'Current time={time}\tNumber of objects={len(self.cache)}')
 				self.write_observables(time,write_location)
 				if time >= end:
 					break
 			elif event in self.rules:
-				self.fire(event)
+				try:
+					self.fire(event)
+				except Exception as error:
+					print(f'While firing {event}, an error occurred.')
+					print(f'The following actions were being implemented: ')
+					for act in CURRENT_ACTION_RECORD:
+						print(act)
+					print(f'Simulation failed. Exiting.' )
+					raise error.with_traceback(sys.exc_info()[2])
+					
 				sch.update(time,subdict(self.variables,self.variables.modified))
 			self.variables.flush()
 		print(f'Simulation complete. Exiting.')
@@ -175,12 +191,4 @@ class SimulationEngine:
 		variables = [x.core for x in self.net.get_nodes(type='variable') if x.data.subtype=='recompute']
 		write_location.append({'time':time,'observables':subdict(self.variables,variables)})
 		return self
-
-
-
-
-
-
-
-
 
