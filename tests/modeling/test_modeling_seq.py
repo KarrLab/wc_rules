@@ -1,6 +1,6 @@
 from wc_rules.schema.seq import *
-from wc_rules.modeling.seqpattern import default_overlap_pattern as overlap
-from wc_rules.modeling.seqpattern import build_overlap_pattern
+from wc_rules.modeling.seqpattern import OverlappingFeaturesPattern
+#from wc_rules.modeling.seqpattern import build_overlap_pattern
 
 import unittest
 
@@ -17,6 +17,7 @@ class Feat2(SequenceFeature):
 class TestOverlapPattern(unittest.TestCase):
 
 	def test_overlap_pattern_default(self):
+		overlap = OverlappingFeaturesPattern()
 		ex = overlap.make_executable_expression_manager()
 		match = {
 			'molecule': SequenceMolecule(),
@@ -54,10 +55,10 @@ class TestOverlapPattern(unittest.TestCase):
 		self.assertTrue(ex.exec(match) is not None)
 
 	def test_overlap_pattern_build(self):
-		overlap2 = build_overlap_pattern(
+		overlap2 = OverlappingFeaturesPattern(
 			molecule = Seq1('seq1'),
 			site1 = Feat1('feat1'),
-			site2 = Feat1('feat2')
+			site2 = Feat2('feat2')
 		)
 
 		ex = overlap2.make_executable_expression_manager()

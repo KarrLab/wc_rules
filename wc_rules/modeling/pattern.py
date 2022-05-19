@@ -1,4 +1,4 @@
-
+from ..schema.attributes import cache_method
 from ..utils.validate import *
 from ..graph.collections import GraphContainer
 from ..utils.collections import split_string
@@ -102,7 +102,6 @@ class Pattern:
 		execs = [initialize_from_string(s,(Constraint,Computation)) for s in self.constraints]
 		manager = ExecutableExpressionManager(execs,self.namespace)
 		return manager
-
 
 class Observable:
 

@@ -4,6 +4,7 @@ from .dbase import Database, DatabaseAlias, DatabaseSingleValue, DatabaseSymmetr
 from .token import TokenTransformer
 from sortedcontainers import SortedSet
 from collections import deque
+from types import MethodType
 
 class AddMethods:
 
@@ -84,6 +85,14 @@ class AddMethods:
 
 	def generate_cache(self,fields,**kwargs):	
 		return self.DATABASE_CLASS(fields=fields,**kwargs)
+
+	def add_cache_methods(self,pattern,cache):
+		methodnames = [x for x in dir(pattern) if callable(getattr(pattern,x))]
+		for name in methodnames:
+			method = getattr(pattern,name)
+			if getattr(method,'_is_cache_method',False):
+				setattr(cache,name,MethodType(method,cache))
+		return self
 
 	def update_node_data(self,core,update_dict):
 		data = self.get_node(core=core).data

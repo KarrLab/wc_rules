@@ -121,3 +121,9 @@ def computation(fn):
 def action(fn):
     fn._is_action = True
     return fn
+
+# wrapper for pattern methods that need to be transferred to 
+# the respective cache on rete-net
+def cache_method(method):
+    method._is_cache_method = True
+    return staticmethod(method)

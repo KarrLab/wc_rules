@@ -140,6 +140,7 @@ class InitializationMethods:
 			if len(pattern.constraints)==0:
 				# TODO: use cache = DatabaseAlias(caches['parent']) instead of cache = caches['parent']
 				self.add_node_pattern(pattern=pattern,cache = caches['parent'],subtype ='alias',caches=caches)
+				self.add_cache_methods(pattern,caches['parent'])
 				return self
 
 		for var,pat in pattern.helpers.items():
@@ -148,8 +149,9 @@ class InitializationMethods:
 
 		manager = pattern.make_executable_expression_manager()
 
-		if requires_parent:
-			self.add_node_pattern(pattern=pattern,subtype='default',executables=manager,caches=caches)
+		#if requires_parent:
+		self.add_node_pattern(pattern=pattern,subtype='default',executables=manager,caches=caches)
+		self.add_cache_methods(pattern,self.get_node(core=pattern).state.cache)
 
 		for variable, attr in manager.get_attribute_calls():
 			assert issubclass(pattern.namespace[variable],BaseClass)

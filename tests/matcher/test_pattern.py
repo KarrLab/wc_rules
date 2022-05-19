@@ -481,3 +481,4 @@ class TestRetePatternBehavior(unittest.TestCase):
 		# then modify elem2 so it does match q
 		# then modify elem1 so it does not match q
 		# then modify elem2 so it does not match q
+
