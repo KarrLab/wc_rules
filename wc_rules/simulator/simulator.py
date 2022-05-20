@@ -95,6 +95,7 @@ class SimulationEngine:
 			.initialize_rules(self.rules,self.variables) \
 			.initialize_observables(self.observables)
 
+		self.net.validate()
 		print('Linking rules to matching engine.')
 		for name,rule in self.rules.items():
 			self.compile_rule(name,rule)

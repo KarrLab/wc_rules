@@ -67,15 +67,13 @@ class DependencyCollector:
 
 	def process_function_call(self,x):
 		if 'function_name' in x:
-			kws = set()
+			kws, kwpairs = set(),set()
 			if 'kws' in x:
-				kws = set(x['kws'])
-			kwpairs = set()
-			for i,kw in enumerate(kws):
-				arg = x['args'][i]
-				if isinstance(arg,dict) and len(arg.keys())==1 and 'variable' in arg:
-					kwpairs.add((kw,arg['variable']))
-			headerlist = [y for y in [x.get('variable',None), x.get('subvariable',None),x.get('function_name',None)] if y is not None]
+				for kw,arg in zip(x['kws'],x['args']):
+					kws.add(kw)
+					if isinstance(arg,dict) and len(arg)==1 and 'variable' in arg:
+						kwpairs.add((kw,arg['variable']))
+			headerlist = list(filter(None,[x.get(y,None) for y in ['variable','subvariable','function_name']]))
 			self.function_calls[tuple(headerlist)] = dict(kws=kws,kwpairs=kwpairs)
 		return self
 

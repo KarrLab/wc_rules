@@ -1,25 +1,31 @@
 from wc_rules.schema.seq import SequenceMolecule, SequenceFeature
 from wc_rules.modeling.pattern import GraphContainer, Pattern
 from wc_rules.schema.attributes import cache_method
+from functools import partial
 
 def overlapping_sites(start1,end1,start2,end2):
 	return max(start1,end1) > min(start2,end2) and max(start2,end2) > min(start1,end1)
 
+
+
 class SequenceFeaturePattern(Pattern):
 
-	def __init__(self,M=SequenceMolecule,S=SequenceFeature):
-		g = GraphContainer(M('molecule',sites=[S('site')]).get_connected())
-		super().__init__(parent=g)
-		
+	def __init__(self,molecule=SequenceMolecule('molecule'),site=SequenceFeature('site')):
+		mname,sname = molecule.id, site.id
+		molecule.sites.add(site)
+		constraints = [f'start = {sname}.start',f'end = {sname}.end',]
+		super().__init__(parent=GraphContainer(molecule.get_connected()),constraints=constraints)
+
 	@cache_method
-	def overlaps(cache,molecule,start,end=None):
-		end = start+1 if end is None else end
-		for x in cache.filter({'molecule':molecule}):
-			site = x['site']
-			if overlapping_sites(site.start,site.end,start,end):
+	def overlaps(cache,**kwargs):
+		start = kwargs.pop('start')
+		end = kwargs.pop('end',start+1)
+		for x in cache.filter(kwargs):
+			if overlapping_sites(x['start'],x['end'],start,end):
 				return True
 		return False
 
+		
 class OverlappingFeaturesPattern(Pattern):
 
 	def __init__(self,molecule=SequenceMolecule('molecule'),site1=SequenceFeature('site1'),site2=SequenceFeature('site2')):

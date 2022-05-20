@@ -53,7 +53,7 @@ class PrintMethods:
 		return ''
 
 	def descr_channel_transform(self,channel):
-		return arrow_str_dict(channel.data.transformer.datamap)
+		return arrow_str_dict(channel.data.transformer.datamap) + ' ' + arrow_str_dict(channel.data.transformer.actionmap)
 		
 	def descr_node_default(self,core_obj):
 		if isinstance(core_obj,str):

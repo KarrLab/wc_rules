@@ -83,7 +83,7 @@ class TestRetePatternInitialization(unittest.TestCase):
 		
 		ch = rn.get_channel(source=Y,target=py,type='transform')
 		self.assertTrue(ch is not None)
-		self.assertEqual(ch.data.transformer.datamap,{'ref':'y','attr':'attr'})
+		self.assertEqual(ch.data.transformer.datamap,{'ref':'y'})
 		self.assertEqual(ch.data.transformer.actionmap,{'SetAttr':'VerifyEntry'})
 		self.assertTrue(ch.data.filter_data({'attr':'x'}))
 		self.assertTrue(ch.data.filter_data({'attr':'boo'}) == False)

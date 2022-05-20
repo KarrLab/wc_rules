@@ -154,11 +154,13 @@ class InitializationMethods:
 		self.add_cache_methods(pattern,self.get_node(core=pattern).state.cache)
 
 		for variable, attr in manager.get_attribute_calls():
-			assert issubclass(pattern.namespace[variable],BaseClass)
+			_class = pattern.namespace[variable]
+			assert issubclass(_class,BaseClass)
+			self.initialize_class(_class)
 			self.add_channel_transform(
-				source = pattern.namespace[variable],
+				source = _class,
 				target = pattern,
-				datamap = {'ref':variable,'attr':'attr'},
+				datamap = {'ref':variable},
 				actionmap = {'SetAttr':'VerifyEntry'},
 				filter_data = partial(lambda data,attr: data['attr'] == attr, attr=attr)
 			)

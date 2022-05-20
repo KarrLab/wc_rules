@@ -27,7 +27,7 @@ class TestSeqPattern(unittest.TestCase):
 	def test_sequence_feature_pattern(self):
 		ReteNet = build_rete_net_class()
 
-		p = SequenceFeaturePattern(M=SeqMol,S=SeqFeat)
+		p = SequenceFeaturePattern(molecule=SeqMol('molecule'),site=SeqFeat('site'))
 		net = ReteNet()
 		net.initialize_start()
 		net.initialize_pattern(p)

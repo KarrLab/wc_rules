@@ -1,6 +1,7 @@
 # see tokens.py for the different types of tokens
 from ..utils.collections import subdict
 from .token import CacheToken, VarToken
+from .logger import Logger
 
 def no_common_values(d1,d2):
 	return len(set(d1.values()) & set(d2.values())) == 0
@@ -8,10 +9,12 @@ def no_common_values(d1,d2):
 class NodeFunctions:
 
 	def function_node_start(self,node,token):
+		Logger.start(node.num,token)
 		self.function_node_class(node,token)
 		return self
 		
 	def function_node_class(self,node,token):
+		Logger._class(node.num,token)
 		if issubclass(token.classref,node.core):
 			node.state.outgoing.append(token)
 		return self
@@ -21,11 +24,13 @@ class NodeFunctions:
 		return self
 
 	def function_node_end(self,node,token):
+		Logger.end(node.num,token)
 		assert isinstance(token,VarToken)
 		node.state.cache.add(token.variable)
 		return self
 
 	def function_node_canonical_label(self,node,token):
+		Logger.canonical_label(node.num,token)
 		if len(node.core.names)==1:
 			self.function_node_canonical_label_single_node(node,token)
 		elif len(node.core.names)==2:
@@ -74,6 +79,7 @@ class NodeFunctions:
 		return self
 
 	def function_node_alias(self,node,token):
+		Logger.pattern(node.num,token)
 		if token.action == 'AddEntry':
 			node.state.outgoing.append(token)
 		if token.action == 'RemoveEntry':
@@ -81,6 +87,7 @@ class NodeFunctions:
 		return self
 
 	def function_node_constraints(self,node,token):
+		Logger.pattern(node.num,token)
 		executable_manager = node.data.executables
 		caches = node.data.caches
 		if token.action == 'AddEntry':
@@ -91,11 +98,10 @@ class NodeFunctions:
 		elif token.action == 'RemoveEntry':
 			self.function_node_cache(node,token)
 		elif token.action == 'VerifyEntry':
+			for elem in node.state.cache.filter(token.data):
+				deltoken = CacheToken(data=elem,action='RemoveEntry')
+				self.function_node_cache(node,deltoken)
 			for elem in caches.parent.filter(token.data):
-				current_matching_elem = node.state.cache.filter_one(elem)
-				if current_matching_elem is not None:
-					deltoken = CacheToken(data=current_matching_elem,action='RemoveEntry')
-					self.function_node_constraints(node,deltoken)
 				instoken = CacheToken(data=elem,action='AddEntry')
 				self.function_node_constraints(node,instoken)
 		else:
@@ -110,6 +116,7 @@ class NodeFunctions:
 		return self
 
 	def function_node_variable(self,node,token):
+		Logger.variable(node.num,token)
 		if node.data.subtype == 'recompute':
 			params = {k:self.get_node(core=c).state.cache.value for k,c in node.data.parameters.items()}
 			value = node.data.executable.exec(params,node.data.caches)

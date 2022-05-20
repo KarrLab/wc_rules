@@ -54,7 +54,7 @@ class ReteNetBase:
 
 	def sync_outgoing(self,node):
 		token = node.state.outgoing.popleft()
-		channels = self.get_channels(source=node.core)
+		channels = sorted(self.get_channels(source=node.core), key = lambda ch:ch.num)
 		for channel in channels:
 			#if token.action in channel.data.allowed_token_actions and channel.data.filter_data(token.data):
 				method = getattr(self,f'function_channel_{channel.type}')
@@ -87,6 +87,13 @@ class ReteNetBase:
 		end = self.get_node(type='end')
 		output, end.state.cache = list(end.state.cache), SortedSet()
 		return output
+
+	def validate(self):
+		for ch in self.channels.filter():
+			x = AttrDict(ch)
+			assert self.get_node(core=x.source) is not None
+			assert self.get_node(core=x.target) is not None
+		return self
 
 def build_rete_net_class(bases=bases,name='ReteNet',symmetry_aware=False):
 	all_bases = [ReteNetBase,] + bases
